@@ -185,12 +185,41 @@ static int vsc82xx_config_intr(struct phy_device *phydev)
 	return err;
 }
 
+static int vitesse_parse_status(struct phy_device *phydev)
+{
+	int speed;
+	int mii_reg;
+
+	mii_reg = phy_read(phydev, MII_VSC8244_AUX_CONSTAT);
+
+	if (mii_reg & MII_VSC8244_AUXCONSTAT_DUPLEX)
+		phydev->duplex = DUPLEX_FULL;
+	else
+		phydev->duplex = DUPLEX_HALF;
+
+	speed = mii_reg & MII_VSC8244_AUXCONSTAT_SPEED;
+	switch (speed) {
+	case MII_VSC8244_AUXCONSTAT_GBIT:
+		phydev->speed = SPEED_1000;
+		break;
+	case MII_VSC8244_AUXCONSTAT_100:
+		phydev->speed = SPEED_100;
+		break;
+	default:
+		phydev->speed = SPEED_10;
+		break;
+	}
+
+	return 0;
+}
 static int vsc8221_config_init(struct phy_device *phydev)
 {
 	int err;
 
+    genphy_update_link(phydev);
 	err = phy_write(phydev, MII_VSC8244_AUX_CONSTAT,
 			MII_VSC8221_AUXCONSTAT_INIT);
+    err |= vitesse_parse_status(phydev);
 	return err;
 
 	/* Perhaps we should set EXT_CON1 based on the interface?

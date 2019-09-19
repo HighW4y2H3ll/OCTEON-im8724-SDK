@@ -194,6 +194,9 @@ static bool of_mdiobus_child_is_phy(struct device_node *child)
 	if (of_device_is_compatible(child, "ethernet-phy-ieee802.3-c22"))
 		return true;
 
+	if (of_device_is_compatible(child, "cortina,cs4318"))
+		return true;
+
 	if (of_match_node(whitelist_phys, child)) {
 		pr_warn(FW_WARN
 			"%s: Whitelisted compatible string. Please remove\n",

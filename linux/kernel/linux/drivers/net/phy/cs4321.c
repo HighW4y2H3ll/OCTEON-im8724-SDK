@@ -21,6 +21,7 @@
 #include <linux/phy.h>
 #include <linux/of.h>
 
+#define CS4321_UBOOT_INIT_SEQ          1
 #define CS4321_API_VERSION_MAJOR       3
 #define CS4321_API_VERSION_MINOR       0
 #define CS4321_API_VERSION_UPDATE      113
@@ -1344,14 +1345,22 @@ int cs4321_read_status(struct phy_device *phydev)
 		value = cs4321_phy_read(phydev, CS4321_GPIO_GPIO_INTS);
 		if (value < 0)
 			goto err;
+
 		phydev->speed = SPEED_10000;
 		phydev->duplex = DUPLEX_FULL;
-		phydev->link = !!(value & 3);
+		phydev->link = !(value & 3);
 	} else {
-		value = cs4321_phy_read(phydev, CS4321_GIGEPCS_LINE_STATUS);
 		phydev->speed = SPEED_1000;
 		phydev->duplex = DUPLEX_FULL;
-		phydev->link = !!(value & 4);
+		value = cs4321_phy_read(phydev, CS4321_GIGEPCS_LINE_CONTROL);
+		if ((value & 0x1000)) {
+			value = cs4321_phy_read(phydev, CS4321_GIGEPCS_LINE_STATUS);
+			phydev->link = !!(value & 4);
+		}
+		else if (board_phy_status)
+			phydev->link = board_phy_status(phydev);
+		else
+			phydev->link = 0;
 	}
 
 err:
@@ -1373,31 +1382,37 @@ int cs4321_init_xaui(struct phy_device *phydev)
 
 int cs4321_config_init(struct phy_device *phydev)
 {
-	int ret;
+	int ret, value;
 	struct cs4321_private *p = phydev->priv;
 	const struct cs4321_multi_seq *init_seq;
+
+	phydev->duplex = DUPLEX_FULL;
+
+	pr_debug("mode = %d\n", p->mode);
+	switch (p->mode) {
+	case RXAUI:
+	case XAUI:
+		/* Enable RX_LOL/RX_LOS interrupts */
+		//value = cs4321_phy_read(phydev, CS4321_GPIO_GPIO_INTE);
+		//if (value < 0)
+		//	goto err;
+		//cs4321_phy_write(phydev, CS4321_GPIO_GPIO_INTE, (u16) (value | 0x3));
+		init_seq = p->mode == RXAUI ? cs4321_init_rxaui_seq : cs4321_init_xaui_seq;
+	    phydev->speed = SPEED_10000;
+		break;
+	case SGMII:
+		init_seq = cs4321_init_sgmii_seq;
+	    phydev->speed = SPEED_1000;
+		break;
+	default:
+		printk(KERN_ERR "Unknown host mode for CS4321 PHY device\n");
+		return -1;
+	}
 
 	ret = cs4321_reset(phydev);
 	if (ret) {
 		printk(KERN_ERR "Error initializing CS4321 PHY device\n");
 		goto err;
-	}
-
-printk("mode = %d\n", p->mode);
-	switch (p->mode) {
-	case RXAUI:
-		init_seq = cs4321_init_rxaui_seq;
-		break;
-	case XAUI:
-		init_seq = cs4321_init_xaui_seq;
-		break;
-	case SGMII:
-		init_seq = cs4321_init_sgmii_seq;
-printk("initializing sgmii seq\n");
-		break;
-	default:
-		printk(KERN_ERR "Unknown host mode for CS4321 PHY device\n");
-		return -1;
 	}
 
 	ret = cs4321_write_multi_seq(phydev, init_seq);
@@ -1435,7 +1450,7 @@ int cs4321_probe(struct phy_device *phydev)
 		goto err;
 	}
 
-	if (id_lsb != 0x23E5 || id_msb != 0x1002) {
+	if (id_lsb != 0x23E5 || (id_msb != 0x1002 && id_msb != 0x2002)) {
 		ret = -ENODEV;
 		goto err;
 	}
@@ -1471,10 +1486,19 @@ err:
 int cs4321_config_aneg(struct phy_device *phydev)
 {
 	int err;
+	struct cs4321_private *p = phydev->priv;
 
 	err = genphy_config_aneg(phydev);
 	if (err < 0)
 		return err;
+
+    if (p->mode == SGMII)
+		phydev->supported = phydev->advertising =
+			 SUPPORTED_1000baseT_Full |
+			 SUPPORTED_Autoneg;
+	else
+		phydev->supported = phydev->advertising =
+			 SUPPORTED_10000baseT_Full;
 
 	return 0;
 }
@@ -1491,9 +1515,25 @@ static struct of_device_id cs4321_match[] = {
 MODULE_DEVICE_TABLE(of, cs4321_match);
 
 static struct phy_driver cs4321_phy_driver = {
-	.phy_id		= 0xffffffff,
+	.phy_id		= 0x100223e5,
 	.phy_id_mask	= 0xffffffff,
 	.name		= "Cortina CS4321",
+//#ifndef CS4321_UBOOT_INIT_SEQ
+	.config_init	= cs4321_config_init,
+//#endif
+	.probe		= cs4321_probe,
+	.config_aneg	= cs4321_config_aneg,
+	.read_status	= cs4321_read_status,
+	.mdiodrv.driver		= {
+		/* .owner = THIS_MODULE, */
+		.of_match_table = cs4321_match,
+	},
+};
+
+static struct phy_driver cs4318_driver = {
+	.name = "Cortina CS4318",
+	.phy_id = 0x200223e5,
+	.phy_id_mask = 0x0fffffff,	/* Cortina is weird.  chip version is 4 MSBs */
 	.config_init	= cs4321_config_init,
 	.probe		= cs4321_probe,
 	.config_aneg	= cs4321_config_aneg,
@@ -1509,6 +1549,7 @@ static int __init cs4321_drv_init(void)
 	int ret;
 
 	ret = phy_driver_register(&cs4321_phy_driver, THIS_MODULE);
+	ret |= phy_driver_register(&cs4318_driver, THIS_MODULE);
 
 	return ret;
 }

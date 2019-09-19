@@ -64,6 +64,8 @@
 #include "cvmx-qlm.h"
 #endif
 
+#define CORTINA_PHY_RXAUI_MODE
+
 /* Enable this define to see BGX error messages */
 /*#define DEBUG_BGX */
 
@@ -1565,6 +1567,7 @@ int __cvmx_helper_bgx_port_init(int xipd_port, int phy_pres)
 			cvmx_dprintf("%s: BGX%d:%d TX-thresh=%d\n",
 				__func__, xi.interface, index, smu_tx_thresh.s.cnt);
 
+#ifndef CORTINA_PHY_RXAUI_MODE
 		/* Set disparity for RXAUI interface as described in the
 		Marvell RXAUI Interface specification. */
 		if (mode == CVMX_HELPER_INTERFACE_MODE_RXAUI && phy_pres) {
@@ -1575,6 +1578,7 @@ int __cvmx_helper_bgx_port_init(int xipd_port, int phy_pres)
 			cvmx_write_csr_node(xi.node, CVMX_BGXX_SPUX_MISC_CONTROL(index, xi.interface),
 					    misc_control.u64);
 		}
+#endif
 	}
 	return 0;
 }

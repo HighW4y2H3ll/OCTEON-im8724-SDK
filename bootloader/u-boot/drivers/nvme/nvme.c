@@ -1061,6 +1061,7 @@ int __nvme_blk_probe(int dev)
 	u8 flbas;
 	u16 vendor;
 	struct nvme_id_ns buf, *id = &buf;
+	struct nvme_id_ctrl cbuf, *ctrl = &cbuf;
 
 	if (!ndev->name)
 		return -ENODEV;
@@ -1068,7 +1069,15 @@ int __nvme_blk_probe(int dev)
 	memset(ns, 0, sizeof(*ns));
 	ns->dev = ndev;
 	ns->devnum = dev;
-	ns->ns_id = desc->dev - ndev->blk_dev_start + 1;
+
+	if(nvme_identify(ndev, 0, 1, cvmx_ptr_to_phys(ctrl)))
+		return -EIO;
+
+	if(le16_to_cpu(ctrl->oacs) & 0x08)
+		ns->ns_id = desc->dev - ndev->blk_dev_start + 1;
+	else
+		ns->ns_id = 1;
+
 	debug("%s(%d)\n", __func__, dev);
 	if (nvme_identify(ndev, ns->ns_id, 0, cvmx_ptr_to_phys(id)))
 		return -EIO;
@@ -1078,7 +1087,7 @@ int __nvme_blk_probe(int dev)
 	ns->lba_shift = id->lbaf[flbas].ds;
 	ns->mode_select_num_blocks = le64_to_cpu(id->nsze);
 	ns->mode_select_block_len = 1 << ns->lba_shift;
-	debug("Adding namespaces");
+	debug("Adding namespaces\n");
 	list_add(&ns->list, &ndev->namespaces);
 
 	desc->type = DEV_TYPE_HARDDISK;

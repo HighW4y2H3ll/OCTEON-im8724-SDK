@@ -402,7 +402,11 @@ int pciauto_config_device(struct pci_controller *hose, pci_dev_t dev)
 
 		/* figure out the deepest we've gone for this leg */
 		sub_bus = max(n, sub_bus);
-		pciauto_postscan_setup_bridge(hose, dev, sub_bus);
+
+#ifdef CONFIG_OCTEON_IM8724
+		if(dev)
+#endif
+			pciauto_postscan_setup_bridge(hose, dev, sub_bus);
 
 		sub_bus = hose->current_busno;
 		break;

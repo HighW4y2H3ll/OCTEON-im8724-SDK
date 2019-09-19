@@ -122,6 +122,7 @@ void cpld_wr(uint8_t offset, uint8_t val);
 
 uint8_t cpld_rd_remote(uint8_t target, uint8_t offset);
 void cpld_wr_remote(uint8_t target, uint8_t offset, uint8_t val);
+void cpld_wr_remote_force(uint8_t target, uint8_t offset, uint8_t val, uint8_t attempts);
 
 #endif
 

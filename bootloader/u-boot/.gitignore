@@ -1,0 +1,31 @@
+*.obj
+*.bin
+.depend
+.depend.*
+*.su
+*.o
+*.d
+
+# generated includes
+include/generated
+
+# u-boot binaries stuff
+u-boot-octeon_*
+System-octeon_*.map
+
+.boards.depend
+include/generated/*
+u-boot.lds
+tools/dtc
+tools/dtcsrc/libfdt/libfdt.a
+tools/dtcsrc/convert-dtsv0
+tools/dtcsrc/convert-dtsv0-lexer.lex.c
+tools/dtcsrc/ftdump
+tools/dtcsrc/libfdt/libfdt-1.2.0.so
+tools/dtcsrc/libfdt/libfdt.so
+tools/dtcsrc/version_gen.h
+tools/update_octeon_header
+tools/envcrc
+tools/gen_eth_addr
+tools/img2srec
+tools/ncb

@@ -3672,6 +3672,7 @@ cvmx_helper_link_info_t __cvmx_helper_board_link_get(int ipd_port)
 	int is_cortina_phy = 0;
 	int is_ti_phy;
 	int xiface = 0, index = 0;
+	int speed, qlm;
 
 	if (ipd_port >= 0) {
 		xiface = cvmx_helper_get_interface_num(ipd_port);
@@ -3795,6 +3796,13 @@ cvmx_helper_link_info_t __cvmx_helper_board_link_get(int ipd_port)
 	case CVMX_BOARD_TYPE_NIC68_4:
 		is_cortina_phy = 1;
 		break;
+	case CVMX_BOARD_TYPE_CUST_IM8724:
+		qlm = cvmx_qlm_lmac(xiface, index);
+		speed = cvmx_qlm_get_gbaud_mhz_node(0, qlm);
+		result.s.speed = speed * 8 / 10;
+		result.s.full_duplex = 1;
+		result.s.link_up = 1;
+		return result;
 	}
 
 	memset(&phy_info, 0, sizeof(phy_info));

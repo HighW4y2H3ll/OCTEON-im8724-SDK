@@ -74,7 +74,8 @@ TARGET = traffic-gen$(PREFIX)
 
 CFLAGS_LOCAL = -g -O3 -W -Wall -Wno-unused-parameter -lm
 CFLAGS_LOCAL += -I${OCTEON_ROOT}/bootloader/u-boot/include/asm/arch
-OBJS = $(OBJ_DIR)/traffic-gen.o $(OBJ_DIR)/traffic-gen-pktio.o
+OBJS = $(OBJ_DIR)/traffic-gen.o $(OBJ_DIR)/traffic-gen-pktio.o $(OBJ_DIR)/octeon_i2c.o \
+	$(OBJ_DIR)/imt_cpld.o $(OBJ_DIR)/leds_mgmt.o $(OBJ_DIR)/fans_mgmt.o $(OBJ_DIR)/cortina_phys.o
 
 include $(OCTEON_ROOT)/application.mk
 

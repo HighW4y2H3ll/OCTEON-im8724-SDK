@@ -388,4 +388,11 @@ int cs4321_configure_sfp_cache(struct phy_device *phydev,
  */
 int cortina_cs4321_phy_init(void);
 
+/**
+ * Register the cs4318 PHY driver
+ *
+ * @return 0 for success.
+ */
+int cortina_cs4318_phy_init(void);
+
 #endif /* __CORTINA_CS4321_H__ */

@@ -180,9 +180,13 @@ extern timestamp_t timestamp_get_rawtime(void);
 /**
  * Get the current system time as a timestamp_t
  *
+ * @param:
+ *  1 - use HW PTP clock is possible
+ *  0 - use linux clock
+ * 
  * @return The current system time
  */
-extern timestamp_t timestamp_get_systime(void);
+extern timestamp_t timestamp_get_systime(int);
 
 /**
  * Set the current system time

@@ -443,7 +443,10 @@ static long pmbus_reg2data_linear(struct pmbus_data *data,
 	s32 mantissa;
 	long val;
 
-	if (sensor->class == PSC_VOLTAGE_OUT) {	/* LINEAR16 */
+	/* LINEAR16 is appplicable for chips with
+	 * supported VOUT_MODE command */
+	if (sensor->class == PSC_VOLTAGE_OUT &&
+	    data->exponent[sensor->page]) {	/* LINEAR16 */
 		exponent = data->exponent[sensor->page];
 		mantissa = (u16) sensor->data;
 	} else {				/* LINEAR11 */

@@ -125,7 +125,7 @@ static int raw_send(packetio_packet_t *packet, const char *addr, int is_event)
     int send_socket = (is_event) ? packet->packetio->sock_event : packet->packetio->sock_msg;
     int bytes = send(send_socket, &l2_packet, 14 + packet->length,
         MSG_DONTWAIT);
-    packet->timestamp = timestamp_get_systime();
+    packet->timestamp = timestamp_get_systime(1);
 
     if (bytes != 14 + packet->length)
     {

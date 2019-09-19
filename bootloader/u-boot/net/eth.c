@@ -35,7 +35,7 @@ int eth_setenv_enetaddr(char *name, const uchar *enetaddr)
 
 	sprintf(buf, "%pM", enetaddr);
 
-	return setenv(name, buf);
+	return setenv_force(name, buf);
 }
 
 int eth_getenv_enetaddr_by_index(const char *base_name, int index,
@@ -182,7 +182,14 @@ int eth_write_hwaddr(struct eth_device *dev, const char *base_name,
 
 	eth_getenv_enetaddr_by_index(base_name, eth_number, env_enetaddr);
 
-	if (memcmp(env_enetaddr, "\0\0\0\0\0\0", 6)) {
+	if (is_valid_ether_addr(dev->enetaddr)) {
+		eth_setenv_enetaddr_by_index(base_name, eth_number,
+					     dev->enetaddr);
+#ifndef CONFIG_OCTEON  /* Ignore this warning */
+		printf("\nWarning: %s using MAC address from net device\n",
+			dev->name);
+#endif
+	} else if (memcmp(env_enetaddr, "\0\0\0\0\0\0", 6)) {
 #ifndef CONFIG_OCTEON
 		if (memcmp(dev->enetaddr, "\0\0\0\0\0\0", 6) &&
 				memcmp(dev->enetaddr, env_enetaddr, 6)) {
@@ -195,13 +202,6 @@ int eth_write_hwaddr(struct eth_device *dev, const char *base_name,
 		}
 #endif
 		memcpy(dev->enetaddr, env_enetaddr, 6);
-	} else if (is_valid_ether_addr(dev->enetaddr)) {
-		eth_setenv_enetaddr_by_index(base_name, eth_number,
-					     dev->enetaddr);
-#ifndef CONFIG_OCTEON	/* Ignore this warning */
-		printf("\nWarning: %s using MAC address from net device\n",
-			dev->name);
-#endif
 	}
 
 	if (dev->write_hwaddr &&

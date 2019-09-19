@@ -83,6 +83,19 @@
 #include "cvmx-qlm.h"
 #include "cvmx-helper-pko3.h"
 
+#include "imt_cpld.h"
+#include "fans_mgmt.h"
+#include "leds_mgmt.h"
+#include "cortina_phys.h"
+
+#define PKO3_FULL_API  1  /* For Octeon III platforms only */
+#define ENABLE_PKI_RED 0  /* Enable / disable RED policy */
+
+static int get_cpu_temp(void);
+static int get_brd_temp(void);
+static uint8_t *get_fan_rpm(void);
+
+
 #define CACHE_LINE_ALIGN __attribute__ ((aligned(128)))
 #define ULL  unsigned long long
 #define LL   long long
@@ -141,6 +154,7 @@ typedef struct
     cvmx_pip_port_status_t  input_statistics;
     cvmx_pip_port_status_t  input_statistics_old;
     uint64_t                input_cumulative_packets;
+    uint64_t                input_cumulative_pdrops;
     uint64_t                input_cumulative_octets;
     uint64_t                input_cumulative_errors;
     uint64_t                backpressure;
@@ -1662,7 +1676,6 @@ static void build_packet_pcore(int port, int pcore)
             *ptr++ = rand();
         break;
     } /* switch */
-
     if (port_setup[port].validate)
     {
         int end_l2 = get_end_l2(port);
@@ -2470,6 +2483,7 @@ static void process_cmd_clear(uint32_t start_port, uint32_t stop_port)
 
         port_state[port].input_cumulative_packets = 0;
         port_state[port].input_cumulative_octets = 0;
+        port_state[port].input_cumulative_pdrops = 0;
         port_state[port].input_cumulative_errors = 0;
         port_state[port].output_cumulative_octets = 0;
         port_state[port].output_cumulative_packets = 0;
@@ -2534,6 +2548,7 @@ static void process_cmd_reset(uint32_t start_port, uint32_t stop_port)
             break;
         case CVMX_HELPER_INTERFACE_MODE_SRIO:
         case CVMX_HELPER_INTERFACE_MODE_XAUI:
+	case CVMX_HELPER_INTERFACE_MODE_RXAUI:
         case CVMX_HELPER_INTERFACE_MODE_XFI:
         case CVMX_HELPER_INTERFACE_MODE_10G_KR:
             p_time = 52; /* 51.2 nsec */
@@ -2614,6 +2629,7 @@ static void process_cmd_packetio(int enable)
     if (cvmx_helper_initialize_packet_io_global())
         printf("cvmx_helper_initialize_packet_io_global() failed\n");
 
+#if ENABLE_PKI_RED
     /* Enable RED so we drop if the RX path can't keep up */
     if (!is_simulation())
     {
@@ -2626,6 +2642,7 @@ static void process_cmd_packetio(int enable)
 
         cvmx_helper_setup_red(num_packet_buffers/4, num_packet_buffers/8);
     }
+#endif
     if(!octeon_has_feature(OCTEON_FEATURE_PKI)) {
         cvmx_ipd_ctl_status_t ipd_ctl_reg;
 
@@ -3649,6 +3666,7 @@ static uint64_t process_command(const char *cmd, int newline)
         PORT_STATISTIC_COMMAND("rx.mbps", input_Mbps)
         PORT_STATISTIC_COMMAND("rx.total_packets", input_cumulative_packets)
         PORT_STATISTIC_COMMAND("rx.total_octets", input_cumulative_octets)
+        PORT_STATISTIC_COMMAND("rx.total_pdrops", input_cumulative_pdrops)
         PORT_STATISTIC_COMMAND("rx.total_errors", input_cumulative_errors)
         PORT_STATISTIC_COMMAND("rx.validation_errors", input_validation_errors)
         else if (strcasecmp(command, "ilk_la") == 0)
@@ -5697,6 +5715,7 @@ someone_on: ;
     ROW(1){PRINTSTAT("Total TX packets", output_cumulative_packets);}
     ROW(0){PRINTSTAT("Total TX octets", output_cumulative_octets);}
     ROW(1){PRINTSTAT("Total RX packets", input_cumulative_packets);}
+    ROW(0){PRINTSTAT("Total RX pdrops", input_cumulative_pdrops);}
     ROW(0){PRINTSTAT("Total RX octets", input_cumulative_octets);}
     ROWNZ(input_cumulative_errors){PRINTSTAT("Total RX errors", input_cumulative_errors);}
     ROW(1){PRINTSTAT("TX packet rate", output_statistics.packets);}
@@ -5799,6 +5818,10 @@ someone_on: ;
                 (ULL)cvmx_read_csr(CVMX_FPA_QUEX_AVAILABLE(cvmx_fpa_get_wqe_pool())));
         }
     }
+    ROW(1){printf("CPU Temperature: %d C, board temperature %d C\n", get_cpu_temp(), get_brd_temp());}
+    ROW(2){uint8_t *r = get_fan_rpm();
+           printf("Fans: 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x RPM\n",
+                  *r, *(r+1), *(r+2), *(r+3), *(r+4), *(r+5), *(r+6), *(r+7));}
     ROW(0){
         /* Compute DRAM utilization */
         static uint64_t prev_ops_cnt;
@@ -6064,6 +6087,8 @@ static void update_statistics(void)
             {
                 port_state[port].input_cumulative_packets +=
                     port_state[port].input_statistics.inb_packets;
+                port_state[port].input_cumulative_pdrops +=
+                    port_state[port].input_statistics.dropped_packets;
                 port_state[port].input_cumulative_octets +=
                     port_state[port].input_statistics.inb_octets;
                 port_state[port].input_cumulative_errors +=
@@ -6311,6 +6336,15 @@ static void statistics_gatherer(void)
             }
         }
         periodic_update(1);
+
+        if ((cvmx_sysinfo_get())->board_type == CVMX_BOARD_TYPE_CUST_IM8724)
+        {
+            /* Process leds status */
+            leds_mgmt();
+
+            /* Processt fans status */
+            fans_mgmt();
+        }
     }
 }
 
@@ -6621,6 +6655,43 @@ static inline int sub_ipd_cnt(cvmx_wqe_t *work)
 }
 #endif
 
+#ifdef PKO3_FULL_API
+static int tx_pdu(uint32_t port, cvmx_wqe_t *work, int len)
+{
+    cvmx_wqe_78xx_t *wqe = (cvmx_wqe_78xx_t *)work;
+    int queue = cvmx_pko3_get_queue_base(port);
+    cvmx_pko3_pdesc_t desc;
+
+    if (cvmx_unlikely(queue < 0))
+        return -1;
+
+    cvmx_pko3_pdesc_from_wqe(&desc, (void *)work, true);
+    if (cvmx_unlikely(wqe->packet_ptr.packet_outside_wqe))
+        cvmx_pko3_pdesc_append_free(&desc,
+                     cvmx_ptr_to_phys(work), work->word0.pki.aura);
+    /* Delegate PKO frees the surrounding buffer(s) instead of analyzing packet segs */
+    desc.hdr_s->s.ii = 1;
+
+     /* Redefine packet length */
+     desc.hdr_s->s.total = len;
+
+    /* Set additional PKO_SEND_GATHER subdescriptors, if needed */
+    if (work->word0.pki.bufs > 1) {
+        cvmx_buf_ptr_pki_t pki_ptr = wqe->packet_ptr;
+        int segsz, i;
+
+        pki_ptr = *(cvmx_buf_ptr_pki_t*)(cvmx_phys_to_ptr(pki_ptr.addr - 8));
+        for (i = 1; i < work->word0.pki.bufs; i++) {
+            segsz = pki_ptr.size > len ? pki_ptr.size : len;
+            cvmx_pko3_pdesc_buf_append(&desc,
+                    cvmx_phys_to_ptr(pki_ptr.addr), segsz, work->word0.pki.aura);
+            pki_ptr = *(cvmx_buf_ptr_pki_t*)(cvmx_phys_to_ptr(pki_ptr.addr - 8));
+            len -= segsz;
+        }
+    }
+    return cvmx_pko3_pdesc_transmit(&desc, queue, NULL);
+}
+#endif
 
 /**
  * Called from cores to perform processing on work received. This is called in the
@@ -6666,6 +6737,14 @@ static packet_free_t fastpath_receive(cvmx_wqe_t *work)
     {
         int output_port = port_setup[port].bridge_port;
         /* NOTE: use a different queue than normal*/
+#ifdef PKO3_FULL_API
+        int len = cvmx_wqe_get_len(work);
+        int status = tx_pdu(output_port, work, len);
+        if (status == 0)
+            return (cvmx_likely(work->word2.s.bufs == 0)) ?
+                PACKET_DONT_FREE_WQE : PACKET_DONT_FREE;
+        return PACKET_FREE;
+#else
         uint64_t queue = cvmx_pko_get_base_queue(output_port) + 1;
         cvmx_buf_ptr_t buffer_ptr;
         cvmx_pko_command_word0_t pko_command;
@@ -6676,7 +6755,8 @@ static packet_free_t fastpath_receive(cvmx_wqe_t *work)
 
         /* Build the PKO command */
         pko_command.u64 = 0;
-        pko_command.s.segs = cvmx_wqe_get_bufs(work);
+        //pko_command.s.segs = cvmx_wqe_get_bufs(work);
+        pko_command.s.segs = (work->word2.s.bufs) ? work->word2.s.bufs: 1;
         pko_command.s.total_bytes = cvmx_wqe_get_len(work);
 
         buffer_ptr = get_packet_buffer_ptr(work);
@@ -6703,6 +6783,7 @@ static packet_free_t fastpath_receive(cvmx_wqe_t *work)
                 PACKET_DONT_FREE_WQE : PACKET_DONT_FREE;
         else
             return PACKET_FREE;
+#endif
     }
     else if (!cvmx_wqe_is_l3_ip(work))
     {
@@ -7009,7 +7090,6 @@ int main(int argc, char *argv[])
     cvmx_user_app_init();
     sysinfo = cvmx_sysinfo_get();
 
-
     if (cvmx_is_init_core())
     {
         int i;
@@ -7025,7 +7105,7 @@ int main(int argc, char *argv[])
 
 	uart_idx = sysinfo->console_uart_num;
 
-	/* parse command line arguments */
+        /* parse command line arguments */
 
         for (i = 0; i < argc; i++)
         {
@@ -7052,14 +7132,15 @@ int main(int argc, char *argv[])
 	mcr.u64 = cvmx_read_csr(CVMX_MIO_UARTX_MCR(uart_idx));
 	mcr.s.rts = 1;
 
-	if (sysinfo->board_type != CVMX_BOARD_TYPE_CUST_NS0216 &&
+        if (sysinfo->board_type != CVMX_BOARD_TYPE_CUST_NS0216 &&
             sysinfo->board_type != CVMX_BOARD_TYPE_NIC_XLE_4G &&
             sysinfo->board_type != CVMX_BOARD_TYPE_NIC_XLE_10G &&
             sysinfo->board_type != CVMX_BOARD_TYPE_NICPRO2 &&
             sysinfo->board_type != CVMX_BOARD_TYPE_NIC73 &&
             sysinfo->board_type != CVMX_BOARD_TYPE_NIC225E &&
             sysinfo->board_type != CVMX_BOARD_TYPE_SNIC10E &&
-            sysinfo->board_type != CVMX_BOARD_TYPE_RAINIER)
+            sysinfo->board_type != CVMX_BOARD_TYPE_RAINIER &&
+            sysinfo->board_type != CVMX_BOARD_TYPE_CUST_IM8724)
         {
 
             printf("About to enable flow control.\n"
@@ -7074,10 +7155,27 @@ int main(int argc, char *argv[])
             printf("Screen updates may not be reliable.\n");
 	    mcr.s.afce = 0;
         }
+
+        if (sysinfo->board_type == CVMX_BOARD_TYPE_CUST_IM8724)
+        {
+            if (!cpld_init()) {
+                printf("IM8724 CPLD init error!\n");
+                return -1;
+            }
+
+            printf("Init fans management.\n");
+            fans_init();
+
+            printf("Init leds management.\n");
+            leds_init();
+
+            printf("Init pim modules settings.\n");
+            pim_set_defines();
+        }
         cvmx_write_csr(CVMX_MIO_UARTX_MCR(uart_idx), mcr.u64);
 	cvmx_read_csr(CVMX_MIO_UARTX_MCR(uart_idx));
 
-	cpu_clock_hz = sysinfo->cpu_clock_hz;
+        cpu_clock_hz = sysinfo->cpu_clock_hz;
         if (is_simulation())
             cpu_clock_hz = 1000000;
 
@@ -7129,7 +7227,7 @@ int main(int argc, char *argv[])
             cvmx_helper_pki_set_dflt_style(node, &style_cfg);
         }
 
-        cvmx_helper_initialize_fpa(num_packet_buffers,
+        cvmx_helper_initialize_fpa(2 * num_packet_buffers,
             (packet_pool == wqe_pool) ? 0 : num_packet_buffers,
             CVMX_PKO_MAX_OUTPUT_QUEUES * 2, 0, 0);
 
@@ -7374,3 +7472,57 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+static int get_cpu_temp(void)
+{
+    static int update_count = 1;
+    static uint8_t cpu_temp = 0;
+    uint8_t temp_buf[4];
+
+    if (cvmx_sysinfo_get()->board_type != CVMX_BOARD_TYPE_CUST_IM8724)
+        return 0;
+    if (--update_count == 0) {
+        int rc;
+        if ((rc = octeon_i2c_read(1, 0x4c, 0x1, 1, temp_buf, 1)) == 0) {
+            cpu_temp = temp_buf[0];
+        }
+        update_count = 5;
+    }
+    return cpu_temp;
+}
+
+static int get_brd_temp(void)
+{
+    static int update_count = 1;
+    static uint8_t brd_temp = 0;
+    uint8_t temp_buf[4];
+
+    if (cvmx_sysinfo_get()->board_type != CVMX_BOARD_TYPE_CUST_IM8724)
+        return 0;
+    if (--update_count == 0) {
+        int rc;
+        if ((rc = octeon_i2c_read(1, 0x4c, 0x3, 1, temp_buf, 1)) == 0) {
+            brd_temp = temp_buf[0];
+        }
+        update_count = 5;
+    }
+    return brd_temp;
+}
+
+static uint8_t *get_fan_rpm(void)
+{
+    static int update_count = 1;
+    static uint8_t fan_speed[8];
+    int indx;
+
+    if (cvmx_sysinfo_get()->board_type != CVMX_BOARD_TYPE_CUST_IM8724)
+        return &fan_speed[0];
+    if (--update_count == 0) {
+        memset(&fan_speed[0], 0, sizeof(fan_speed));
+        for (indx = 0; indx < ADT7470_REG_PWM_MAX_NUMBER; indx++) {
+            fan_speed[indx] = cpld_i2c_read(0x9e, 0x0, 0x2c, ADT7470_REG_PWM(indx));
+            fan_speed[indx+4] = cpld_i2c_read(0x9e, 0x0, 0x2f, ADT7470_REG_PWM(indx));
+        }
+        update_count = 5;
+    }
+    return &fan_speed[0];
+}

@@ -1381,14 +1381,14 @@ err:
 	return ret;
 }
 
-int cs4321_init_rxaui(struct phy_device *phydev)
+int cs4321_rxaui_init(struct phy_device *phydev)
 {
 	debug("%s: Initializing RXAUI interface at address %d\n",
 	      __func__, phydev->addr);
 	return cs4321_write_multi_seq(phydev, cs4321_init_rxaui_seq);
 }
 
-int cs4321_init_xaui(struct phy_device *phydev)
+int cs4321_xaui_init(struct phy_device *phydev)
 {
 	int ret;
 	debug("%s: Initializing XAUI interface at address %d\n",
@@ -1405,7 +1405,7 @@ int cs4321_init_sgmii(struct phy_device *phydev)
 	return cs4321_write_multi_seq(phydev, cs4321_init_sgmii_seq);
 }
 
-int cs4321_reset(struct phy_device *phydev)
+static int cs4321_reset(struct phy_device *phydev)
 {
 	struct cs4321_private *p = (struct cs4321_private *)phydev->priv;
 	int ret;
@@ -1558,6 +1558,13 @@ int cs4321_read_status(struct phy_device *phydev)
 	return value < 0 ? -1 : 0;
 }
 
+struct phy_driver cs4318_driver;
+
+int cortina_cs4318_phy_init(void)
+{
+	cortina_phy_register(&cs4318_driver);
+	return 0;
+}
 
 struct phy_driver cs4321_driver;
 
@@ -1567,7 +1574,7 @@ int cortina_cs4321_phy_init(void)
 	return 0;
 }
 
-int phy_reset(struct phy_device *phydev)
+int cortina_cs4321_phy_reset(struct phy_device *phydev)
 {
 	struct cs4321_private *p = (struct cs4321_private *)phydev->priv;
 	if (!p->initialized)
@@ -1639,6 +1646,17 @@ struct phy_driver cs4321_driver = {
 	.probe = cs4321_probe,
 	.config = cs4321_config,
 	.startup = cs4321_startup,
+	.shutdown = cs4321_shutdown,
+	.reset = NULL
+};
+
+struct phy_driver cs4318_driver = {
+	.name = "Cortina CS4318",
+	.uid = 0x200223e5,
+	.mask = 0x0fffffff,	/* Cortina is weird.  chip version is 4 MSBs */
+	.features = 0,
+	.probe = cs4321_probe,
+	.config = cs4321_config,
 	.shutdown = cs4321_shutdown,
 	.reset = NULL
 };

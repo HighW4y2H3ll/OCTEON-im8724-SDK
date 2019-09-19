@@ -2523,10 +2523,11 @@ static int octeon3_eth_probe(struct platform_device *pdev)
 	}
 #endif
 
-	if (register_netdev(netdev) < 0) {
+	if ((r = register_netdev(netdev)) < 0) {
 		dev_err(&pdev->dev, "Failed to register ethernet device\n");
 		list_del(&priv->list);
 		free_netdev(netdev);
+        return r;
 	}
 	netdev_info(netdev, "Registered\n");
 	return 0;

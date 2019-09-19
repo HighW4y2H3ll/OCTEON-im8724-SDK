@@ -3100,10 +3100,13 @@ __cvmx_get_generic_8023_c22_phy_link_state(cvmx_phy_info_t *phy_info)
 
 	result.u64 = 0;
 
+	/* Do a fake read (need of read twice because per IEEE Std, this bit is lacth low). */
 	phy_basic_status = cvmx_mdio_read(phy_addr >> 8, phy_addr & 0xff, 1);
-	if (!(phy_basic_status & 0x4))	/* Check if link is up */
-		return result;			/* Link is down, return link down */
-
+	if (!(phy_basic_status & 0x4)) {        /* Check if link is up */
+		phy_basic_status = cvmx_mdio_read(phy_addr >> 8, phy_addr & 0xff, 1);
+		if (!(phy_basic_status & 0x4))
+			return result;          /* Link is down, return link down */
+	}
 	result.s.link_up = 1;
 	phy_basic_control = cvmx_mdio_read(phy_addr >> 8, phy_addr & 0xff, 0);
 	/* Check if autonegotiation is enabled and completed */
@@ -3444,6 +3447,14 @@ void cvmx_update_rx_activity_led(int xiface, int index, bool check_time)
 					cvmx_clock_get_count(CVMX_CLOCK_CORE);
 }
 
+/*
+ * cvmx_helper_adjust_bgx_link_state_by_phy_settings()
+ * is a function pointer to board specific callback, which adjusts bgx pcs settings
+ * with phy auto-negoatiated data.
+ */
+CVMX_SHARED int(*cvmx_helper_adjust_bgx_link_state_by_phy_settings)(int xiface, int index,
+						cvmx_helper_link_info_t *link_info) = NULL;
+
 /**
  * @INTERNAL
  * This function is used ethernet ports link speed. This functions uses the
@@ -3498,7 +3509,20 @@ cvmx_helper_link_info_t __cvmx_helper_board_link_get_from_dt(int ipd_port)
 					else
 						result.s.speed >>= 2;
 				} else {
-					result.s.speed = 1000;
+					if (!cvmx_helper_adjust_bgx_link_state_by_phy_settings ||
+					    !cvmx_helper_adjust_bgx_link_state_by_phy_settings(xiface, index, &result))
+					{
+						struct cvmx_xiface xi = cvmx_helper_xiface_to_node_interface(xiface);
+						cvmx_bgxx_gmp_gmi_prtx_cfg_t gmp_prtx_cfg;
+
+						gmp_prtx_cfg.u64 = cvmx_read_csr_node(xi.node, CVMX_BGXX_GMP_GMI_PRTX_CFG(xiface, index));
+						if (gmp_prtx_cfg.s.speed == 0 && gmp_prtx_cfg.s.speed_msb == 1)
+							result.s.speed = 10;
+						else if (gmp_prtx_cfg.s.speed == 0 && gmp_prtx_cfg.s.speed_msb == 0)
+							result.s.speed = 100;
+						else
+							result.s.speed = 1000;
+					}
 				}
 				break;
 			case CVMX_HELPER_INTERFACE_MODE_RXAUI:

@@ -1,0 +1,9 @@
+#
+# Niagara Platform Specific Drivers
+#
+
+config NIAGARA_PLATFORM
+	tristate "Niagara Platform Support"
+	depends on I2C 
+	depends on I2C_MUX
+	select I2C_ALGOBIT

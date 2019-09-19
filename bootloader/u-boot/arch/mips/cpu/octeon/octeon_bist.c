@@ -488,7 +488,6 @@ int octeon_bist_7XXX(int node)
 
 	bist_failures += displayErrorReg_1_node(node, "CVMX_IOBN_BIST_STATUS",
 						CVMX_IOBN_BIST_STATUS, 0, ~0ull);
-
 	bist_val = cvmx_read_csr_node(node, CVMX_IOBN_PP_BIST_STATUS);
 	bist_val &= ciu_fuse;
 	if (bist_val && iob_bist_status)

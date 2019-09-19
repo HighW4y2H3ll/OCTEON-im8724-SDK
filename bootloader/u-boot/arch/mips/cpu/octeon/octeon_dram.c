@@ -137,7 +137,7 @@ get_octeon3_ddr3_reference_clock(uint32_t alt_refclk,
 		ddr_type = get_ddr_type(dimm_config, 0);
 		spd_dimm_type = get_dimm_module_type(dimm_config, 0, ddr_type);
 
-		debug("ddr type: 0x%x, dimm type: 0x%x\n", ddr_type, spd_dimm_type);
+		printf("ddr type: 0x%x, dimm type: 0x%x\n", ddr_type, spd_dimm_type);
 		/* Is DDR4 and RDIMM just to be sure. */
 		if ((ddr_type == DDR4_DRAM) &&
                     ((spd_dimm_type == 1) || (spd_dimm_type == 5) || (spd_dimm_type == 8))) {
@@ -406,7 +406,7 @@ int octeon_init_dram(void)
 
 		ddr_ref_hertz = getenv_ulong("ddr_ref_hertz", 10, ddr_ref_hertz);
 
-		debug("Initializing DDR, clock = %uhz, reference = %uhz\n",
+		printf("Initializing DDR, clock = %uhz, reference = %uhz\n",
 		      ddr_hertz, ddr_ref_hertz);
 #ifdef CONFIG_OCTEON_OCX
 		cvmx_coremask_for_each_node(node, gd->arch.node_mask) {

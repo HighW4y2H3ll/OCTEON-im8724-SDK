@@ -182,15 +182,35 @@ static int abortboot_keyed(int bootdelay)
 
 # else	/* !defined(CONFIG_AUTOBOOT_KEYED) */
 
-#ifdef CONFIG_MENUKEY
+#if defined(CONFIG_MENUKEY) || defined(CONFIG_STOPKEY)
 static int menukey = 0;
+#endif
+
+#ifdef CONFIG_STOPKEY
+#define MENUKEY_S      83
+#define MENUKEY_T      84
+#define MENUKEY_O      79
+#define MENUKEY_P      80
+
+static const char stopkey_buf[] = {
+      MENUKEY_S,
+      MENUKEY_T,
+      MENUKEY_O,
+      MENUKEY_P,
+      0
+};
+
+static int stopkey_ind = 0;
 #endif
 
 static int abortboot_normal(int bootdelay)
 {
 	int abort = 0;
 	unsigned long ts;
-
+#ifdef CONFIG_STOPKEY
+      stopkey_ind = 0;
+	printf("Type '%s' or ", stopkey_buf);
+#endif
 #ifdef CONFIG_MENUPROMPT
 	printf(CONFIG_MENUPROMPT);
 #else
@@ -218,11 +238,28 @@ static int abortboot_normal(int bootdelay)
 		ts = get_timer(0);
 		do {
 			if (tstc()) {	/* we got a key press	*/
-				abort  = 1;	/* don't auto boot	*/
-				bootdelay = 0;	/* no more delay	*/
-# ifdef CONFIG_MENUKEY
-				menukey = getc();
-# else
+#if defined(CONFIG_MENUKEY) || defined(CONFIG_STOPKEY)
+                        menukey = getc();
+#ifdef CONFIG_STOPKEY
+                        if((menukey & ~(1 << 5)) == stopkey_buf[stopkey_ind]) {
+                              printf("\b\b\b\b%c    ", menukey);
+                              stopkey_ind++;
+                              bootdelay++;
+
+                              if(!stopkey_buf[stopkey_ind]) {
+                                    abort = 1;
+                                    bootdelay = 0;  /* no more delay        */
+                              }
+                              continue;
+                        }
+#endif
+#ifdef CONFIG_MENUKEY
+				if (menukey == CONFIG_MENUKEY) {
+					abort = 1;
+					bootdelay = 0;  /* no more delay        */
+				}
+#endif
+# else // CONFIG_STOPKEY || CONFIG_MENUKEY
 				(void) getc();  /* consume input	*/
 # endif
 				break;

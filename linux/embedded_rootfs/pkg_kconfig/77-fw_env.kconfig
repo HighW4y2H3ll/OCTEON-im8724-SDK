@@ -1,0 +1,5 @@
+config CONFIG_fw_env
+	bool "fw_env"
+	default n
+	help
+		Tool that helping to access firmware environment on flash

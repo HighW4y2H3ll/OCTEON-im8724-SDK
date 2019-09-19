@@ -1,0 +1,6 @@
+config CONFIG_board_mgmt
+	bool "board_mgmt"
+	default y
+	help
+		Pluggable modules, front-panel and management
+		leds processing service

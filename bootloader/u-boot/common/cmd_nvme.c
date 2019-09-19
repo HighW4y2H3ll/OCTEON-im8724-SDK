@@ -46,7 +46,9 @@ int __nvme_initialize(void)
 		nvme_dev_desc[i].log2blksz = LOG2(nvme_dev_desc[i].blksz);
 		nvme_dev_desc[i].block_read = nvme_read;
 		nvme_dev_desc[i].block_write = nvme_write;
+	}
 
+	for (i = 0; i < CONFIG_SYS_NVME_MAX_DEVICE; i++) {
 		rc = init_nvme(i);
 		if (!rc) {
 			scan_device[i] = true;
@@ -148,7 +150,7 @@ static int do_nvme_part(cmd_tbl_t *cmdtp, int flag,
 		int argc, char * const argv[])
 {
 	if (argc > 1) {
-		int devnum = (int)simple_strtoul(argv[2], NULL, 10);
+		int devnum = (int)simple_strtoul(argv[1], NULL, 10);
 		if (blk_print_part_devnum(IF_TYPE_NVME, devnum)) {
 			printf("\nNVME device %d not available\n", devnum);
 			return CMD_RET_FAILURE;

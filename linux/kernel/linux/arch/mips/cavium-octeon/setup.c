@@ -416,6 +416,11 @@ static void __init init_octeon_system_type(void)
 {
 	char const *board_type;
 
+	if (octeon_bootinfo->board_type == CVMX_BOARD_TYPE_CUST_IM8724) {
+		snprintf(octeon_system_type, sizeof(octeon_system_type), "IM-8724S (%s)",
+			octeon_model_get_string(read_c0_prid()));
+		return;
+	}
 	board_type = cvmx_board_type_to_string(octeon_bootinfo->board_type);
 	if (board_type == NULL) {
 		struct device_node *root;

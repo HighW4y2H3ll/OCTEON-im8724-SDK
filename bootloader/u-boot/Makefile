@@ -8,7 +8,7 @@
 VERSION = 2013
 PATCHLEVEL = 07
 SUBLEVEL =
-EXTRAVERSION =
+EXTRAVERSION = $(shell git rev-parse --short HEAD)
 ifneq "$(SUBLEVEL)" ""
 U_BOOT_VERSION = $(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
 else
@@ -283,6 +283,7 @@ LIBS-y += drivers/mtd/spi/libspi_flash.o
 LIBS-y += drivers/nvme/libnvme.o
 LIBS-y += drivers/net/libnet.o
 LIBS-y += drivers/net/phy/libphy.o
+LIBS-$(CONFIG_PHY_MARVELL88X5113) += drivers/net/phy/marvell88x5113/libmarvell88x5113.o
 LIBS-y += drivers/pci/libpci.o
 LIBS-y += drivers/pcmcia/libpcmcia.o
 LIBS-y += drivers/power/libpower.o \

@@ -120,6 +120,12 @@ int eeprom_read (unsigned dev_addr, unsigned offset, uchar *buffer, unsigned cnt
 	unsigned blk_off;
 	int rcode = 0;
 
+#if defined(CONFIG_SYS_EEPROM_I2C_BUS_NUM)
+	i2c_set_bus_num(CONFIG_SYS_EEPROM_I2C_BUS_NUM);
+#else
+	i2c_set_bus_num(0);
+#endif
+
 	/* Read data until done or would cross a page boundary.
 	 * We must write the address again when changing pages
 	 * because the next page may be in a different device.
@@ -201,6 +207,13 @@ int eeprom_write (unsigned dev_addr, unsigned offset, uchar *buffer, unsigned cn
 	uchar	contr_reg[2];
 	uchar	ctrl_reg_v;
 	int	i;
+#endif
+
+#if defined(CONFIG_I2C_ENV_EEPROM_BUS)
+	int old_bus = i2c_get_bus_num();
+
+	if (old_bus != CONFIG_I2C_ENV_EEPROM_BUS)
+		i2c_set_bus_num(CONFIG_I2C_ENV_EEPROM_BUS);
 #endif
 
 #if defined(CONFIG_SYS_EEPROM_WREN)
@@ -363,6 +376,11 @@ int eeprom_write (unsigned dev_addr, unsigned offset, uchar *buffer, unsigned cn
 #if defined(CONFIG_SYS_EEPROM_WREN)
 	eeprom_write_enable (dev_addr,0);
 #endif
+
+#if defined(CONFIG_I2C_ENV_EEPROM_BUS)
+	if (old_bus != CONFIG_I2C_ENV_EEPROM_BUS)
+		i2c_set_bus_num(old_bus);
+#endif
 	return rcode;
 }
 
@@ -515,6 +533,10 @@ int spi_eeprom_read(unsigned dev_addr, unsigned offset, uchar *buffer,
 		buffer += len;
 		offset += len;
 	}
+
+#if defined(CONFIG_SYS_EEPROM_I2C_BUS_NUM)
+	i2c_set_bus_num(0);
+#endif
 
 	return rcode;
 }

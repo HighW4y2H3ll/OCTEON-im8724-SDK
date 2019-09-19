@@ -158,7 +158,7 @@ int main(int argc, const char *argv[])
     }
 
     /* Initialize ptplib */
-    if (ptplib_initialize(&ptp, PTPLIB_FLAGS_USE_MULTICAST | PTPLIB_FLAGS_USE_UNICAST))
+    if (ptplib_initialize(&ptp, PTPLIB_FLAGS_USE_MULTICAST | PTPLIB_FLAGS_USE_UNICAST, PTPLIB_USE_DEFAULT_CLOCK, 0))
         return -1;
 
     /* Add packet interface */

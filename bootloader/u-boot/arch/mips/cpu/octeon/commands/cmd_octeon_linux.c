@@ -108,6 +108,8 @@ void setup_linux_app_boot_info(cvmx_coremask_t *linux_core_mask)
 	      sizeof(*labi), labi->start_core0_addr);
 }
 
+extern void board_pre_exec(void);
+
 int do_bootoctlinux(cmd_tbl_t * cmdtp, int flag, int argc, char *const argv[])
 {
 	uint64_t entry_addr = 0;
@@ -296,6 +298,9 @@ int do_bootoctlinux(cmd_tbl_t * cmdtp, int flag, int argc, char *const argv[])
 	/* Check environment for forceboot flag */
 	if (getenv("forceboot"))
 		forceboot |= 1;
+
+	/* Run board specific pre executive preparations */
+	board_pre_exec();
 
 	setup_linux_app_boot_info(&core_mask);
 

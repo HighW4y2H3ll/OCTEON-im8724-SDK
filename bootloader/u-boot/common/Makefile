@@ -218,6 +218,7 @@ else
 COBJS-y += env_nowhere.o
 endif
 endif
+
 # core command
 COBJS-y += cmd_nvedit.o
 #environment
@@ -240,6 +241,7 @@ COBJS-$(CONFIG_FIT) += image-fit.o
 COBJS-$(CONFIG_FIT_SIGNATURE) += image-sig.o
 COBJS-y += memsize.o
 COBJS-y += stdio.o
+COBJS-y += cmd_octeon_readreg.o
 
 
 COBJS	:= $(sort $(COBJS-y))
@@ -248,7 +250,9 @@ SRCS	:= $(COBJS:.o=.c) $(XCOBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(COBJS))
 XOBJS	:= $(addprefix $(obj),$(XCOBJS))
 
-CPPFLAGS += -I..
+CFLAGS += -I$(TOPDIR)/arch/mips/include/asm/arch-octeon -Wno-unused-value -Wno-unused-but-set-variable -Wno-unused-variable
+
+CPPFLAGS += -I.. -I$(TOPDIR)/arch/mips/include/asm/arch-octeon -Wno-unused-value -Wno-unused-but-set-variable -Wno-unused-variable
 
 all:	$(LIB) $(XOBJS)
 

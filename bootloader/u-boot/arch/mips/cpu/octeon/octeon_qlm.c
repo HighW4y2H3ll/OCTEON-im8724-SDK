@@ -5041,7 +5041,9 @@ int octeon_configure_qlm_cn78xx(int node, int qlm, int baud_mhz,
 	}
 
 	/* Reduce the voltage amplitude coming from Marvell PHY and also change
-	   DFE threshold settings for RXAUI interface */
+	   DFE threshold settings for RXAUI interface. For Cortina PHY slightly different
+	   parameters are required (0xcf6f -> 0xff6f, 0x12 -> 0x13). */
+
 	if (is_bgx && mode == CVMX_QLM_MODE_RXAUI) {
 		int l;
 		for (l = 0; l < 2; l++) {
@@ -5049,11 +5051,11 @@ int octeon_configure_qlm_cn78xx(int node, int qlm, int baud_mhz,
 			cvmx_gserx_lanex_tx_cfg_0_t cfg0;
 			/* Change the Q/QB error sampler 0 threshold from 0xD to 0xF */
 			cfg4.u64 = cvmx_read_csr_node(node, CVMX_GSERX_LANEX_RX_CFG_4(l, qlm));
-			cfg4.s.cfg_rx_errdet_ctrl = 0xcf6f;
+			cfg4.s.cfg_rx_errdet_ctrl = 0xff6f;
 			cvmx_write_csr_node(node, CVMX_GSERX_LANEX_RX_CFG_4(l, qlm), cfg4.u64);
 			/* Reduce the voltage swing to roughly 460mV */
 			cfg0.u64 = cvmx_read_csr_node(node, CVMX_GSERX_LANEX_TX_CFG_0(l, qlm));
-			cfg0.s.cfg_tx_swing = 0x12;
+			cfg0.s.cfg_tx_swing = 0x13;
 			cvmx_write_csr_node(node, CVMX_GSERX_LANEX_TX_CFG_0(l, qlm), cfg0.u64);
 		}
 	}

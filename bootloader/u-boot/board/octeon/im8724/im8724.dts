@@ -1,0 +1,1786 @@
+/dts-v1/;
+/*
+ * Cavium Inc. EVB CN7800
+ */
+/ {
+	model = "cavium,im8724";
+	compatible = "cavium,im8724";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	soc@0 {
+		interrupt-parent = <&ciu3>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu3: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0x10000 0x10000000  0>,
+				 <1 0  0       0x1e000000  0x10000>,
+				 <2 0  0x10000 0x30000000  0>,
+				 <3 0  0x10000 0x40000000  0>,
+				 <4 0  0x10000 0x50000000  0>,
+				 <5 0  0x10000 0x60000000  0>,
+				 <6 0  0x10000 0x70000000  0>,
+				 <7 0  0x10000 0x80000000  0>;
+                        cavium,cs-config@1 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <1>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <10>;
+				cavium,t-oe   = <160>;
+				cavium,t-we   = <100>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <0>;
+				cavium,t-pause  = <50>;
+				cavium,t-wait   = <20>;
+				cavium,t-page   = <300>;
+				cavium,t-rd-dly = <0>;
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+				cavium,ale-mode  = <1>;
+                        };
+			imcpld: cpld@1,0 {
+				compatible = "imt,im8724-cpld";
+				reg = <1 0 0x100>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+			};
+		};
+
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+			cavium,board-trim = "0,notrev1";
+		};
+
+		uart1: serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		gpio0: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-7890-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *                2 - edge falling
+			 *                4 - level active high
+			 *                8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0x03000 4>, <0x03001 4>, <0x03002 4>, <0x03003 4>,
+				     <0x03004 4>, <0x03005 4>, <0x03006 4>, <0x03007 4>,
+				     <0x03008 4>, <0x03009 4>, <0x0300a 4>, <0x0300b 4>,
+				     <0x0300c 4>, <0x0300d 4>, <0x0300e 4>, <0x0300f 4>;
+		};
+
+		mmc: mmc@1180000002000 {
+			compatible = "cavium,octeon-7890-mmc";
+			reg = <0x11800 0x00002000 0x0 0x100>,
+			      <0x11800 0x00000180 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* EMM_INT_BUF_DONE,
+			   EMM_INT_CMD_DONE,
+			   EMM_INT_DMA_DONE,
+			   EMM_INT_CMD_ERR,
+			   EMM_INT_DMA_ERR,
+			   EMM_INT_SWITCH_DONE,
+			   EMM_INT_SWITCH_ERR,
+			   EMM_DMA_DONE,
+			   EMM_DMA_FIFO*/
+			interrupts = <0x09040 1>,
+				     <0x09041 1>,
+				     <0x09042 1>,
+				     <0x09043 1>,
+				     <0x09044 1>,
+				     <0x09045 1>,
+				     <0x09046 1>,
+				     <0x09000 1>,
+				     <0x09001 1>;
+
+			/* Power on GPIO 8, active high */
+			power-gpios = <&gpio0 8 0>;
+
+			mmc-slot@0 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <0>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <40000000>;
+				non-removable;
+				bus-width = <8>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+			};
+			mmc-slot@1 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <1>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <25000000>;
+				wp-gpios = <&gpio0 19 0>; /* active high */
+				cd-gpios = <&gpio0 17 1>; /* active low */
+				bus-width = <4>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <4>;
+			};
+		};
+
+		/* MDIO */
+		smi0: mdio@1180000003800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003800 0x0 0x40>;
+
+			phy0: ethernet-phy@0 {
+				compatible = "vitesse,vsc8221", "ethernet-phy-ieee802.3-c22";
+				cavium,qlm-trim = "3,sgmii";
+				interrupts = <0 8>;
+				reg = <0>;
+			};
+		};
+
+		smi1: mdio@1180000003880 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003880 0x0 0x40>;
+
+			phy110: ethernet-phy@1 {
+				cavium,qlm-trim = "0,rxaui";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "rxaui";
+				reg = <0x0>;
+			};
+			phy120: ethernet-phy@2 {
+				cavium,qlm-trim = "0,rxaui";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "rxaui";
+				reg = <0x1>;
+			};
+			phy130: ethernet-phy@3 {
+				cavium,qlm-trim = "1,rxaui";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "rxaui";
+				reg = <0x2>;
+			};
+			phy140: ethernet-phy@4 {
+				cavium,qlm-trim = "1,rxaui";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "rxaui";
+				reg = <0x3>;
+			};
+
+			phy111: ethernet-phy@5 {
+				cavium,qlm-trim = "0,sgmii";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "sgmii";
+				reg = <0x0>;
+			};
+			phy121: ethernet-phy@6 {
+				cavium,qlm-trim = "0,sgmii";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "sgmii";
+				reg = <0x1>;
+			};
+			phy131: ethernet-phy@7 {
+				cavium,qlm-trim = "1,sgmii";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "sgmii";
+				reg = <0x2>;
+			};
+			phy141: ethernet-phy@8 {
+				cavium,qlm-trim = "1,sgmii";
+				compatible = "cortina,cs4318";
+				cortina,host-mode = "sgmii";
+				reg = <0x3>;
+			};
+		};
+
+		smi2: mdio@1180000003900 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003900 0x0 0x40>;
+
+			/* Please refer to the HRM for the PCTL values from the
+			 * SMI_DRV_CTL register.  For CN7XXX use 4 for 75 ohm,
+			 * 6 for 50 ohm (default) and 7 for 40 ohm.  For CN63XX
+			 * use 0x13 (default) for a 3.3v supply
+			 * (assuming 50 ohm) and0x17 for 2.5v. Note: this value
+			 * applies to all MDIO interfaces.  These values are
+			 * ignored for CN3XXX and CN5XXX.
+			 */
+			cavium,pctl-drive-strength = <7>;
+
+			/* Please refer to the HRM for the NCTL values from the
+			 * SMI_DRV_CTL register.  For CN7XXX use 4 for 75 ohm,
+			 * 6 for 50 ohm (default) and 7 for 40 ohm.  For CN63XX
+			 * use 0x0F (default) for a 3.3v supply
+			 * (assuming 50 ohm) and 0x13 for 2.5v. Note: this value
+			 * applies to all MDIO interfaces.  These values are
+			 * ignored for CN3XXX and CN5XXX.
+			 */
+			cavium,nctl-drive-strength = <7>;
+
+			/* The CS4343 is a really confusing device.  die 0 has
+			 * the lsb of the address set to 1 and die 1 has the
+			 * lsb set to 0.
+			 *
+			 * Furthermore, the slices are addressed with offsets
+			 * 0x0000, 0x1000, 0x2000, 0x3000 for die 0 (addr 1) and
+			 * 0x3000, 0x2000, 0x1000, 0x0000 for die 1 (addr 0).
+			 *
+			 * So to talk with the first slice the lsb of the mdio
+			 * address would be 1 and the offset for the registers
+			 * would be 0, but to talk to slice 4, the mdio address
+			 * would have bit 0 clear and use offset 0x3000.
+			 */
+
+			/* Bay A */
+			mphy30: ethernet-phy-nexus@0 {
+				reg = <0x1>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4343", "ethernet-phy-nexus";
+
+				/* The Cortina CS4343 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy300: ethernet-phy@0 {
+					compatible = "cortina,cs4343-slice";
+					reg = <0>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x0000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x1c>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <8>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x1c>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0xc>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x1c>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <8>;
+				};
+				phy301: ethernet-phy@1 {
+					compatible = "cortina,cs4343-slice";
+					reg = <1>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x1000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x1c>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <8>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x1b>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x8>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x1c>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <8>;
+				};
+				phy302: ethernet-phy@2 {
+					compatible = "cortina,cs4343-slice";
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x2000>;
+					reg = <2>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x19>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <6>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x6>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x19>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy303: ethernet-phy@3 {
+					compatible = "cortina,cs4343-slice";
+					reg = <3>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x3000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x19>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <5>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x19>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <7>;
+				};
+			};
+
+			mphy31: ethernet-phy-nexus@1 {
+				reg = <0x0>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4343", "ethernet-phy-nexus";
+
+				phy310: ethernet-phy@0 {
+					compatible = "cortina,cs4343-slice";
+					reg = <0>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x3000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x10>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <7>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x7>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x10>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <7>;
+				};
+				phy311: ethernet-phy@1 {
+					compatible = "cortina,cs4343-slice";
+					reg = <1>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x2000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x16>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <6>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x7>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x16>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy312: ethernet-phy@2 {
+					compatible = "cortina,cs4343-slice";
+					reg = <2>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x1000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x17>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <6>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x17>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy313: ethernet-phy@3 {
+					compatible = "cortina,cs4343-slice";
+					reg = <3>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x0000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x18>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <5>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x18>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <5>;
+				};
+			};
+		};
+
+		smi3: mdio@1180000003980 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003980 0x0 0x40>;
+
+			cavium,pctl-drive-strength = <7>;
+			cavium,nctl-drive-strength = <7>;
+
+			/* Bay B */
+			mphy20: ethernet-phy-nexus@0 {
+				reg = <0x1>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4343", "ethernet-phy-nexus";
+
+				phy200: ethernet-phy@0 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x0000>;
+					reg = <0>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x1c>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <8>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x1c>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0xc>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x1c>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <8>;
+				};
+				phy201: ethernet-phy@1 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x1000>;
+					reg = <1>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x1c>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <8>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x1b>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x8>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x1c>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <8>;
+				};
+				phy202: ethernet-phy@2 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x2000>;
+					reg = <2>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x19>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <6>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x6>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x19>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy203: ethernet-phy@3 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x3000>;
+					reg = <3>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x19>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <5>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x19>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <7>;
+				};
+			};
+
+			mphy21: ethernet-phy-nexus@1 {
+				reg = <0x0>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4343", "ethernet-phy-nexus";
+
+				phy210: ethernet-phy@0 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x3000>;
+					reg = <0>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x10>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <7>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x7>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x10>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <7>;
+				};
+				phy211: ethernet-phy@1 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x2000>;
+					reg = <1>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x16>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <6>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x7>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x16>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy212: ethernet-phy@2 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x1000>;
+					reg = <2>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x17>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <6>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x17>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy213: ethernet-phy@3 {
+					compatible = "cortina,cs4343-slice";
+					slice_offset = <0x0000>;
+					reg = <3>;
+
+					sr-stx-cmode-res = <3>;
+					sr-stx-drv-lower-cm = <8>;
+					sr-stx-level = <0x18>;
+					sr-stx-pre-peak = <1>;
+					sr-stx-muxsubrate-sel = <0>;
+					sr-stx-post-peak = <5>;
+
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x18>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <5>;
+				};
+			};
+		};
+
+		/* BGX 0*/
+		ethernet-mac-nexus@11800e0000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe0000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* SerDes 0 (QLM0.0-1, RXAUI) */
+			ethernet-mac@0 {
+				cavium,qlm-trim = "0,rxaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy110>;
+			};
+			/* SerDes 1 (QLM0.2-3, RXAUI) */
+			ethernet-mac@1 {
+				cavium,qlm-trim = "0,rxaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy120>;
+			};
+			/* SerDes 0 (QLM0.0-1, SGMII) */
+			ethernet-mac@2 {
+				cavium,qlm-trim = "0,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0x0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy111>;
+			};
+			/* SerDes 1 (QLM0.2-3, SGMII) */
+			ethernet-mac@3 {
+				cavium,qlm-trim = "0,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0x2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy121>;
+			};
+		};
+
+		/* BGX 1 */
+		ethernet-mac-nexus@11800e1000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe1000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* SerDes 0 (QLM3.0 SGMII), QLM1 alternative */
+			ethernet-mac@0 {
+				cavium,qlm-trim = "3,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy0>;
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+			};
+			/* SerDes 4 (QLM1.0-1, RXAUI), QLM3 alternative */
+			ethernet-mac@1 {
+				cavium,qlm-trim = "1,rxaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy130>;
+			};
+			/* SerDes 5 (QLM1.2-3, RXAUI), QLM3 alternative */
+			ethernet-mac@2 {
+				cavium,qlm-trim = "1,rxaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy140>;
+			};
+			/* SerDes 4 (QLM1.0-1, SGMII), QLM3 alternative */
+			ethernet-mac@3 {
+				cavium,qlm-trim = "1,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0x0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy131>;
+			};
+			/* SerDes 5 (QLM1.2-3, SGMII), QLM3 alternative */
+			ethernet-mac@4 {
+				cavium,qlm-trim = "1,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0x2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy141>;
+			};
+		};
+
+		/* BGX 2 */
+		ethernet-mac-nexus@11800e2000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe2000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Bay B, SerDes 5-8 (QLM.4.0-4.3 XFI) */
+			ethernet-mac@0 {
+				cavium,qlm-trim = "4,xfi","4,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy210>;
+			};
+			ethernet-mac@1 {
+				cavium,qlm-trim = "4,xfi","4,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy211>;
+			};
+			ethernet-mac@2 {
+				cavium,qlm-trim = "4,xfi","4,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy212>;
+			};
+			ethernet-mac@3 {
+				cavium,qlm-trim = "4,xfi","4,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy213>;
+			};
+			ethernet-mac@4 {
+				cavium,qlm-trim = "4,xlaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&mphy21>;
+			};
+			ethernet-mac@5 {
+				cavium,qlm-trim = "4,gearbox";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@6 {
+				cavium,qlm-trim = "4,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@7 {
+				cavium,qlm-trim = "4,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@8 {
+				cavium,qlm-trim = "4,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@9 {
+				cavium,qlm-trim = "4,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* BGX 3 */
+		ethernet-mac-nexus@11800e3000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe3000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Bay B, SerDes 1-4 (QLM.5.0-5.3 XFI) */
+			ethernet-mac@0 {
+				cavium,qlm-trim = "5,xfi","5,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy200>;
+			};
+			ethernet-mac@1 {
+				cavium,qlm-trim = "5,xfi","5,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy201>;
+			};
+			ethernet-mac@2 {
+				cavium,qlm-trim = "5,xfi","5,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy202>;
+			};
+			ethernet-mac@3 {
+				cavium,qlm-trim = "5,xfi","5,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy203>;
+			};
+			ethernet-mac@4 {
+				cavium,qlm-trim = "5,xlaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&mphy20>;
+			};
+			ethernet-mac@5 {
+				cavium,qlm-trim = "5,gearbox";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@6 {
+				cavium,qlm-trim = "5,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@7 {
+				cavium,qlm-trim = "5,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@8 {
+				cavium,qlm-trim = "5,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@9 {
+				cavium,qlm-trim = "5,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* BGX 4*/
+		ethernet-mac-nexus@11800e4000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe4000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Bay A, SerDes 5-8 (QLM.6.0-6.3 XFI) */
+			ethernet-mac@0 {
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy310>;
+			};
+			ethernet-mac@1 {
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy311>;
+			};
+			ethernet-mac@2 {
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy312>;
+			};
+			ethernet-mac@3 {
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy313>;
+			};
+			ethernet-mac@4 {
+				cavium,qlm-trim = "6,xlaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&mphy31>;
+			};
+			ethernet-mac@5 {
+				cavium,qlm-trim = "6,gearbox";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@6 {
+				cavium,qlm-trim = "6,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@7 {
+				cavium,qlm-trim = "6,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@8 {
+				cavium,qlm-trim = "6,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@9 {
+				cavium,qlm-trim = "6,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* BGX 5 */
+		ethernet-mac-nexus@11800e5000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe5000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Bay A, SerDes 1-4 (QLM.7.0-7.3 XFI) */
+			ethernet-mac@0 {
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy300>;
+			};
+			ethernet-mac@1 {
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy301>;
+			};
+			ethernet-mac@2 {
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy302>;
+			};
+			ethernet-mac@3 {
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				phy-handle = <&phy303>;
+			};
+			ethernet-mac@4 {
+				cavium,qlm-trim = "7,xlaui";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&mphy30>;
+			};
+			ethernet-mac@5 {
+				cavium,qlm-trim = "7,gearbox";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@6 {
+				cavium,qlm-trim = "7,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@7 {
+				cavium,qlm-trim = "7,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@8 {
+				cavium,qlm-trim = "7,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@9 {
+				cavium,qlm-trim = "7,gearbox_10g";
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* TWSI */
+		twsi0: i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b000 1>, <0x0b001 1>, <0x0b002 1>;
+			clock-frequency = <100000>;
+
+			/* NOTE: spd is not quite right for DDR4.  Currently
+			 * Linux does not support the DDR4 SPD EEPROM.
+			 */
+			ddr0-dimm0@50 {
+				compatible = "spd";
+				reg = <0x50>;
+			};
+			ddr0-dimm1@51 {
+				compatible = "spd";
+				reg = <0x51>;
+			};
+			ddr0-dimm1@52 {
+				compatible = "spd";
+				reg = <0x52>;
+			};
+			ddr0-dimm1@53 {
+				compatible = "spd";
+				reg = <0x53>;
+			};
+		};
+		twsi1: i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b100 1>, <0x0b101 1>, <0x0b102 1>;
+			clock-frequency = <100000>;
+
+			tlv-eeprom@54 {
+				compatible = "atmel,24c256";
+				reg = <0x54>;
+				pagesize = <64>;
+			};
+			rtc@6f {
+				compatible = "microchip,mcp7941x";
+				reg = <0x6f>;
+			};
+			tmp@4c {
+				compatible = "maxim,max6699";
+				reg = <0x4c>;
+			};
+		};
+
+		/* USB 3.0 */
+		uctl: uctl@1180068000000 {
+			compatible = "cavium,octeon-7130-usb-uctl";
+			reg = <0x11800 0x68000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* Only 100MHz allowed */
+			refclk-frequency = <100000000>;
+			/* Only "dlmc_ref_clk0" is supported */
+			refclk-type-ss = "dlmc_ref_clk0";
+			/* Only "dlmc_ref_clk0" is supported */
+			refclk-type-hs = "dlmc_ref_clk0";
+
+			xhci@1680000000000 {
+				compatible = "cavium,octeon-7130-xhci","synopsys,dwc3";
+				reg = <0x16800 0x00000000 0x10 0x0>;
+				interrupts = <0x68080 4>; /* UAHC_IMAN, level */
+			};
+		};
+	};
+};

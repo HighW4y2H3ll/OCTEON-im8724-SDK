@@ -77,7 +77,7 @@ static const char *mode_to_str[] = {
  *
  * Die 0 has bit 0 set in the MDIO address whereas die 1 has bit 0 clear,
  * which seems totally backwards.
- */
+	 */
 static const uint16_t cs4224_pp_sku_cs4343_offset[8] = {
 	0x0000, 0x1000, 0x2000, 0x3000, 0x3000, 0x2000, 0x1000, 0x0000
 };
@@ -139,6 +139,13 @@ int cortina_phy_reset(struct phy_device *phydev)
 	return 0;
 }
 
+int cs4224_mmi_bus(struct mii_dev *bus)
+{
+	return 1;
+}
+
+int cs4224_mmi_bus(struct mii_dev *bus) __attribute__((weak));
+
 /**
  * get_phy_id - reads the specified addr for its ID.
  * @bus: the target MII bus
@@ -153,14 +160,16 @@ static int cortina_get_phy_id(struct mii_dev *bus, int addr, uint32_t *phy_id)
 	int phy_reg;
 	bool finished;
 #ifdef CONFIG_PHY_CORTINA_CS4223
-	int retries = 5000;
+	if (cs4224_mmi_bus(bus)) {
+		int retries = 5000;
 
-	/* Wait for firmware to finish loading */
-	do {
-		finished = cs4224_is_eeprom_finished(bus, addr);
-		if (!finished)
-			mdelay(1);
-	} while (retries-- > 0 && !finished);
+		/* Wait for firmware to finish loading */
+		do {
+			finished = cs4224_is_eeprom_finished(bus, addr);
+			if (!finished)
+				mdelay(1);
+		} while (retries-- > 0 && !finished);
+	}
 #endif
 	/* The Cortina PHY stores the PHY id at addresses 0 and 1 */
 	phy_reg = bus->read(bus, addr, 0, CORTINA_GLOBAL_CHIP_ID_MSB);
@@ -258,7 +267,7 @@ struct phy_device *cortina_phy_device_create(struct mii_dev *bus,
 	dev->drv = cortina_get_phy_driver(dev, interface);
 
 	if (!dev->drv) {
-		printf("PHY driver not found for Cortina PHY on %s, address %u:%d, phy id: 0x%08x\n",
+		debug("PHY driver not found for Cortina PHY on %s, address %u:%d, phy id: 0x%08x\n",
 		       bus->name, addr, sub_addr, dev->phy_id);
 		return NULL;
 	}
@@ -757,7 +766,7 @@ static int cs4223_config(struct phy_device *phydev)
  *
  * @return 0 for success.
  */
-static int cs4223_reset(struct phy_device *phydev)
+int cs4223_reset(struct phy_device *phydev)
 {
 	u16 reg;
 	u16 value;
@@ -834,6 +843,9 @@ int cortina_phy_init(void)
 #ifdef CONFIG_PHY_CORTINA_CS4321
 	rc |= cortina_cs4321_phy_init();
 #endif
+#ifdef CONFIG_PHY_CORTINA_CS4318
+	rc |= cortina_cs4318_phy_init();
+#endif
 	cortina_phy_register(&cortina_cs4223);
 
 	return rc;
@@ -899,7 +911,6 @@ int cortina_phy_init(void)
 
 #define CS4224_MONITOR_STATUS_FINAL0              0x25A
 #define CS4224_MONITOR_STATUS_FINAL2              0x25C
-
 #define CS4224_MONITOR_STATUS_FINAL6              0x260
 #define CS4224_MONITOR_LUT_RANGE0                 0x27B
 #define CS4224_MONITOR_LUT_VALUE0                 0x28B
@@ -917,25 +928,25 @@ int cortina_phy_init(void)
 #define CS4224_PP_LINE_SDS_COMMON_SRX0_RX_SPARE   0x102F
 #define CS4224_PP_LINE_SDS_COMMON_SRX0_RX_SPARE_dft 0xE0F0
 
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL00	0x1047
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL01	0x1048
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL02	0x1049
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL03	0x104A
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL10	0x104B
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL11	0x104C
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL12	0x104D
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL00 0x1047
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL01 0x1048
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL02 0x1049
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL03 0x104A
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL10 0x104B
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL11 0x104C
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL12 0x104D
 #define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_BIASVAL1	0x104E
-#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_VCOBIAS 	0x104F
+#define CS4224_PP_LINE_SDS_COMMON_RXVCO0_LC_VCOBIAS 0x104F
 #define CS4224_PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA	0x108F
 #define CS4224_PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB	0x1090
 
-#define CS4224_PP_LINE_SDS_COMMON_STX0_SQUELCH		0x1091
+#define CS4224_PP_LINE_SDS_COMMON_STX0_SQUELCH    0x1091
 
 
-#define CS4224_PP_LINE_SDS_DSP_MSEQ_OPTIONS_SHADOW	0x1224
-#define CS4224_PP_LINE_SDS_DSP_MSEQ_OPTIONS		0x1225
-#define CS4224_PP_LINE_SDS_DSP_MSEQ_POWER_DOWN_LSB	0x1235
-#define CS4224_PP_LINE_SDS_DSP_MSEQ_CAL_RX_PHSEL	0x1265
+#define CS4224_PP_LINE_SDS_DSP_MSEQ_OPTIONS_SHADOW 0x1224
+#define CS4224_PP_LINE_SDS_DSP_MSEQ_OPTIONS       0x1225
+#define CS4224_PP_LINE_SDS_DSP_MSEQ_POWER_DOWN_LSB 0x1235
+#define CS4224_PP_LINE_SDS_DSP_MSEQ_CAL_RX_PHSEL  0x1265
 
 #define CS4224_PP_LINE_SDS_DSP_MSEQ_SPARE0_LSB		0x1280
 #define CS4224_PP_LINE_SDS_DSP_MSEQ_SPARE0_MSB		0x1281
@@ -996,10 +1007,10 @@ int cortina_phy_init(void)
 #define CS4224_PP_LINE_SDS_DSP_MSEQ_SPARE28_LSB		0x12B8
 #define CS4224_PP_LINE_SDS_DSP_MSEQ_SPARE28_MSB		0x12B9
 
-#define CS4224_PP_HOST_HOSTMISC_MSEQCLKCTRL		0x1807
+#define CS4224_PP_HOST_HOSTMISC_MSEQCLKCTRL       0x1807
 #define CS4224_PP_HOST_SDS_COMMON_STX0_TX_OUTPUT_CTRLA	0x188F
 #define CS4224_PP_HOST_SDS_COMMON_STX0_TX_OUTPUT_CTRLB	0x1890
-#define CS4224_PP_HOST_SDS_DSP_MSEQ_OPTIONS		0x1A25
+#define CS4224_PP_HOST_SDS_DSP_MSEQ_OPTIONS       0x1A25
 #define CS4224_PP_HOST_SDS_DSP_MSEQ_SPARE0_LSB		0x1A80
 #define CS4224_PP_HOST_SDS_DSP_MSEQ_SPARE0_MSB		0x1A81
 #define CS4224_PP_HOST_SDS_DSP_MSEQ_SPARE1_LSB		0x1A82
@@ -1059,18 +1070,18 @@ int cortina_phy_init(void)
 #define CS4224_PP_HOST_SDS_DSP_MSEQ_SPARE28_LSB		0x1AB8
 #define CS4224_PP_HOST_SDS_DSP_MSEQ_SPARE28_MSB		0x1AB9
 
-#define CS4224_EEPROM_LOADER_CONTROL			0x5000
-#define CS4224_EEPROM_LOADER_STATUS			0x5001
-#define CS4224_EEPROM_LOADER_ERROR_STATUS		0x5002
-#define CS4224_EEPROM_LOADER_VERIFY_RESULT		0x5003
-#define CS4224_EEPROM_UNSTICKER_CONTROL			0x5004
-#define CS4224_EEPROM_MICRO_ACCESS_CONTROL		0x5005
-#define CS4224_EEPROM_MICRO_ACCESS_STATUS		0x5006
-#define CS4224_EEPROM_MICRO_ACCESS_ADDRESS		0x5007
-#define CS4224_EEPROM_MICRO_ACCESS_READ_DATA		0x5008
-#define CS4224_EEPROM_MICRO_ACCESS_WRITE_DATA		0x5009
-#define CS4224_EEPROM_EXCESSIVE_COLLISION_THRESHOLD	0x500b
-#define CS4224_EEPROM_TOTAL_COLLISION_COUNT		0x500c
+#define CS4224_EEPROM_LOADER_CONTROL              0x5000
+#define CS4224_EEPROM_LOADER_STATUS               0x5001
+#define CS4224_EEPROM_LOADER_ERROR_STATUS         0x5002
+#define CS4224_EEPROM_LOADER_VERIFY_RESULT        0x5003
+#define CS4224_EEPROM_UNSTICKER_CONTROL           0x5004
+#define CS4224_EEPROM_MICRO_ACCESS_CONTROL        0x5005
+#define CS4224_EEPROM_MICRO_ACCESS_STATUS         0x5006
+#define CS4224_EEPROM_MICRO_ACCESS_ADDRESS        0x5007
+#define CS4224_EEPROM_MICRO_ACCESS_READ_DATA      0x5008
+#define CS4224_EEPROM_MICRO_ACCESS_WRITE_DATA     0x5009
+#define CS4224_EEPROM_EXCESSIVE_COLLISION_THRESHOLD 0x500b
+#define CS4224_EEPROM_TOTAL_COLLISION_COUNT       0x500c
 
 /**
  * Obtains the ASIC SKU hardware ID
@@ -1098,7 +1109,7 @@ enum cortina_hw_id cs4224_get_hw_id(struct phy_device *phydev)
 		debug("%s(%s): ASIC SKU not programmed\n",
 		      __func__, phydev->dev->name);
 		return CORTINA_CS4224_HW_UNDEF;
-	}
+		}
 
 	cinfo->hw_id = sku;
 
@@ -1154,7 +1165,6 @@ static int cs4224_set_mode_slice(struct phy_device *phydev,
 		switch (mode) {
 		case CORTINA_SLICE_SR:
 			debug("%s: Changing mode from SR to SR\n", __func__);
-
 			phy_write(phydev, 0,
 				  off + CS4224_PP_LINE_SDS_DSP_MSEQ_SPARE22_MSB,
 				  0);
@@ -1229,7 +1239,7 @@ static int cs4224_set_mode_slice(struct phy_device *phydev,
 			       __func__, mode);
 			break;
 		}
-		break;
+			break;
 	}
 	case CORTINA_SLICE_CX: {
 		switch (mode) {
@@ -1252,7 +1262,6 @@ static int cs4224_set_mode_slice(struct phy_device *phydev,
 			break;
 		case CORTINA_SLICE_CX:
 			debug("%s: Changing from CX to CX\n", __func__);
-
 			phy_write(phydev, 0,
 				  off + CS4224_PP_LINE_SDS_DSP_MSEQ_SPARE22_MSB,
 				  0);
@@ -1309,11 +1318,11 @@ static int cs4224_set_mode_slice(struct phy_device *phydev,
 				  val);
 			mdelay(10);
 			break;
-		default:
+	default:
 			printf("%s: Error: Unsupported mode %d\n",
 			       __func__, mode);
 			break;
-		}
+	}
 		break;
 	}
 	case CORTINA_SLICE_1000X:
@@ -1585,7 +1594,7 @@ int cs4224_set_mode(struct phy_device *phydev, enum cortina_slice_mode mode)
 						    pinfo->slice_offsets[i]);
 	} else {
 		rc = cs4224_set_mode_slice(phydev, mode, pinfo->sub_addr, off);
-	}
+		}
 
 	if (rc) {
 		printf("%s(%s, %s): Error setting slice mode\n", __func__,
@@ -1611,7 +1620,7 @@ cs4224_get_mode_from_sfp(const struct phy_sfp_info *sfp_info)
 	if (sfp_info->rate >= SFP_RATE_10G) {
 		if (sfp_info->limiting) {
 			return CORTINA_SLICE_SR;
-		} else {
+	} else {
 			return CORTINA_SLICE_CX;
 		}
 	} else if (sfp_info->rate == SFP_RATE_1G) {
@@ -1765,7 +1774,7 @@ static bool cs4224_is_eeprom_finished(struct mii_dev *bus, int addr)
 	return false;
 }
 
-int cs4224_enable_monitor_sense_points(struct phy_device *phydev, bool wait)
+static int cs4224_enable_monitor_sense_points(struct phy_device *phydev, bool wait)
 {
 	uint16_t val;
 	int i;
@@ -1793,7 +1802,7 @@ int cs4224_enable_monitor_sense_points(struct phy_device *phydev, bool wait)
 	return 0;
 }
 
-int cs4224_apply_workarounds(struct phy_device *phydev)
+static int cs4224_apply_workarounds(struct phy_device *phydev)
 {
 	uint16_t val;
 
@@ -1860,7 +1869,7 @@ int cs4223_wait_for_eeprom_finished(struct phy_device *phydev,
 		return -1;
 }
 
-int cs4224_hard_reset(struct phy_device *phydev)
+static int cs4224_hard_reset(struct phy_device *phydev)
 {
 	uint16_t val;
 	uint32_t stride;

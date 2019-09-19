@@ -818,6 +818,7 @@ void __octeon_configure_prompt(void)
 {
 	char __attribute__((unused)) board_name[CONFIG_SYS_MAX_PROMPT_LEN];
 	char prompt[CONFIG_SYS_MAX_PROMPT_LEN];
+	int offset = 0;
 
 	/* Generate the u-boot prompt based on various conditions */
 	if (!getenv("prompt")) {
@@ -833,6 +834,9 @@ void __octeon_configure_prompt(void)
 		octeon_adjust_board_name(board_name, sizeof(board_name)-1);
 		lowcase(board_name);
 		snprintf(prompt, sizeof(prompt), "Octeon %s", board_name);
+		if (!memcmp("cust_", board_name, 5))
+			offset = 5;
+		snprintf(prompt, sizeof(prompt), "Octeon %s", &board_name[offset]);
 #endif
 		if (gd->flags & GD_FLG_FAILSAFE_MODE)
 			snprintf(uboot_prompt, sizeof(uboot_prompt),

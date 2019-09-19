@@ -43,6 +43,21 @@ typedef enum
     PTPLIB_FLAGS_USE_PHASE_ADJUST       = 1<<4, /* Adjust the phase of the clock */
 } ptplib_flags_t;
 
+typedef enum
+{
+    PTPLIB_USE_DEFAULT_CLOCK = 0,
+    PTPLIB_USE_INT_CLOCK,
+    PTPLIB_USE_QLM_CLOCK,
+    PTPLIB_USE_GPIO_CLOCK
+} ptplib_clock_source_t;
+
+typedef enum
+{
+    PTPLIB_BOARD_UNSUPPORTED,
+    PTPLIB_BOARD_IM8724,
+    PTPLIB_BOARD_N822
+} ptplib_board_t;
+
 /**
  * Initialize a state instance ofr use with ptplib. Each state
  * instance represents a synchronizable clock. Based on paramaters
@@ -52,10 +67,14 @@ typedef enum
  * @param ptp    State for ptplib representing a single clock processing
  *               instance.
  * @param flags  Optional flags
+ * 
+ * @param clock_source  See ptplib_clock_source_t enum
+ * 
+ * @param clock_num
  *
  * @return Zero on success, negative on failure.
  */
-extern int ptplib_initialize(ptplib_state_t *ptp, ptplib_flags_t flags);
+extern int ptplib_initialize(ptplib_state_t *ptp, ptplib_flags_t flags, int clock_source, int clock_num);
 
 /**
  * Add a packet interface for use by PTP/1588v2

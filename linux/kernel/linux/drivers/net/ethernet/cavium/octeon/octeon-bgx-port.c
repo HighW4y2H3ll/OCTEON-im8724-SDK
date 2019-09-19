@@ -271,6 +271,9 @@ static void bgx_port_adjust_link(struct net_device *netdev)
 	}
 }
 
+int(* board_link_status)(u32 bgx_interface, u32 index) = 0;
+EXPORT_SYMBOL(board_link_status);
+
 static void bgx_port_check_state(struct work_struct *work)
 {
 	struct bgx_port_priv		*priv;
@@ -279,6 +282,9 @@ static void bgx_port_check_state(struct work_struct *work)
 	priv = container_of(work, struct bgx_port_priv, dwork.work);
 
 	link_info = cvmx_helper_link_get(priv->ipd_port);
+	if (board_link_status)
+		link_info.s.link_up = board_link_status(priv->bgx_interface, priv->index);
+
 	if (priv->last_link != link_info.s.link_up) {
 		priv->last_link = link_info.s.link_up;
 		if (link_info.s.link_up)
@@ -300,9 +306,6 @@ int bgx_port_enable(struct net_device *netdev)
 	bool dont_use_phy;
 	union cvmx_bgxx_cmrx_config cfg;
 	struct bgx_port_priv *priv = bgx_port_netdev2priv(netdev);
-
-	cvmx_helper_set_1000x_mode(priv->xiface, priv->index, false);
-	cvmx_helper_set_mac_phy_mode(priv->xiface, priv->index, false);
 
 	cfg.u64 = cvmx_read_csr_node(priv->numa_node, CVMX_BGXX_CMRX_CONFIG(priv->index, priv->bgx_interface));
 	if (cfg.s.lmac_type == 0 || cfg.s.lmac_type == 5) {
@@ -355,6 +358,12 @@ int bgx_port_enable(struct net_device *netdev)
 	case CVMX_HELPER_INTERFACE_MODE_40G_KR4:
 		dont_use_phy = true;
 		break;
+	case CVMX_HELPER_INTERFACE_MODE_SGMII:
+		if (priv->phy_np && of_device_is_compatible(of_get_parent(priv->phy_np), "ethernet-phy-nexus"))
+			dont_use_phy = true;
+		else
+			dont_use_phy = false;
+		break;
 	default:
 		dont_use_phy = false;
 		break;
@@ -404,6 +413,14 @@ int bgx_port_disable(struct net_device *netdev)
 {
 	struct bgx_port_priv *priv = bgx_port_netdev2priv(netdev);
 	cvmx_helper_link_info_t link_info;
+	int is_up = 0;
+
+	if (!priv->phy_np || of_device_is_compatible(
+			of_get_parent(priv->phy_np), "ethernet-phy-nexus")) {
+		link_info = cvmx_helper_link_get(priv->ipd_port);
+		if (link_info.s.speed && link_info.s.full_duplex && board_link_status)
+			is_up = board_link_status(priv->bgx_interface, priv->index);
+	}
 
 	if (priv->phydev)
 		phy_disconnect(priv->phydev);
@@ -421,6 +438,8 @@ int bgx_port_disable(struct net_device *netdev)
 	}
 	mutex_unlock(&priv->lock);
 
+	if (is_up)
+		pr_info("%s: Link is down\n", netdev->name);
 	return 0;
 }
 EXPORT_SYMBOL(bgx_port_disable);
@@ -531,6 +550,16 @@ static int bgx_port_probe(struct platform_device *pdev)
 	priv->ipd_port = cvmx_helper_get_ipd_port(priv->xiface, index);
 	if (mac)
 		priv->mac_addr = mac;
+
+	cvmx_helper_set_mac_phy_mode(priv->xiface, priv->index,
+				of_get_property(pdev->dev.of_node,
+					"cavium,sgmii-mac-phy-mode", NULL));
+	cvmx_helper_set_1000x_mode(priv->xiface, priv->index,
+				of_get_property(pdev->dev.of_node,
+					"cavium,sgmii-mac-1000x-mode", NULL));
+	cvmx_helper_set_port_autonegotiation(priv->xiface, priv->index,
+				!of_get_property(pdev->dev.of_node,
+					"cavium,disable-autonegotiation", NULL));
 
 	priv->phy_np = of_parse_phandle(pdev->dev.of_node, "phy-handle", 0);
 

@@ -49,7 +49,15 @@
     #define PTP_GPIO_PPS_HZ     1   /* Frequency for the PPS signal, Normally 1Hz */
     #define PTP_GPIO_CLOCK_OUT  2   /* GPIO for output. Set to -1 to disable */
     #define PTP_GPIO_CLOCK_HZ   30720000    /* Frequency for the clock out, 30.72Mhz */
+#else
+    #define PTP_GPIO_PPS_OUT    (-1)
+    #define PTP_GPIO_PPS_HZ     0
+    #define PTP_GPIO_CLOCK_OUT  (-1)
+    #define PTP_GPIO_CLOCK_HZ   0
 #endif
+
+#define PTPLIB_BOARD_IM8724_STR "CUST_IM8724"
+#define PTPLIB_BOARD_N822_STR   "CUST_N822"
 
 #define PTP_FOREIGN_MASTER_TIME_WINDOW  4       /* Section 9.3.2.4.4 - Four second window */
 #define PTP_FOREIGN_MASTER_THRESHOLD    2       /* Section 9.3.2.4.4 - Need two announce messages */
@@ -280,6 +288,185 @@ static port_info_t *ptplib_get_port(ptplib_t *ptplib, const packetio_packet_t *p
     return NULL;
 }
 
+static uint64_t get_proc_info(const char *file_name, const char *search_mask, char *buf, size_t buf_len)
+{
+    uint64_t ui64Ret = (uint64_t)0;
+    FILE *ptOctInfo = fopen(file_name, "r");
+
+    if(ptOctInfo != NULL)
+    {
+        char *line = NULL;
+        size_t len = 0;
+        ssize_t read;
+
+        while ((read = getline(&line, &len, ptOctInfo)) != -1)
+        {
+            if(strncmp(line, search_mask, strlen(search_mask)) == 0)
+            {
+                char *pt = line + strlen(search_mask);
+
+                pt = strchr(pt, ':');
+                if(pt++)
+                {
+                    while(isspace(*pt))
+                        pt++;
+
+                    if(isdigit(*pt))
+                    {
+                        ui64Ret = atoll(pt);
+                        break;
+                    }
+                    else if(buf != NULL)
+                    {
+                        strncpy(buf, pt, buf_len-1);
+                        buf[buf_len-1] = '\0';
+                        pt = strchr(buf, '\n');
+                        if(pt)
+                            *pt = '\0';
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        fclose(ptOctInfo);
+
+        if(line)
+            free(line);
+    }
+
+    return ui64Ret;
+}
+
+static uint64_t get_io_clock_rate(void)
+{
+    static uint64_t ret_io_clock_rate = 0;
+    
+    ret_io_clock_rate = get_proc_info("/proc/octeon_info", "io_clock_hz", NULL, 0);
+
+    return ret_io_clock_rate;
+}
+
+char *get_system_type(void)
+{
+    static char ptSystemType[50] = {0};
+
+    if(*ptSystemType == '\0')
+        get_proc_info("/proc/cpuinfo", "system type", ptSystemType, sizeof(ptSystemType));
+
+    return (*ptSystemType != '\0') ? ptSystemType : NULL;
+}
+
+/**
+ * Cofigure a clock output
+ * 
+ * @param clock_src
+ * @param port_num
+ */
+static void ptplib_setup_ptp_input(int clock_source, int clock_num)
+{
+    volatile uint64_t *CLOCK_CFG    = (volatile uint64_t *)PTPLIB_MIO_PTP_CLOCK_CFG;
+    volatile uint64_t *ptp_clock_comp = (volatile uint64_t *)PTPLIB_MIO_PTP_CLOCK_COMP;
+
+    const uint64_t compensation_value = 0x3B9AC9FFE8287C00llu;
+
+    uint64_t int_clk = 0ull;
+    char *sys_type;
+    uint64_t ext_clk_in_value = 0ull;
+    uint64_t ext_clk_en_value = 1ull;
+    ptplib_board_t board_type;
+    if(clock_source == PTPLIB_USE_DEFAULT_CLOCK)
+        return;
+
+    if((clock_source == PTPLIB_USE_QLM_CLOCK) && (clock_num > 19))
+        return;
+
+    int_clk = get_io_clock_rate();
+    sys_type = get_system_type();
+
+// CN68xx:
+//   0x00-0x0F = GPIOn, where n is EXT_CLK_IN<3:0>
+//   0x10 = QLM0_REF_CLK
+//   0x11 = QLM1_REF_CLK
+//   0x12 = QLM2_REF_CLK
+//   0x13 = QLM3_REF_CLK
+//   0x14 = QLM4_REF_CLK
+//   0x20 =GPIO<16>
+//   0x21 =GPIO<17>
+//   0x22 =GPIO<18>
+//   0x23 =GPIO<19>
+//
+// CN78xx:
+//   0x0 + α - GPIO(0..19) Normal GPIO inputs.
+//   0x20 + α - QLM_REF(0..7) QLM0-QLM7 reference clock
+
+    if(int_clk && sys_type)
+    {
+        if(strncmp(sys_type, PTPLIB_BOARD_IM8724_STR, strlen(PTPLIB_BOARD_IM8724_STR)) == 0)
+            board_type = PTPLIB_BOARD_IM8724;
+        else if(strncmp(sys_type, PTPLIB_BOARD_N822_STR, strlen(PTPLIB_BOARD_N822_STR)) == 0)
+            board_type = PTPLIB_BOARD_N822;
+        else
+        {
+            board_type = PTPLIB_BOARD_UNSUPPORTED;
+            return;
+        }
+
+        switch(clock_source)
+        {
+            case PTPLIB_USE_QLM_CLOCK:
+                int_clk = 156250000ull;
+                if(board_type == PTPLIB_BOARD_IM8724)
+                {
+                    if(clock_num > 7)
+                        return;
+
+                    ext_clk_in_value = 0x20 + clock_num;
+                }
+                else if(board_type == PTPLIB_BOARD_N822)
+                {
+                    if(clock_num > 4)
+                        return;
+
+                    ext_clk_in_value = 0x10 + clock_num;
+                }
+                break;
+            case PTPLIB_USE_GPIO_CLOCK: // use GPIO clock
+                int_clk = 100000000ull;
+                if(board_type == PTPLIB_BOARD_IM8724)
+                {
+                    if(clock_num > 19)
+                        return;
+
+                    ext_clk_in_value = 0x00 + clock_num;
+                }
+                else if(board_type == PTPLIB_BOARD_N822)
+                {
+                    if(clock_num > 19)
+                        return;
+
+                    if(clock_num < 16)
+                        ext_clk_in_value = 0x00 + clock_num;
+                    else
+                        ext_clk_in_value = 0x20 + clock_num;
+                }
+                break;
+            default: // use io clock
+                ext_clk_en_value = 0ull;
+                break;
+        }
+
+        ptplib_mio_ptp_clock_cfg_t ptp_clock_cfg;
+        ptp_clock_cfg.u64 = *CLOCK_CFG;
+
+        ptp_clock_cfg.s.ext_clk_in = ext_clk_in_value;
+        ptp_clock_cfg.s.ext_clk_en = ext_clk_en_value;
+        *ptp_clock_comp = compensation_value / int_clk;
+        *CLOCK_CFG = ptp_clock_cfg.u64;
+    }
+}
+
 /**
  * Cofigure a clock output
  *
@@ -297,7 +484,7 @@ static void ptplib_setup_ptp_output(int use_pps, int gpio, int frequency, int hi
     volatile uint64_t *THRESH_HI    = (volatile uint64_t *)((use_pps) ? PTPLIB_MIO_PTP_PPS_THRESH_HI : PTPLIB_MIO_PTP_CKOUT_THRESH_HI);
     volatile uint64_t *THRESH_LO    = (volatile uint64_t *)((use_pps) ? PTPLIB_MIO_PTP_PPS_THRESH_LO : PTPLIB_MIO_PTP_CKOUT_THRESH_LO);
 
-    printf("Setting up %dHz clock signal on GPIO %d\n", frequency, gpio);
+    printf("Setting up %dHz clock signal on GPIO %d, please wait...\n", frequency, gpio);
     *(volatile uint64_t *)PTPLIB_GPIO_BIT_CFG(gpio) = 1;
 
     /* Set the rate */
@@ -330,7 +517,7 @@ static void ptplib_setup_ptp_output(int use_pps, int gpio, int frequency, int hi
     {
         uint64_t start_time = *CLOCK_HI + NSEC;
         uint64_t factor = ((start_time - hi) << 32) / clk_incr;
-        factor += 2;
+        factor += 1000;
         uint64_t fractions = clk_incr & 0xffffffff;
         fractions *= factor;
         lo += fractions;
@@ -545,7 +732,7 @@ static int ptplib_update_sync(ptplib_t *ptplib, port_info_t *pinfo)
         if (!timestamp_in_range(offsetFromMaster, -MAX_OFFSET_FOR_SLEW, MAX_OFFSET_FOR_SLEW))
         {
             PTPLIB_INFO(pinfo, "Offset too high, setting the time to match master clock\n");
-            ptplib_set_systime(timestamp_sub(timestamp_get_systime(), offsetFromMaster));
+            ptplib_set_systime(timestamp_sub(timestamp_get_systime(1), offsetFromMaster));
             /* This forces a reset of statistics */
             timestamp_avg_update(&ptplib->currentDS.offsetFromMaster, TIMESTAMP_ZERO, AVERAGE_SHIFT_OFFSETFROMMASTER+1);
             offsetFromMaster = TIMESTAMP_ZERO;
@@ -912,7 +1099,7 @@ static int ptplib_process_pdelay_req(ptplib_t *ptplib, const packetio_packet_t *
     {
         tx_packet.header.flagField = htons(0);
         tx_packet.ptp.pdresp.requestReceiveTimestamp = timestamp_to_ptp(TIMESTAMP_ZERO);
-        timestamp_t processingTime = timestamp_sub(timestamp_get_systime(), rx_packet->timestamp);
+        timestamp_t processingTime = timestamp_sub(timestamp_get_systime(1), rx_packet->timestamp);
         tx_packet.header.correctionField += timestamp_to_correction(processingTime);
     }
 
@@ -2295,7 +2482,7 @@ static int ptplib_process_management(ptplib_t *ptplib, const packetio_packet_t *
             /* GET, SET */
             if (management->actionField == PTP_ACTIONFIELD_GET)
             {
-                mgmt_response->dataField.time.currentTime = timestamp_to_ptp(timestamp_get_systime());
+                mgmt_response->dataField.time.currentTime = timestamp_to_ptp(timestamp_get_systime(1));
                 tlv_response->lengthField = htons(2 + sizeof(mgmt_response->dataField.time));
                 mgmt_response->managementId = htons(PTP_MANAGEMENTID_TIME);
             }
@@ -2610,6 +2797,10 @@ static int ptplib_process_management(ptplib_t *ptplib, const packetio_packet_t *
     return 0;
 }
 
+void setclock(void)
+{
+    ptplib_set_systime(timestamp_get_systime(0));
+}
 
 /**
  * Initialize a state instance ofr use with ptplib. Each state
@@ -2623,7 +2814,7 @@ static int ptplib_process_management(ptplib_t *ptplib, const packetio_packet_t *
  *
  * @return Zero on success, negative on failure.
  */
-int ptplib_initialize(ptplib_state_t *ptp, ptplib_flags_t flags)
+int ptplib_initialize(ptplib_state_t *ptp, ptplib_flags_t flags, int clock_source, int clock_num)
 {
     static packetio_t local_port;
     ptplib_t *ptplib = (ptplib_t *)ptp;
@@ -2640,6 +2831,9 @@ int ptplib_initialize(ptplib_state_t *ptp, ptplib_flags_t flags)
         perror("sysmips(MIPS_CAVIUM_XKPHYS_WRITE) failed");
         return -1;
     }
+
+    if(clock_source != PTPLIB_USE_DEFAULT_CLOCK)
+        ptplib_setup_ptp_input(clock_source, clock_num);
 
     /* Configure the PPS output */
     if (PTP_GPIO_PPS_OUT != -1)
@@ -2707,6 +2901,8 @@ int ptplib_initialize(ptplib_state_t *ptp, ptplib_flags_t flags)
     local->announce.timeSource = ptplib->timeDS.timeSource;
     local->id = local->announce.grandmasterIdentity;
     local->pinfo = &ptplib->port[0];
+
+    setclock(); // set PTP clock to system time
 
     return 0;
 }
@@ -3141,7 +3337,7 @@ static int ptplib_send_sync(ptplib_t *ptplib, port_info_t *p, int sequenceId, co
     {
         /* Timestamp is stored in originTimestamp + correctionField */
         tx_packet.header.flagField = htons(0);
-        timestamp_t send_time = timestamp_get_systime();
+        timestamp_t send_time = timestamp_get_systime(1);
         tx_packet.ptp.sync.originTimestamp = timestamp_to_ptp(send_time);
         send_time.nanoseconds = 0;
         tx_packet.header.correctionField = timestamp_to_correction(send_time);
@@ -3525,14 +3721,16 @@ int ptplib_display(ptplib_state_t *ptp, int clear_screen)
     timestamp_t now = timestamp_get_rawtime();
 
     printf(GOTO_TOP);
+    printf(REVERSE);
     printf("---- 1588v2 Daemon ----%s", EOL);
+    printf(NORMAL);
 
     printf("Domain Number:          %u%s", ptplib->defaultDS.domainNumber, EOL);
     printf("Clock synchronization:  %s%s%s",
         (ptplib->flags & PTPLIB_FLAGS_USE_FREQUENCY_ADJUST) ? "Frequency" : "None",
         (ptplib->flags & PTPLIB_FLAGS_USE_PHASE_ADJUST) ? " and Phase" : "",
         EOL);
-    printf("Local time:             %s%s", timestamp_to_string(timestamp_get_systime(), localtime), EOL);
+    printf("Local time:             %s%s", timestamp_to_string(timestamp_get_systime(1), localtime), EOL);
 
     if (ptplib->best_clock != &ptplib->clock[0])
     {

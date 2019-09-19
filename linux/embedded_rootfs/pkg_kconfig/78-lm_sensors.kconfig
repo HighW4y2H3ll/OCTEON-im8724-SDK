@@ -1,0 +1,7 @@
+config CONFIG_lm_sensors
+	bool "lm_sensors"
+	default n
+	help
+		LM sensors is a set of hardware monitoring user space utilities.
+		They are helpful for tracking temperature, fan, and voltage.
+

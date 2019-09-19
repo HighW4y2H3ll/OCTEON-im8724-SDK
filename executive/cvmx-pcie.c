@@ -2160,7 +2160,11 @@ static uint64_t __cvmx_pcie_build_config_addr(int node, int port, int bus,
 	pcie_addr.config.es = _CVMX_PCIE_ES;
 	pcie_addr.config.port = port;
 	/* Always use config type 0 */
+#ifndef CONFIG_OCTEON_IM8724
 	if (pciercx_cfg006.s.pbnum == 0)
+#else
+	if(dev == 0 && bus == 2)
+#endif
 		pcie_addr.config.ty = (bus > pciercx_cfg006.s.pbnum + 1);
 	else
 		pcie_addr.config.ty = (bus > pciercx_cfg006.s.pbnum);

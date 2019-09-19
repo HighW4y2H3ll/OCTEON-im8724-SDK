@@ -270,6 +270,13 @@ void break_core_start_app(void)
 		asm volatile ("break\n");
 }
 
+void board_pre_exec(void)
+{
+	return;
+}
+
+void board_pre_exec(void)
+	__attribute__((weak));
 
 /* ======================================================================
  * Interpreter command to boot an Octeon simple exec ELF image from memory.
@@ -386,6 +393,9 @@ int do_bootocteon(cmd_tbl_t * cmdtp, int flag, int argc, char *const argv[])
 		cvmx_coremask_print(&coremask_to_run);
 		return -1;
 	}
+
+	/* Run board specific pre executive preparations */
+	board_pre_exec();
 
 	debug("Bootloader: Booting Octeon Executive application at 0x%08lx, "
 	      "stack size: 0x%x, heap size: 0x%x, nodemask=0x%x core mask:\n",

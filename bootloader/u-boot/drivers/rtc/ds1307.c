@@ -51,7 +51,20 @@
 #define RTC_YR_REG_ADDR		0x06
 #define RTC_CTL_REG_ADDR	0x07
 
+#define RTC_SEC_MASK		0x7F
+#define RTC_MIN_MASK		0x7F
+#define RTC_HR_MASK			0x3F
+#define RTC_DAY_MASK		0x07
+#define RTC_DATE_MASK		0x3F
+#define RTC_MON_MASK		0x1F
+#define RTC_YR_MASK			0xFF
 #define RTC_SEC_BIT_CH		0x80	/* Clock Halt (in Register 0)   */
+
+#ifndef CONFIG_RTC_MCP7940N
+#define RTC_SEC_BIT_CH_VAL	0x80	/* Clock Halt value (0x80 = active high) */
+#else
+#define RTC_SEC_BIT_CH_VAL	0
+#endif
 
 #define RTC_CTL_BIT_RS0		0x01	/* Rate select 0                */
 #define RTC_CTL_BIT_RS1		0x02	/* Rate select 1                */
@@ -60,6 +73,7 @@
 
 static uchar rtc_read (uchar reg);
 static void rtc_write (uchar reg, uchar val);
+static void rtc_write_mask(uchar reg, uchar mask, uchar val);
 
 /*
  * Get the current time from the RTC
@@ -81,21 +95,21 @@ int rtc_get (struct rtc_time *tmp)
 		"hr: %02x min: %02x sec: %02x\n",
 		year, mon, mday, wday, hour, min, sec);
 
-	if (sec & RTC_SEC_BIT_CH) {
+	if ((sec & RTC_SEC_BIT_CH) == RTC_SEC_BIT_CH_VAL) {
 		printf ("### Warning: RTC oscillator has stopped\n");
 		/* clear the CH flag */
 		rtc_write (RTC_SEC_REG_ADDR,
-			   rtc_read (RTC_SEC_REG_ADDR) & ~RTC_SEC_BIT_CH);
+			   rtc_read (RTC_SEC_REG_ADDR) ^ RTC_SEC_BIT_CH);
 		rel = -1;
 	}
 
-	tmp->tm_sec  = bcd2bin (sec & 0x7F);
-	tmp->tm_min  = bcd2bin (min & 0x7F);
-	tmp->tm_hour = bcd2bin (hour & 0x3F);
-	tmp->tm_mday = bcd2bin (mday & 0x3F);
-	tmp->tm_mon  = bcd2bin (mon & 0x1F);
+	tmp->tm_sec  = bcd2bin (sec & RTC_SEC_MASK);
+	tmp->tm_min  = bcd2bin (min & RTC_MIN_MASK);
+	tmp->tm_hour = bcd2bin (hour & RTC_HR_MASK);
+	tmp->tm_mday = bcd2bin (mday & RTC_DATE_MASK);
+	tmp->tm_mon  = bcd2bin (mon & RTC_MON_MASK);
 	tmp->tm_year = bcd2bin (year) + ( bcd2bin (year) >= 70 ? 1900 : 2000);
-	tmp->tm_wday = bcd2bin ((wday - 1) & 0x07);
+	tmp->tm_wday = bcd2bin ((wday - 1) & RTC_DAY_MASK);
 	tmp->tm_yday = 0;
 	tmp->tm_isdst= 0;
 
@@ -119,13 +133,13 @@ int rtc_set (struct rtc_time *tmp)
 	if (tmp->tm_year < 1970 || tmp->tm_year > 2069)
 		printf("WARNING: year should be between 1970 and 2069!\n");
 
-	rtc_write (RTC_YR_REG_ADDR, bin2bcd (tmp->tm_year % 100));
-	rtc_write (RTC_MON_REG_ADDR, bin2bcd (tmp->tm_mon));
-	rtc_write (RTC_DAY_REG_ADDR, bin2bcd (tmp->tm_wday + 1));
-	rtc_write (RTC_DATE_REG_ADDR, bin2bcd (tmp->tm_mday));
-	rtc_write (RTC_HR_REG_ADDR, bin2bcd (tmp->tm_hour));
-	rtc_write (RTC_MIN_REG_ADDR, bin2bcd (tmp->tm_min));
-	rtc_write (RTC_SEC_REG_ADDR, bin2bcd (tmp->tm_sec));
+	rtc_write_mask (RTC_YR_REG_ADDR,   RTC_YR_MASK,   bin2bcd (tmp->tm_year % 100));
+	rtc_write_mask (RTC_MON_REG_ADDR,  RTC_MON_MASK,  bin2bcd (tmp->tm_mon));
+	rtc_write_mask (RTC_DAY_REG_ADDR,  RTC_DAY_MASK,  bin2bcd (tmp->tm_wday + 1));
+	rtc_write_mask (RTC_DATE_REG_ADDR, RTC_DATE_MASK, bin2bcd (tmp->tm_mday));
+	rtc_write_mask (RTC_HR_REG_ADDR,   RTC_HR_MASK,   bin2bcd (tmp->tm_hour));
+	rtc_write_mask (RTC_MIN_REG_ADDR,  RTC_MIN_MASK,  bin2bcd (tmp->tm_min));
+	rtc_write_mask (RTC_SEC_REG_ADDR,  RTC_SEC_MASK,  bin2bcd (tmp->tm_sec));
 
 	return 0;
 }
@@ -142,8 +156,12 @@ void rtc_reset (void)
 {
 	struct rtc_time tmp;
 
-	rtc_write (RTC_SEC_REG_ADDR, 0x00);	/* clearing Clock Halt	*/
+	rtc_write (RTC_SEC_REG_ADDR, RTC_SEC_BIT_CH ^ RTC_SEC_BIT_CH_VAL);	/* clearing Clock Halt	*/
 	rtc_write (RTC_CTL_REG_ADDR, RTC_CTL_BIT_SQWE | RTC_CTL_BIT_RS1 | RTC_CTL_BIT_RS0);
+
+#ifdef CONFIG_RTC_MCP7940N
+	rtc_write (RTC_DAY_REG_ADDR, 0x08);	//enable battery backup
+#endif
 
 	tmp.tm_year = 1970;
 	tmp.tm_mon = 1;
@@ -177,4 +195,14 @@ static void rtc_write (uchar reg, uchar val)
 {
 	i2c_reg_write (CONFIG_SYS_I2C_RTC_ADDR, reg, val);
 }
+static void rtc_write_mask(uchar reg, uchar mask, uchar val)
+{
+	uint8_t t = 0;
+	if(mask != 0xFF)
+	{
+		t = rtc_read(reg) & ~mask;
+	}
+	rtc_write(reg, t | (val & mask));
+}
+
 #endif

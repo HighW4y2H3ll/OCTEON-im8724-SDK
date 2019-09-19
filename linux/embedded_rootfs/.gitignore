@@ -1,0 +1,16 @@
+build/
+.config.cmd
+.config.old
+.kconfig_include
+.tmpconfig.h
+.config
+
+config/conf
+config/lex.zconf.c
+config/lkc_defs.h
+config/mconf
+config/zconf.tab.c
+config/zconf.tab.h
+
+source/config/cvmx-config.h
+fw_env

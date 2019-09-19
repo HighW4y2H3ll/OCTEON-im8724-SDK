@@ -1,0 +1,6 @@
+config CONFIG_airflow
+	bool "airflow"
+	select CONFIG_i2ctools
+	default y
+	help
+		Fan speed controller, backward compatible with fancontrol(8)

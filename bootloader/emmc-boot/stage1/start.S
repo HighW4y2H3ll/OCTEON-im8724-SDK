@@ -205,9 +205,9 @@ uart_write_hex:
 	move	t9, a0		/* Save a0 since C code expects that */
 	move	t8, ra		/* Save ra */
 	bal	uart_write_char	/* Output '0' */
-	 li	a0, '0'
+	li	a0, '0'
 	bal	uart_write_char	/* Output 'x' */
-	 li	a0, 'x'
+	li	a0, 'x'
 	li	t3, 15		/* We need 16 digits total */
 	move	t2, t9
 1:
@@ -216,13 +216,13 @@ uart_write_hex:
 	slti	t0, a0, 0x3a	/* Flag if 0-9 instead of a-f */
 	addiu	t1, a0, 0x41-0x30-10 /* Add 'a' */
 	bal	uart_write_char /* Output char */
-	 movz	a0, t1, t0	/* Choose if 0-9 or a-f */
+	movz	a0, t1, t0	/* Choose if 0-9 or a-f */
 	dsll	t2, 4		/* Shift to the next digit */
 	bnez	t3, 1b		/* Loop while we still have digits */
-	 addu	t3, -1		/* One less digit to do */
+	addu	t3, -1		/* One less digit to do */
 	move	ra, t8		/* Restore ra */
 	j ra			/* We're done, just return to the caller */
-	 move	a0, t9		/* Restore a0 */
+	move	a0, t9		/* Restore a0 */
 	.end uart_write_hex
 
 /*
@@ -233,7 +233,7 @@ jump_to_bootloader:
 	sync			/* Complete any writes */
 	cache	1, 0(zero)	/* Invalidate Dcache */
 	j	a0
-	 cache	0, 0(zero)	/* Invalidate Icache in delay slot */
+	cache	0, 0(zero)	/* Invalidate Icache in delay slot */
 	.end jump_to_bootloader
 
 /*
@@ -268,12 +268,12 @@ disk_signature:	.word	0
  * NOTE: LBA and sector counts are in little-endian format!
  */
 partition_table:
-partition1:	.byte	0x00			/* Status */
-		.byte	0x00, 0x00, 0x00	/* CHS of first absolute sector */
-		.byte	0x00			/* Partition type */
-		.byte	0x00, 0x00, 0x00	/* CHS of last absolute sector */
-		.byte	0x00, 0x00, 0x00, 0x00  /* LBA of first absolute sector */
-		.byte	0x00, 0x00, 0x00, 0x00	/* Number of sectors in partition */
+partition1:	.byte	0x80			/* Status */
+		.byte	0x12, 0x21, 0x01	/* CHS of first absolute sector */
+		.byte	0x0e			/* Partition type */
+		.byte	0x11, 0x04, 0x19	/* CHS of last absolute sector */
+		.byte	0x00, 0x08, 0x00, 0x00  /* LBA of first absolute sector */
+		.byte	0x00, 0x80, 0x00, 0x00	/* Number of sectors in partition */
 
 partition2:	.byte	0x00
 		.byte	0x00, 0x00, 0x00

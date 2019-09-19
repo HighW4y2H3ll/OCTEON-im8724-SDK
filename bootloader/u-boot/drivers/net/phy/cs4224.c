@@ -464,7 +464,7 @@ int cortina_cs4224_phy_init(void)
 	return 0;
 }
 
-int phy_reset(struct phy_device *phydev)
+int cortina_cs4224_phy_reset(struct phy_device *phydev)
 {
 	struct cs4224_private *p = (struct cs4224_private *)phydev->priv;
 	if (!p->initialized)

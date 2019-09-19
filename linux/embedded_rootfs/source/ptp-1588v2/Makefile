@@ -22,6 +22,17 @@
 EXTRA_CFLAGS = -W -Wall -Wno-unused-parameter -O3 -g -idirafter ../../../kernel/linux/include
 OUTPUT_DIR=.
 
+ifeq ("$(OCTEON_TARGET)", "linux_64")
+CROSS=mips64-octeon-linux-gnu-
+else
+CROSS=
+endif
+
+CC = $(CROSS)gcc
+LD = $(CROSS)gcc
+
+LDFLAGS = -O3 -Wall
+
 ifneq ($(findstring mips, $(CC)),)
 	EXTRA_CFLAGS += -DUSE_PTP_CLOCK=1
 else

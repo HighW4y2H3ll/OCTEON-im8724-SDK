@@ -156,6 +156,18 @@ typedef struct environment_s {
 	unsigned char	data[ENV_SIZE]; /* Environment data		*/
 } env_t;
 
+//structure compatible with stage 3 environment
+#define CONFIG_ENV_SIZE_S3 8*1024
+#define ENV_SIZE_S3 (CONFIG_ENV_SIZE_S3 - ENV_HEADER_SIZE)
+
+typedef struct environment_s3 {
+	uint32_t        crc;            /* CRC32 over data bytes        */
+#ifdef CONFIG_SYS_REDUNDAND_ENVIRONMENT
+	unsigned char   flags;          /* active/obsolete flags        */
+#endif
+	unsigned char   data[ENV_SIZE_S3]; /* Environment data          */
+} env_t3;
+
 #ifdef ENV_IS_EMBEDDED
 extern env_t environment;
 #endif /* ENV_IS_EMBEDDED */

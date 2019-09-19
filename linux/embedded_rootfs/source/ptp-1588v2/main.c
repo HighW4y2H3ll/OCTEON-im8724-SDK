@@ -42,6 +42,25 @@
 #define GOTO_BOTTOM "\033[100;1H"   /* Begins output at the bottom of the terminal (actually line 100) */
 
 /**
+ * Help routine
+ */
+int help(const char *myname)
+{
+    printf("Usage:\n"
+        "%s [-e | -p] [-q num | -g num] interface[:transport] [interface[:transport]]*\n"
+        "\n"
+        "    -e          Select the delay request-response (E2E) mechanism (default value).\n"
+        "    -p          Select the peer delay (P2P) mechanism.\n"
+        "    -q num      Use QLM[num] as clock source, or\n"
+        "    -g num      Use GPIO[num] as clock source.\n"
+        "    interface = Linux network device name (eth0, eth1, etc).\n"
+        "    transport = Which transport to use (802.3, UDP, UDP6). Defaults to 802.3.\n"
+        "\n", myname);
+
+    return -1;
+}
+
+/**
  * Main entry point
  *
  * @param argc   Number of arguments
@@ -56,28 +75,61 @@ int main(int argc, const char *argv[])
     int num_interfaces = 0;
     packetio_t interface_list[32];
 
+    int opt;
+    int delay = 0;
+    int have_src = 0;
+    int clock_source = PTPLIB_USE_INT_CLOCK, clock_num = 0;
+
     /* Check that we have the proper number of arguments */
     if ((argc < 2) || (argc > 32))
-    {
-        printf("Usage:\n"
-               "%s interface[:transport] [interface[:transport]]*\n"
-               "\n"
-               "    interface = Linux network device name (eth0, eth1, etc).\n"
-               "    transport = Which transport to use (802.3, UDP, UDP6). Defaults to 802.3.\n"
-               "\n", argv[0]);
-        return -1;
+        return help(argv[0]);
+
+    while ((opt = getopt(argc, argv, "epq:g:")) != -1) {
+        switch (opt) {
+        case 'e':
+            delay = 0;
+            break;
+        case 'p':
+            delay = PTPLIB_FLAGS_USE_PEER_DELAY;
+            break;
+        case 'q':
+            if(!have_src && isdigit(*optarg))
+            {
+                have_src = 1;
+                clock_source = PTPLIB_USE_QLM_CLOCK;
+                clock_num = atoi(optarg);
+            }
+            else
+                return help(argv[0]);
+            break;
+        case 'g':
+            if(!have_src && isdigit(*optarg))
+            {
+                have_src = 1;
+                clock_source = PTPLIB_USE_GPIO_CLOCK;
+                clock_num = atoi(optarg);
+            }
+            else
+                return help(argv[0]);
+            break;
+        default: /* '?' */
+            return help(argv[0]);
+        }
     }
+
+    if (optind >= argc) // no interfaces given, we have only options
+        return help(argv[0]);
 
     /* Initialize ptplib */
     if (ptplib_initialize(&ptp, 0
-        //| PTPLIB_FLAGS_USE_PEER_DELAY
+        | delay
         | PTPLIB_FLAGS_USE_MULTICAST
         | PTPLIB_FLAGS_USE_UNICAST
 #if __BYTE_ORDER == __BIG_ENDIAN
         | PTPLIB_FLAGS_USE_FREQUENCY_ADJUST
         | PTPLIB_FLAGS_USE_PHASE_ADJUST
 #endif
-        ))
+        , clock_source, clock_num))
     {
         return -1;
     }
@@ -87,12 +139,15 @@ int main(int argc, const char *argv[])
     printf("Adding Interfaces\n");
 
     /* For each argument, add it as a packet interface */
-    for (index = 1; index < argc; index++)
+    for (index = optind; index < argc; index++)
     {
         packetio_t *packetio = interface_list + num_interfaces;
         char interface[32];
         char *options;
         char *transport;
+
+        if(argv[index][0] == '-')
+            continue;
 
         strncpy(interface, argv[index], sizeof(interface));
         interface[sizeof(interface)-1] = 0;

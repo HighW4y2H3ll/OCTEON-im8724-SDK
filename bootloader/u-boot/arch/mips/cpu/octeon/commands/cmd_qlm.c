@@ -266,7 +266,7 @@ do_qlm_tune(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 }
 
 #ifdef CONFIG_OCTEON_OCX
-U_BOOT_CMD(qlmtune, 6, 0, do_qlm_tune,
+U_BOOT_CMD(qlmtune, 8, 0, do_qlm_tune,
 	   "Octeon3 QLM tuning function (dangerous, remove from final product)",
 	   "Usage:\n"
 	   "  qlmtune <node> <qlm>\n"
@@ -285,7 +285,7 @@ U_BOOT_CMD(qlmtune, 6, 0, do_qlm_tune,
 	   "WARNING: Incorrect settings can damage chips, so be careful!\n\n");
 
 #else
-U_BOOT_CMD(qlmtune, 5, 0, do_qlm_tune,
+U_BOOT_CMD(qlmtune, 7, 0, do_qlm_tune,
 	   "Octeon3 QLM tuning function (dangerous, remove from final product)",
 	   "Usage:\n"
 	   "  qlmtune <qlm>\n"

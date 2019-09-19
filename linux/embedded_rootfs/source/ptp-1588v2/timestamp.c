@@ -366,40 +366,51 @@ timestamp_t timestamp_get_rawtime(void)
     return r;
 }
 
-
 /**
  * Get the current system time as a timestamp_t
  *
+ * @param:
+ *  1 - use HW PTP clock is possible
+ *  0 - use linux clock
+ * 
  * @return The current system time
  */
-timestamp_t timestamp_get_systime(void)
+timestamp_t timestamp_get_systime(int which_clock)
 {
 #if USE_PTP_CLOCK
-    timestamp_t r;
-    volatile uint64_t *ptp_clock_hi = (volatile uint64_t *)PTPLIB_MIO_PTP_CLOCK_HI;
-    r.nanoseconds = *ptp_clock_hi;
-    r.nanoseconds = *ptp_clock_hi;
-    r.fractions = 0;
-    return r;
+    int hw_enabled = 1;
 #else
-    timestamp_t r;
-    struct timespec ts;
-    if (clock_gettime(CLOCK_REALTIME, &ts))
+    int hw_enabled = 0;
+#endif
+
+    if(hw_enabled && which_clock)
     {
-        ERROR("timestamp_get_rawtime: clock_gettime(CLOCK_REALTIME) failed\n");
-        r.nanoseconds = 0;
+        timestamp_t r;
+        volatile uint64_t *ptp_clock_hi = (volatile uint64_t *)PTPLIB_MIO_PTP_CLOCK_HI;
+        r.nanoseconds = *ptp_clock_hi;
+        r.nanoseconds = *ptp_clock_hi;
         r.fractions = 0;
+        return r;
     }
     else
     {
-        r.nanoseconds = (uint64_t)ts.tv_sec * NSEC;
-        r.nanoseconds += ts.tv_nsec;
-        r.fractions = 0;
+        timestamp_t r;
+        struct timespec ts;
+        if (clock_gettime(CLOCK_REALTIME, &ts))
+        {
+            ERROR("timestamp_get_rawtime: clock_gettime(CLOCK_REALTIME) failed\n");
+            r.nanoseconds = 0;
+            r.fractions = 0;
+        }
+        else
+        {
+            r.nanoseconds = (uint64_t)ts.tv_sec * NSEC;
+            r.nanoseconds += ts.tv_nsec;
+            r.fractions = 0;
+        }
+        return r;
     }
-    return r;
-#endif
 }
-
 
 /**
  * Set the current system time

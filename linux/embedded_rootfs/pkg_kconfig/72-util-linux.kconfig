@@ -1,0 +1,5 @@
+config CONFIG_util-linux
+	bool "util-linux"
+	default y
+	help
+		util-linux is a random collection of Linux utilitie

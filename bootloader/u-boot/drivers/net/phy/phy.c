@@ -664,7 +664,7 @@ static struct phy_device *get_phy_device_by_mask(struct mii_dev *bus,
 		if (phydev)
 			return phydev;
 	}
-	printf("Phy not found\n");
+	debug("Phy not found\n");
 	return phy_device_create(bus, ffs(phy_mask) - 1, 0xffffffff, interface);
 }
 
@@ -784,7 +784,7 @@ void phy_connect_dev(struct phy_device *phydev, struct eth_device *dev)
 	/* Soft Reset the PHY */
 	phy_reset(phydev);
 	if (phydev->dev) {
-		printf("%s:%d is connected to %s.  Reconnecting to %s\n",
+		debug("%s:%d is connected to %s.  Reconnecting to %s\n",
 				phydev->bus->name, phydev->addr,
 				phydev->dev->name, dev->name);
 	}

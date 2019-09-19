@@ -806,8 +806,8 @@ int octeon_board_phy_init(void)
 		if (!octeon_fdt_compat_vendor(gd->fdt_blob, phy_off,
 					      "vitesse")) {
 			debug("Configuring Vitesse PHY\n");
+			if (!need_coma) octeon_vitesse_coma(true);
 			need_coma = 1;
-			octeon_vitesse_coma(true);
 
 			rc = octeon_fdt_vitesse_config(ethdev);
 #if defined(CONFIG_PHYLIB_10G) && defined(CONFIG_PHY_SFP)

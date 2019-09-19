@@ -91,7 +91,7 @@ static int udp6_send(packetio_packet_t *packet, const char *addr, int is_event)
         MSG_DONTWAIT, (struct sockaddr *)&inaddr, sizeof(inaddr));
     /* The hardware timestamp will show up later if it is supported. Use
         software as a guess for now */
-    packet->timestamp = timestamp_get_systime();
+    packet->timestamp = timestamp_get_systime(1);
 
     if (bytes != packet->length)
     {

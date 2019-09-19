@@ -67,6 +67,17 @@ void cpld_wr_remote(uint8_t target, uint8_t offset, uint8_t val)
 	while(cpld_rd(CPLD_ADDR_SPI_CMD) & CPLD_SPI_CMD_ST);
 }
 
+void cpld_wr_remote_force(uint8_t target, uint8_t offset, uint8_t val, uint8_t attempts)
+{
+	while(attempts--) {
+		cpld_wr_remote(target, offset, val);
+		cvmx_wait(1000);
+		if (cpld_rd_remote(target, offset) == val)
+			break;
+		cvmx_wait(10000000);
+	}
+}
+
 #endif
 
 int do_cpld_rd(cmd_tbl_t * cmdtp, int flag, int argc, char *const argv[])

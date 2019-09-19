@@ -1749,6 +1749,27 @@ static int octeon_eth_initialize_port(int interface, int index, int port,
 			else
 				sprintf(dev->name, "octeth%d", card_number++);
 		} else {
+#ifdef CONFIG_OCTEON_IM8724
+			if (!strcmp(getenv("ethname"), "ifmode")) {
+			    switch (if_mode) {
+				case CVMX_HELPER_INTERFACE_MODE_SGMII:
+					sprintf(dev->name, "octsgmii%d%d", interface, index);
+					card_number++;
+					break;
+				case CVMX_HELPER_INTERFACE_MODE_RXAUI:
+					sprintf(dev->name, "octrxaui%d%d", interface, index);
+					card_number++;
+					break;
+				case CVMX_HELPER_INTERFACE_MODE_XFI:
+					sprintf(dev->name, "octxfi%d%d", interface, index);
+					card_number++;
+					break;
+				default:
+					sprintf(dev->name, "octeth%d", card_number++);
+			    }
+			}
+			else
+#endif
 			sprintf(dev->name, "octeth%d", card_number++);
 		}
 	}
@@ -2422,4 +2443,3 @@ int octeon_mgmt_eth_initialize(bd_t * bis)
 
 }
 #endif /* defined(CONFIG_OCTEON_MGMT_ENET) && defined(CONFIG_CMD_NET) */
-

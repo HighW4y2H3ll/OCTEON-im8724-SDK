@@ -47,6 +47,7 @@
 # include <spi_flash.h>
 #endif
 #include <linux/ctype.h>
+#include <environment.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -69,6 +70,86 @@ extern unsigned long do_go_exec(ulong (*entry)(int, char * const []), int argc,
 #endif
 
 #ifdef CONFIG_OCTEON_EMMC_STAGE2
+/* Fix issue #4616, if env variable dram_size_mbytes is not set - stage 3 try to
+ * reinit DRAM and crash. */
+void fix_eeprom_dram_size(void)
+{
+    env_t3 env_new;
+    int env_leng;
+    int rcode;
+    int i,j;
+    int dram_str_size;
+    int position;
+    int dram_size;
+    int dram_size_env;
+    int position_end;
+    int new_ddr_length;
+    char *buf;
+    char *dram_str;
+    char new_ddr_size_value[100];
+    char temp_buf[4*1024];
+
+    env_leng = 0;
+    buf = (char *)&env_new.data;
+    eeprom_init();
+    rcode = eeprom_read(CONFIG_SYS_DEF_EEPROM_ADDR, 0, (uchar *)&env_new, CONFIG_ENV_SIZE_S3);
+
+    for ( j = 0; j < ENV_SIZE_S3; j++){
+        if( buf[j] == 0x00
+           && buf[j+1] == 0x00
+           && buf[j+2] == 0x00){
+            env_leng = j+1;
+            break;
+        }
+    }
+    position = 0;
+    dram_str = "dram_size_mbytes";
+    dram_str_size = strlen(dram_str);
+
+    for(j = 0; j < env_leng; j++){
+        for(i = 0; i < dram_str_size-1; i++){
+            if(buf[j+i] == dram_str[i]){
+                if( i >= dram_str_size -2 ){
+                    position = j;
+                    break;
+                }
+            }
+            else{
+                break;
+            }
+        }
+        if(position > 0){
+            break;
+        }
+    }
+    position_end = env_leng;
+    dram_size = gd->arch.ram_sizes[0];
+    dram_size = abs(dram_size);
+    sprintf(new_ddr_size_value,"dram_size_mbytes=%d", dram_size);
+    new_ddr_length = strlen(new_ddr_size_value)+1;
+
+    if(position > 0){
+        dram_size_env = simple_strtoul(&buf[position+dram_str_size+1], NULL, 10);
+        if(dram_size_env == dram_size){
+            return;
+        }
+        for(i = position; i < env_leng; i++){
+            if(buf[i] == ';' || buf[i] == 0x00 ){
+                position_end = i;
+                break;
+            }
+        }
+        memcpy(&temp_buf[0], &buf[position_end+1], env_leng-position_end);
+        memcpy(&buf[position], new_ddr_size_value, new_ddr_length);
+        memcpy(&buf[position+new_ddr_length ], &temp_buf[0], env_leng-position_end);
+    }
+    else{
+        memcpy(&buf[env_leng], new_ddr_size_value, new_ddr_length);
+    }
+    env_new.crc = crc32(0, (unsigned char const *)&env_new.data, ENV_SIZE_S3);
+    rcode = eeprom_write (CONFIG_SYS_DEF_EEPROM_ADDR, CONFIG_ENV_OFFSET, (uchar *)&env_new, CONFIG_ENV_SIZE_S3);
+}
+
 /**
  * Search for a bootable FAT partition
  *
@@ -123,6 +204,8 @@ int do_octbootstage3(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	const char *dev_name;
 #ifdef CONFIG_ENV_IS_NOWHERE
 	char *s;
+	char str_temp[255];
+	char *s_tmp = &str_temp[0];
 #endif
 	int failsafe;
 	int size = 0;
@@ -132,13 +215,19 @@ int do_octbootstage3(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char str_buf[64];
 	block_dev_desc_t *dev_desc = NULL;
 
+	fix_eeprom_dram_size();
+
 #ifdef CONFIG_ENV_IS_NOWHERE
-	snprintf(str_buf, sizeof(str_buf), "u-boot-octeon_%s.bin",
-		 cvmx_board_type_to_string(cvmx_sysinfo_get()->board_type));
-	s = str_buf;
-	while (*s) {
-		*s = tolower(*s);
-		s++;
+	strcpy(s_tmp, cvmx_board_type_to_string(cvmx_sysinfo_get()->board_type));
+	while (*s_tmp) {
+		*s_tmp = tolower(*s_tmp);
+		s_tmp++;
+	}
+	s_tmp = &str_temp[0];
+	if( strstr(s_tmp, "cust_") !=  NULL){
+		snprintf(str_buf, sizeof(str_buf), "u-boot-octeon_%s.bin", s_tmp+5);
+	}else{
+		snprintf(str_buf, sizeof(str_buf), "u-boot-octeon_%s.bin", s_tmp);
 	}
 	filename = str_buf;
 	addr = CONFIG_OCTEON_STAGE3_LOAD_ADDR;
@@ -187,7 +276,8 @@ int do_octbootstage3(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 #ifndef CONFIG_OCTEON_NO_STAGE3_FAILSAFE
-	failsafe = gpio_direction_input(CONFIG_OCTEON_FAILSAFE_GPIO);
+	gpio_direction_input(CONFIG_OCTEON_FAILSAFE_GPIO);
+	failsafe = gpio_get_value(CONFIG_OCTEON_FAILSAFE_GPIO);
 
 	if (!filename)
 		failsafe = 1;
@@ -209,14 +299,16 @@ failsafe:
 		return 0;
 	}
 	if (failsafe_filename) {
-		size = file_fat_read(filename, (unsigned char *)addr,
+		size = file_fat_read(failsafe_filename, (unsigned char *)addr,
 				     max_size);
 		if (size <= 0) {
 			printf("Could not read failsafe bootloader %s, "
 			       "trying %s\n", failsafe_filename,
 			       CONFIG_OCTEON_STAGE3_FAILSAFE_FILENAME);
 			failsafe_filename = CONFIG_OCTEON_STAGE3_FAILSAFE_FILENAME;
+			return -1;
 		}
+		do_go_exec((void *)addr, argc -1, argv +1);
 	} else {
 		printf("No failsafe available!\n");
 		return -1;

@@ -158,6 +158,7 @@ extern int isspace(int);
 #include "configs/octeon_rainier_shared.h"
 #include "configs/octeon_nicx40e_shared.h"
 #include "configs/octeon_copperhead_shared.h"
+#include "configs/octeon_im8724_shared.h"
 #ifdef __U_BOOT__
 # include <asm/arch/octeon_eeprom_types.h>
 #else
@@ -380,6 +381,14 @@ static void ddr_print(const char *format, ...)
     }
 }
 #endif
+
+static void ddr_print2(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+}
 
 static void ddr_config_write_csr(uint64_t csr_addr, uint64_t val)
 {
@@ -12277,6 +12286,21 @@ const board_table_entry_t octeon_board_ddr_config_table[] =
 	}
     },
 #endif
+# if defined(CONFIG_OCTEON_IM8724) || \
+     defined(CONFIG_OCTEON_IM8724_EMMC_STAGE2) || \
+     defined(CONFIG_OCTEON_IM8724_SPI_STAGE2) || \
+     !defined(CVMX_BUILD_FOR_UBOOT)
+     {
+	.board_type = CVMX_BOARD_TYPE_CUST_IM8724,
+	.eeprom_addr = OCTEON_IM8724_BOARD_EEPROM_TWSI_ADDR,
+	.chip_ddr_config =
+	{
+	    {
+		.ddr_config = { OCTEON_IM8724_DDR_CONFIGURATION }
+	    }
+	}
+     },
+# endif
 #if !defined(CVMX_BUILD_FOR_UBOOT) || defined(CONFIG_OCTEON_SFF7800)
     {
 	.board_type = CVMX_BOARD_TYPE_SFF7800,

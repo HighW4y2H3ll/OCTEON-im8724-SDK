@@ -1,0 +1,10 @@
+# Vim temporary files
+*.swp
+
+# Links generated in the process of build
+u-boot/include/asm
+u-boot/arch/mips/include/asm/arch
+envcrc
+gen_eth_addr
+img2srec
+ncb

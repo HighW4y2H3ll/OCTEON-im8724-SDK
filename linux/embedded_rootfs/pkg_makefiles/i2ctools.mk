@@ -22,8 +22,8 @@ install: ${DIR}
 	sudo /bin/cp ${DIR}/tools/i2cdump ${ROOT}/usr/bin/
 	sudo /bin/cp ${DIR}/tools/i2cget ${ROOT}/usr/bin/
 	sudo /bin/cp ${DIR}/tools/i2cset ${ROOT}/usr/bin/
-	sudo /usr/bin/mknod ${ROOT}/dev/i2c-0 c 89 0
-	sudo /usr/bin/mknod ${ROOT}/dev/i2c-1 c 89 1
+	sudo /bin/mknod ${ROOT}/dev/i2c-0 c 89 0
+	sudo /bin/mknod ${ROOT}/dev/i2c-1 c 89 1
 
 ${DIR}:
 	tar -jxf ${STORAGE}/${PKG}-${VERSION}.tar.bz2

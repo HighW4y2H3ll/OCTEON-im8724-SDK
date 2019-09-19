@@ -2539,13 +2539,7 @@ do_display_WL(int node, int ddr_interface_num,
     if (flags & WITH_FINAL) {
 	msg_buf = "  FINAL SETTINGS  ";
         //vbl = VBL_NORM;
-    } else {
-	snprintf(hex_buf, sizeof(hex_buf), "0x%016llX", (long long unsigned int)lmc_wlevel_rank.u64);
-	msg_buf = hex_buf;
-        //vbl = VBL_FAE;
-    }
-
-    ddr_print("N%d.LMC%d.R%d: Wlevel Rank %#4x, %s  : %5d %5d %5d %5d %5d %5d %5d %5d %5d\n",
+	ddr_print2("N%d.LMC%d.R%d: Wlevel Rank %#4x, %s  : %5d %5d %5d %5d %5d %5d %5d %5d %5d\n",
             node, ddr_interface_num, rank,
             lmc_wlevel_rank.s.status,
             msg_buf,
@@ -2559,6 +2553,25 @@ do_display_WL(int node, int ddr_interface_num,
             lmc_wlevel_rank.s.byte1,
             lmc_wlevel_rank.s.byte0
             );
+    } else {
+	snprintf(hex_buf, sizeof(hex_buf), "0x%016llX", (long long unsigned int)lmc_wlevel_rank.u64);
+	msg_buf = hex_buf;
+        //vbl = VBL_FAE;
+	ddr_print("N%d.LMC%d.R%d: Wlevel Rank %#4x, %s  : %5d %5d %5d %5d %5d %5d %5d %5d %5d\n",
+            node, ddr_interface_num, rank,
+            lmc_wlevel_rank.s.status,
+            msg_buf,
+            lmc_wlevel_rank.s.byte8,
+            lmc_wlevel_rank.s.byte7,
+            lmc_wlevel_rank.s.byte6,
+            lmc_wlevel_rank.s.byte5,
+            lmc_wlevel_rank.s.byte4,
+            lmc_wlevel_rank.s.byte3,
+            lmc_wlevel_rank.s.byte2,
+            lmc_wlevel_rank.s.byte1,
+            lmc_wlevel_rank.s.byte0
+            );
+    }
 }
 
 static inline void

@@ -1291,6 +1291,9 @@ static int adt7470_detect(struct i2c_client *client,
 	struct i2c_adapter *adapter = client->adapter;
 	int vendor, device, revision;
 
+	if (adapter->name && !strcmp(adapter->name, "im_bitbang"))
+		return -ENODEV;
+
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
 		return -ENODEV;
 
@@ -1326,9 +1329,13 @@ static void adt7470_init_client(struct i2c_client *client)
 static int adt7470_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
+	struct i2c_adapter *adapter = client->adapter;
 	struct device *dev = &client->dev;
 	struct adt7470_data *data;
 	struct device *hwmon_dev;
+
+	if (adapter->name && !strcmp(adapter->name, "im_bitbang"))
+		return -ENODEV;
 
 	data = devm_kzalloc(dev, sizeof(struct adt7470_data), GFP_KERNEL);
 	if (!data)

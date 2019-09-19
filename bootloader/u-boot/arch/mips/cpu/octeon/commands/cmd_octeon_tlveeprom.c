@@ -282,15 +282,18 @@ int do_tlv_eeprom(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 
 	if (argc < 2 || (argc == 2 && !strcmp(argv[1], "help")) ||
 	    strlen(argv[1]) < MIN_TLV_COMMAND_CHARS) {
-		int i;
+		int  i, j = 0;
+		char *bdname;
 
 		cmd_usage(cmdtp);
 		/* Print out board type table here */
 		printf("Board types: \n");
-		for (i = 1; i < CVMX_BOARD_TYPE_MAX; i++) {
-			printf("%20s\t", cvmx_board_type_to_string(i));
-			if ((i - 1) % 3 == 2)
-				printf("\n");
+		for (i = 1; i < CVMX_BOARD_TYPE_MODULE_MAX; i++) {
+			bdname = cvmx_board_type_to_string(i) ;
+			if ( ! strncmp ( bdname, "Unsupported", 11 )) continue ;
+			if ( 0 == j%3 ) printf("\n");
+			j++ ;
+			printf("%20s\t", bdname);
 		}
 		printf("\n");
 		return 1;
@@ -543,7 +546,7 @@ int do_tlv_eeprom(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 			    OCTEON_EEPROM_BOARD_DESC_MINOR_VER;
 
 			bd_ptr->board_type = 0;
-			for (i = 1; i < CVMX_BOARD_TYPE_MAX; i++) {
+			for (i = 1; i < CVMX_BOARD_TYPE_CUST_PRIVATE_MAX; i++) {
 				if (!strncmp(argv[3],
 					     cvmx_board_type_to_string(i),
 					     100)) {

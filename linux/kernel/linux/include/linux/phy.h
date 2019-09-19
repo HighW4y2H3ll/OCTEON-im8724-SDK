@@ -84,6 +84,7 @@ typedef enum {
 	PHY_INTERFACE_MODE_MAX,
 } phy_interface_t;
 
+
 /**
  * It maps 'enum phy_interface_t' found in include/linux/phy.h
  * into the device tree binding of 'phy-mode', so that Ethernet
@@ -648,7 +649,13 @@ int phy_read_mmd_indirect(struct phy_device *phydev, int prtad, int devad);
  */
 static inline int phy_read(struct phy_device *phydev, u32 regnum)
 {
-	return mdiobus_read(phydev->mdio.bus, phydev->mdio.addr, regnum);
+	int attempt = 2, err = 0;
+	while (attempt-- >= 0 ) {
+		err =  mdiobus_read(phydev->mdio.bus, phydev->mdio.addr, regnum);
+		if (err >= 0)
+			break;
+	}
+	return err;
 }
 
 /**
@@ -844,6 +851,8 @@ int phy_ethtool_get_link_ksettings(struct net_device *ndev,
 				   struct ethtool_link_ksettings *cmd);
 int phy_ethtool_set_link_ksettings(struct net_device *ndev,
 				   const struct ethtool_link_ksettings *cmd);
+
+extern int(* board_phy_status)(struct phy_device *phydev);
 
 int __init mdio_bus_init(void);
 void mdio_bus_exit(void);

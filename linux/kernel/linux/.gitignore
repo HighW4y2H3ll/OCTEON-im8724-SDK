@@ -1,0 +1,5 @@
+.tmp_versions/
+arch/mips/include/generated/
+arch/mips/boot/tools/relocs
+include/generated/
+include/config/

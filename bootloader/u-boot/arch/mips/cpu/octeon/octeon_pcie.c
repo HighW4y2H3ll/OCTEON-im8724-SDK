@@ -302,6 +302,25 @@ void init_octeon_pcie(void)
 
 		rc = cvmx_pcie_rc_initialize(pcie_port);
 
+#ifdef CONFIG_OCTEON_IM8724
+		if(pcie_port == 2) {
+			cvmx_pciercx_cfg032_t pciercx_cfg032;
+			union cvmx_rst_boot rst_boot;
+
+			/* PCIe init fixup for board cold boot init */
+			rst_boot.u64 = cvmx_read_csr(CVMX_RST_BOOT);
+			if (rst_boot.s.lboot < 0x3) {
+				pciercx_cfg032.u32 = cvmx_pcie_cfgx_read_node(0, 2, CVMX_PCIERCX_CFG032(2));
+				debug("%s: lboot: %d, pcie: gen%d\n", __func__,
+					rst_boot.s.lboot, pciercx_cfg032.s.ls);
+				if (pciercx_cfg032.s.ls == 1) {
+					mdelay(1000);
+					cvmx_pcie_rc_initialize(2);
+				}
+			}
+		}
+#endif
+
 		if (rc != 0)
 			continue;
 

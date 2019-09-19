@@ -319,7 +319,7 @@ int packetio_receive_internal(packetio_t *packetio, packetio_packet_t *packet, i
     }
 
     /* Use the current time if we don't get a better timestamp */
-    packet->timestamp = timestamp_get_systime();
+    packet->timestamp = timestamp_get_systime(1);
 
     /* Get the receive time from the control data */
     cmsg = CMSG_FIRSTHDR(&msg);

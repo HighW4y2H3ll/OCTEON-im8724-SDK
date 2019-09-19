@@ -38,6 +38,9 @@
 
 #include <asm/irq.h>
 
+int(* board_phy_status)(struct phy_device *phydev) = 0;
+EXPORT_SYMBOL(board_phy_status);
+
 static const char *phy_speed_to_str(int speed)
 {
 	switch (speed) {

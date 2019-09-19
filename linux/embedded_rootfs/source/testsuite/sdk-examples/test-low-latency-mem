@@ -1,0 +1,25 @@
+#!/bin/sh
+
+source ./functions.sh
+
+check_memory
+check_large_shared_mem
+have_cn30xx
+require [ $? != 0 ]
+have_cn58xx_pass1
+require [ $? != 0 ]
+have_cn56xx
+require [ $? != 0 ]
+have_cn52xx
+require [ $? != 0 ]
+have_cn50xx
+require [ $? != 0 ]
+have_cn6xxx
+require [ $? != 0 ]
+have_cnf71xx
+require [ $? != 0 ]
+have_cn7xxx
+require [ $? != 0 ]
+assert schedtool -a 0 -e /examples/low-latency-mem > $0.log
+assert grep -q PASSED $0.log
+

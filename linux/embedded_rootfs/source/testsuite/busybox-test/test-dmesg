@@ -1,0 +1,17 @@
+#!/bin/sh
+source ./functions.sh
+
+assert dmesg -s 1024 > $0.log
+require_good ls -l $0.log | grep -q '1024'
+assert dmesg > $0.log
+
+assert dmesg -c > $0-clear.log
+require_good  diff -q $0.log $0-clear.log
+assert dmesg > $0-clear.log
+
+for i in `ls -l $0-clear.log | awk '{ print $5 }'`
+do
+rm -f $0.log $0-clear.log
+require [ $i == 0 ]
+done
+

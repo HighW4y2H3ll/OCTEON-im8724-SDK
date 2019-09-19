@@ -1,0 +1,126 @@
+// $Id: tab.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Tables
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "std.vsl"
+
+// Version
+tab_version() = "$Id: tab.vsl 14384 2006-04-11 21:46:04Z cchavva $";
+
+// Table functions
+
+// tab([[1, 2, 3], [4, 5, 6], [7, 8, 9]]) results in
+// 1 2 3
+// 4 5 6
+// 7 8 9
+
+// tab([[1, 2, 3], [4, 5, 6], 7]]) results in
+// 1 2 3
+// 4 5 6
+// 7
+
+// Override this one to create an alternative padding
+tab_elem([]) = tab_elem(0);
+tab_elem(x)  = whiteframe(x);
+
+// Subroutines
+
+// Maximum width and height of a list
+_tab_maxhspace([...]) = hspace(valign(...));
+_tab_maxvspace([...]) = vspace(halign(...));
+
+// Check if list is empty
+_tab_allempty([[]]) = true;
+_tab_allempty([[] : more]) = _tab_allempty(more);
+_tab_allempty([_...]) = false;
+
+// Create a list from the heads of all elems
+_tab_heads([]) = [];
+_tab_heads([[head : _] : more]) =
+	[tab_elem(head) : _tab_heads(more)];
+_tab_heads([x]) = [tab_elem(x)];
+
+// Create a list from the tails of all elems
+_tab_tails([]) = [];
+_tab_tails([[_ : tail] : more]) =
+	[tail : _tab_tails(more)];
+_tab_tails(_) = [];
+
+// Create a list with column widths
+_tab_width(...) =
+	if _tab_allempty(...) 
+	then []
+	else [ _tab_maxhspace(_tab_heads(...)) : _tab_width(_tab_tails(...)) ] 
+	fi;
+
+// Align a line with given column widths
+_tab_line([width], [head]) =
+  width | tab_elem(head);
+_tab_line([width : twidth], [head : tail]) =
+  _tab_line([width], [head]) & _tab_line(twidth, tail);
+_tab_line([width], x) =
+  _tab_line([width], [x]);
+_tab_line([width : twidth], x) =
+  _tab_line([width], [x]) & _tab_line(twidth, 0);
+
+// Align a line with given column widths, using delimiters
+_dtab_line([width], [head]) =
+  width | tab_elem(head);
+_dtab_line([width : twidth], [head : tail]) =
+  _dtab_line([width], [head]) & vrule() & _dtab_line(twidth, tail);
+_dtab_line([width], x) =
+  _tab_line([width], [x]);
+_dtab_line([width : twidth], x) =
+  _tab_line([width], [x]) & vwhite(rulethickness()) & _dtab_line(twidth, 0);
+
+// Create a table with given column widths
+_tab(width, [head]) =
+  _tab_line(width, head);
+_tab(width, [head : tail]) =
+  _tab_line(width, head)
+| _tab(width, tail);
+
+// Create a table with delimiters and given column widths
+_dtab(width, [head]) =
+  vrule() & _dtab_line(width, head) & vrule();
+_dtab(width, [head : tail]) =
+  vrule() & _dtab_line(width, head) & vrule()
+| hrule()
+| _dtab(width, tail);
+
+
+// Public functions
+
+// Create a table, calculating the maximum width
+tab(...) =
+  _tab(_tab_width(...), ...);
+
+// Same, but with delimiters
+dtab(...) =
+  hrule()
+| _dtab(_tab_width(...), ...)
+| hrule();

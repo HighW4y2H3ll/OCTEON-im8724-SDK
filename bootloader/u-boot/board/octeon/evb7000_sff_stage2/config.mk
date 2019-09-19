@@ -1,0 +1,1 @@
+../generic_emmc_stage2/config.mk

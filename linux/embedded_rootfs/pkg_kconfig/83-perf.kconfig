@@ -1,0 +1,9 @@
+config CONFIG_perf
+       bool "perf - Linux kernel profiling tool."
+       select CONFIG_libelf
+       select CONFIG_bison_host
+       select CONFIG_flex_host
+       select CONFIG_m4_host
+       select CONFIG_libunwind
+       help
+         The perf tool supplies a suite of system profiling tools.

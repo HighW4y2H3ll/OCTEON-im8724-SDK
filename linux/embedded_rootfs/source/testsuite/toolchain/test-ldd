@@ -1,0 +1,10 @@
+#!/bin/sh
+
+source ./functions.sh
+
+require test -f /usr/bin/ldd
+assert ldd `which objdump` > $0.log
+assert grep -q "libc.so.6" $0.log
+assert grep -q "ld.so.1" $0.log
+
+

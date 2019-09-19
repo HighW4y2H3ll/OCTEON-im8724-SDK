@@ -1,0 +1,11 @@
+--- mkfs.ubifs/mkfs.ubifs.h-orig	2014-02-18 18:24:33.396517195 +0530
++++ mkfs.ubifs/mkfs.ubifs.h	2014-02-18 18:22:29.586397055 +0530
+@@ -45,7 +45,7 @@
+ #include <errno.h>
+ #include <libgen.h>
+ #include <ctype.h>
+-#include <uuid/uuid.h>
++#include "../../e2fsprogs-1.42.6/lib/uuid/uuid.h"
+ #include <sys/file.h>
+ 
+ #include "libubi.h"

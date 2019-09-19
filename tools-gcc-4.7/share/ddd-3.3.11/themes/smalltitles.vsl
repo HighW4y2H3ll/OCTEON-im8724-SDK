@@ -1,0 +1,12 @@
+// $Id: smalltitles.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Small titles.  If enabled, display titles in a smaller font.
+
+#pragma replace title_rm
+#pragma replace title_bf
+#pragma replace title_it
+#pragma replace title_bi
+
+title_rm(box) = small_rm(box);
+title_bf(box) = small_bf(box);
+title_it(box) = small_it(box);
+title_bi(box) = small_bi(box);

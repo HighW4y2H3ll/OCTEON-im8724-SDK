@@ -1,0 +1,22 @@
+#!/bin/sh
+
+source ./functions.sh
+
+have_cavium_pci_device
+require_good
+
+OCTEON_REMOTE_DEBUG=1 oct-pci-csr ciu_fuse | grep -q BAR1
+require_good
+
+oct-pci-memory 0 | grep -q "Address 0x0000000000000000 ="
+assert_good
+
+assert oct-pci-memory 0 0x1122334455667788 > /dev/null
+oct-pci-memory 0 | grep -q "Address 0x0000000000000000 = 0x1122334455667788"
+assert_good
+
+assert oct-pci-memory 0 0 > /dev/null
+oct-pci-memory 0 | grep -q "Address 0x0000000000000000 = 0x0000000000000000"
+assert_good
+
+

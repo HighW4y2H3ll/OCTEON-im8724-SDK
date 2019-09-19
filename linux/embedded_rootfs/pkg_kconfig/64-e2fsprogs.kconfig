@@ -1,0 +1,9 @@
+config CONFIG_e2fsprogs
+	bool "e2fsprogs"
+	default y
+	help
+		From the e2fsprogs homepage:
+		The Ext2 Filesystem Utilities (e2fsprogs) contain all of 
+		the standard utilities for creating, fixing, configuring , 
+		and debugging ext2 filesystems. E2fsprogs is freely available 
+		under the GNU General Public License.

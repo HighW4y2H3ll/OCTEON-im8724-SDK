@@ -1,0 +1,1297 @@
+Release notes for Octeon Linux SDK 5.1.0
+
+Release 5.1.0
+	- Updated Linux kernel to 4.9.57
+		- Added OcteonII and OcteonIII SOC support.
+
+	- Special notes:
+		- NAND device not supported, NAND support will be
+                  added in a future patch release.
+
+	- Ethernet Driver:
+		- Added NAPI support to POW driver
+		- Added mgmt support to Octeon III driver.
+		- Added PTP support to Octeon III driver.
+		- Added new APIs to alloc/free FPA buffers for OcteonIII SOCs.
+
+	- Embedded Rootfs:
+		- Upgraded all packages to latest version.
+ 
+
+Release 5.0.0
+	- Updated Linux kernel to 4.4.2
+
+	- Special notes:
+		- This release has only been tested on the OCTEON CN68XX
+			- EBB68XX
+			- NIC68
+
+		- The following features are known to work:
+			- NAND device
+			- RXAUI interface
+			- Fix page table corruption when THP permission changes.
+			- Watchdog
+			- PCIe/MSI-X
+			- CPU hotplug
+			- octeon-pow-ethernet driver
+			- USB
+			- I2C driver
+			- Compact flash driver
+			- RTC
+			- Oct-remote-utils
+			- Simple Exec and UM Simple Exec applications
+			- Synced up simple-executive files
+
+	- Ethernet driver:
+		- Handle the case when request_threaded_irq() fails during
+		  xaui link initialization.
+		- The ethernet driver uses the default kernel transmit
+		  queues resulting in severe performance degradation under
+		  some cases. The problem will be addressed on later
+		  releases.
+
+	- embedded_rootfs:
+		- oct-app-ctl utility
+
+Release 3.1.2
+
+	- Special notes:
+		- Fixed various issues with kexec, kdump, CPU hotplug for
+		  cn78xx
+		- Added initial 'zero copy networking driver' for KVM.
+		- Fixed GPIO, I2C, eMMC, USB, watchdog, PCIe drivers to work in
+     		  multinode mode.
+		- Fixed error interrupts and interrupt handler to work in
+		  multinode mode.
+
+	- New kernel features:
+		- Added OCTEON CN73XX CPU.
+		- Added OCTEON CNF75XX CPU (simulator only).
+
+	- Ethernet driver:
+		- Added MIX support to ethernet driver
+		- Updated ethernet driver to support cn73xx.
+		- Added phy support for RGMII support.
+		- Added to support SRIO driver for cnf75xx.
+		- Fixed Linux kernel to be able to remove octeon3-ethernet
+		  driver, only applies to pass1.1 chip
+		- Fixed various performanc issues.
+
+Release 3.1.1
+
+	- Special notes:
+		- The default kernel config files (kernel.config, and
+                  sim.config) have been changed to build a kernel that
+                  runs only on OCTEON II and OCTEON III processors.
+                  This was done to take advantage of the increased
+                  performance available when built this way.  All
+                  OCTEON processor models are still supported by the
+                  kernel, but the CONFIG_CAVIUM_OCTEON2 option must be
+                  disabled for OCTEON and OCTEON Plus processors.
+		- On CN78XX the default irq affinity is for all CPUs.
+                  Other chips still have default affinity set to CPU 0
+                  only to facilitate multi-CPU receive in the
+                  octeon-ethernet driver.
+		- On CN78XX the /examples/testsuite/set_affinity.sh
+                  can be used to set all irqs to their suggested
+                  affinity "hint".  Doing this may result in higher
+                  performance in the octeon3-ethernet driver.
+		- The MIX/mgmt ethernet blocks on CN78XX are not
+                  supported by Linux.
+
+	- New kernel features:
+		- OCTEON III CN78XX CPUs are now supported.
+
+	- Ethernet driver:
+		- CN78XX uses a new Ethernet driver called
+                  octeon3-ethernet.  Other chips still use the
+                  octeon-ethernet driver.  The Kconfig variable name
+                  of this driver is CONFIG_OCTEON3_ETHERNET
+		- octeon3-ethernet driver assigns a default name of
+                  "ethX" to each port, there is no more "xauiX".
+		- rmmod of the octeon3-ethernet driver is not
+                  supported.
+
+Release 3.1.0
+	- Special notes:
+		- Linux kernel has been upgraded to 3.10.x
+		- The SRIO ports must be manually enumerated on the host
+		  side by issuing the following command after loading the
+		  ethernet module "echo -1 > /sys/bus/rapidio/scan". Note:
+		  this command must be executed before enabling the interfaces
+		  via the ifconfig command.
+		- When the following options are enabled: CONFIG_DEBUG_SPINLOCK,
+		  CONFIG_DEBUG_MUTEXES, and CONFIG_PROVE_LOCKING, the kernel 
+		  issues the following warning "WARNING: at kernel/lockdep.c:
+		  2988 lockdep_init_map+0x60c/0x618()".
+
+	- New kernel features:
+		- OCTEON III CPUs are now supported, with full support
+                  for CN70XX/CN71XX SoCs.
+			- Hardware floating point arithmetic support.
+			- On chip SATA host controller.
+			- On chip USB3 host controller.
+		- The perf profiling tools now allow stack traces to
+                  be collected from both kernel and user-space
+                  profiling.
+
+	- Ethernet driver:
+		- rx_cpu_factor command line argument added for tuning
+                  number of CPUs used on RX path.  Also settable via
+                  /sys/module/octeon_ethernet/parameters/rx_cpu_factor
+		- recycle_tx command line argument added to
+                  control buffer recycling. Also settable via
+                  /sys/module/octeon_ethernet/parameters/recycle_tx
+
+Release 3.0.0
+	- Special notes:
+		- kernel_2.6 directory is renamed to 'kernel'.
+		- Linux kernel has been upgraded to 3.4.24.
+		- Added kexec/kdump support.
+		- Added Transparent HugeTLB support.
+		- The source code for ethernet driver is moved to
+                  drivers/net/ethernet/octeon directory based on new
+		  kernel layout.
+		- Upgraded error handling to use EDAC framework.
+		- Upgraded Cortina PHY driver to support nic68_4.
+		- Upgraded Vitesse PHY driver to support snic and nic10e_66. 
+
+	- embedded_rootfs:
+		- Upgraded busybox to 1.20.2 to support GCC-4.7.
+		- Upgraded iptables to 1.4.14 and various other packages to 
+		  support GCC-4.7.
+		- Removed oprofile utility.
+		- Added perf utility to profile kernel.
+		- Added openssh, openssl, e2fsprogs, hdparm, kexec tools.
+	- debian rootfs:
+		- Upgraded debian rootfs to squeeze root file system from lenny.
+
+Release 2.3.0
+	- Known Issues Fixed (Please refer to the specific OCTEON silicon’s
+	  known issues document for details):
+		- TLB Parity error [Impacts: cn63xx pass1.x, pass2.x,
+		  cn68xx pass1.x and cn66xx pass1.0].
+		- Outstanding Prefetch to L1 Affects Load order [Impacts:
+		  All cn6xxx OCTEON models].
+
+	- Special notes:
+		- The ability to use OCTEON crypto instructions in
+                  kernel, that was present in 1.9.0 and earlier
+                  releases, has been added back with a small change.
+                  The prototypes of the functions are now in
+                  asm/octeon/octeon-crypto.h, and
+                  CONFIG_CAVIUM_OCTEON_KERNEL_CRYPTO should be
+                  selected to use them.
+		- Added clause-45 support.
+		- Various bug fixes for interrupts to work on EBB6800.
+
+	- New kernel features:
+		- CN61XX OCTEON model and the EBB6100 development
+                  board are now supported.
+		- Added very preliminary support for eMMC driver.
+
+	- SPI:
+		- A driver for the on-chip SPI bus controller present
+                  on CN66XX and CN61XX chips has been added.  It can
+                  be used with the standard at24 driver to read and
+                  write the SPI EEPROM on the EBB6600 and EBB6100
+                  development boards.
+
+Release 2.2.0
+	- Special notes:
+		- Configuration of board specific hardware is now done
+                  via the device tree structure rather than adding
+                  special cases to the driver code.
+		- When running two kernels, the serial ports used by
+                  each kernel must now be explicitly specified with
+                  the 'uartdisable=x' and 'console=' command line
+                  options.
+
+       - New kernel features
+                - Added support for CN66XX Octeon model and EBB6600
+                  development board.
+		- Kernel device configuration controlled by device
+                  tree structure passed from bootloader.
+		- New kernel command line parameter 'uartdisable=x'
+                  added to dynamically disable serial port drivers.
+
+	- Ethernet driver:
+		- Jumbo frame packet data is no longer copied upon
+                  reception.
+		- Transmitted packets with 12 or fewer fragments can be
+                  sent without copying the packet data (up from 6).
+		- On boards with phys that support it, link state
+                  change notifications are interrupt driven instead
+                  of being polled for.
+
+	- TWSI/I2C:
+		- Use of TWSI/I2C on multi-master busses should be
+                  reliable.
+		- High Level Controller (HLC) hardware used when
+                  possible to reduce interrupt overhead.
+
+	- GPIO:
+		- A driver for the OCTEON on-chip GPIO unit was added,
+                  allowing the GPIO pins to be controlled by the
+                  standard Linux GPIO facilities.
+
+	- embedded_rootfs:
+		- Added oct-top utility.
+
+Release 2.1.0
+	- Special notes:
+		- The interrupt numbering for the Linux kernel has
+                  changed.  Drivers using symbolic names (like
+                  OCTEON_IRQ_GPIO0) will continue to work.  Any code
+                  that uses hard coded irq numbers is no longer
+                  supported.
+                - Even though the code contains references to CN66XX,
+                  this chip is not officially supported in SDK 2.1.  
+
+	- New kernel features:
+		- Linux kernel upgraded to version 2.6.32.27.
+		- Added support for CN68XX OCTEON II processors.
+                - Fixed race conditions in the kernel TLB modify
+                  handlers. 
+
+	- Ethernet driver:
+		- The 'pow0' device has been moved from the
+                  octeon-ethernet driver to the octeon-pow-ethernet
+
+	- USB drivers:
+		- USB support for 6XXX parts using the EHCI and OHCI
+                  drivers, there is no longer a restriction on the
+                  amount of memory that can be supported.
+
+	- Embedded rootfs:
+		- Updated busybox to 1.18.4 version.
+		- Various bug fixes.
+
+Release 2.0.0
+	- Special notes:
+		- For Linux kernels to be run on cn63xx-pass1.x OCTEON
+                  models, the CONFIG_CAVIUM_OCTEON2 configuration
+                  option must be selected.  This can be activated from
+                  menuconfig "Machine selection --> Build the kernel
+                  to be used only on OCTEON II processor cores".
+                  Doing this activates workarounds for chip errata
+                  found in early cn63xx parts.
+		- The OHCI low speed USB controller on the cn63xx does
+                  not work with 4GB or more of DRAM configured.  If
+                  OHCI operation is required, boot the kernel with
+                  'mem=3584M' to restrict the amount of memory used.
+                  EHCI high speed USB operation is not affected by
+                  this issue.
+                - The default debian distribution in the SDK has been 
+                  upgraded to 'Lenny' from 'Etch'. The previous Etch
+                  distribution is deprecated, but still included in 
+                  the SDK. Also note that Lenny requires at least 
+                  2GB storage, hence a 1GB compact flash may not
+                  be adequate. 
+
+	- New kernel features:
+		- Linux kernel upgraded to version 2.6.32.13.
+		- Added new CONFIG_CAVIUM_OCTEON2 to compile the kernel with
+		  -march=octeon2 ISA.
+		- All kernel synchronization and atomic operations optimized
+		  for OCTEON II when built for CONFIG_CAVIUM_OCTEON2.
+		- Modified TLB refill to use OCTEON II instructions when possible.
+		- Added support for the new physical memory layout in OCTEON II.
+		- Modified clear_page() to use OCTEON II instructions.
+		- Improved TLB refill handler, for both hugetlbfs and
+                  normal pages.
+		- Signal return trampolines moved to VDSO for faster
+                  signal processing.
+		- Interrupts distributed round-robin to CPUs when
+                  affinity set to more than a single CPU.
+		- Two level page table instead of three level with
+                  64KB page size for faster TLB refills.
+		- Added standard userspace protocol to watchdog
+                  driver, userspace monitoring tools can now use
+                  /dev/watchdog to control it.
+		- Added new CONFIG_MAPPED_KERNEL option, selected from
+                  menuconfig "Kernel type --> Mapped kernel", allowing
+                  for more efficient code in loadable kernel modules.
+		- Octeon hardware block parameter and address checking
+                  is no longer controlled by build system environment
+                  variables.  They can be enabled from the menuconfig
+                  "Machine selection" menu.
+		- Tracing with function and function_graph tracers is
+                  now possible.  They can be selected from menuconfig
+                  "Kernel hacking --> Tracers".  Userspace tracing helper
+                  programs 'trace-cmd' and 'kernelshark' are provided.
+		- Support for hot-plugging of CPUs can now enabled.
+		- Address space randomization is now supported and
+		  enabled.  Please see SDK documentation for details.
+		- The KProbes system is now supported.  It can be
+                  selected from the menuconfig "General setup -->
+                  Kprobes" menu.
+
+	- Removed kernel features:
+		- The CONFIG_CAVIUM_RESERVE32_USE_WIRED_TLB configure
+                  option has been removed.
+
+	- kernel bug fixes:
+		- Fixed problem with oprofile while generating call graphs.
+		- Ported faster version of lockless version of handling
+		  interrupts for cn56xx and cn52xx octeon models, missed out
+		  in previous release.
+		- The memory freed by the init code can be reused. 
+
+	- Linux kernel menuconfig changes:
+		- All Octeon network drivers moved from "Machine
+                  selection" to "Device Drivers --> Network device
+                  support --> Ethernet (1000 Mbit)"
+		- All Octeon TWSI/I2C drivers moved from "Machine
+                  selection" to "Device Drivers --> I2C support -->
+                  I2C Hardware Bus Support"
+		- All Octeon USB drivers moved from "Machine selection"
+                  to "Device Drivers --> USB support"
+
+	- Source file location changes:
+		- All Ethernet driver files were moved to drivers/net/octeon/.
+		- All USB driver files were moved to drivers/usb/host/.
+		- All TWSI/I2C driver files were moved to drivers/i2c/busses/.
+		- Many header files have been moved to
+                  arch/mips/include/asm/octeon/.
+
+	- Ethernet driver:
+		- Kernel module is now called octeon-ethernet instead
+                  of cavium-ethernet, this is to match the name used
+                  in upstream kernel versions.  Systems that
+                  previously did 'modprobe cavium-ethernet' should be
+                  changed to do 'modprobe octeon-ethernet'.
+		- The Ethernet driver now uses the Linux NAPI system,
+                  which reduces the interrupt processing overhead for
+                  received packets.
+		- Transmit packet buffers are now freed by feeding
+                  them back to the POW fixing problems of user-space
+                  TCP and UDP sockets stalling under some conditions.
+		- NETIF_F_SG is now supported, reducing copying of
+                  network packet data.
+		- Packet receive processing is done on the lowest
+                  numbered CPUs.  For some networking applications,
+                  using schedtool to set the application CPU affinity
+                  to the higher numbered CPUs, can improve networking
+                  throughput.
+
+	- Management port Ethernet driver (on 52XX, 56XX, and 63XX processors):
+		- The driver for the mgmt devices has been completely
+                  rewritten.  When using the kernel menuconfig program
+                  its configuration has moved to Device Drivers -->
+                  Network device support --> Ethernet (1000 Mbit).
+		- Tranmit and receive packest are no longer copied.
+		- The mgmt driver now uses Linux NAPI system,
+                  which can reduce the interrupt processing overhead for
+                  received packets.
+		- When built as a loadable kernel module, it is called
+                  'octeon_mgmt'.
+
+	- Ethernet PHY device support.
+		- The Octeon SMI/MDIO busses are now integrated with
+                  the Linux kernel's MDIO/PHY subsystem.
+		- Both the octeon-ethernet and octeon_mgmt Ethernet
+                  drivers now use the Linux PHY subsystem to
+                  communicate with their PHYs.
+
+	- USB drivers:
+		- For all 3XXX and 5XXX parts that support USB, the
+                  dwc_otg USB driver is no longer supported.
+		- USB support for 3XXX and 5XXX parts use the Octeon
+                  usb host driver.  It can be enabled via menuconfig
+                  at "Device Drivers --> USB support --> Octeon usb
+                  host driver"
+		- USB support for 6XXX parts use the EHCI and OHCI
+                  drivers.  They can be enabled by first enabling
+                  "Device Drivers --> USB support --> EHCI HCD" and
+                  "Device Drivers --> USB support --> OHCI HCD", then
+                  enable "Octeon on-chip EHCI support" and "Octeon
+                  on-chip OHCI support"
+
+	- Embedded rootfs:
+		- Use ext2 filesystem for simulator root filesystem instead of
+		  ext3.
+		- htlbremap can now remap the user stack and shared libraries.
+		  Refer to the SDK documentation for more details.
+		- Replaced "oncpu" utility with more modern "schedtool".
+
+Release 1.9.0
+	- New kernel features:
+		- Linux kernel upgraded to version 2.6.27. 
+		- Added per-process access control for XKPHYS. XKPHYS access for 
+		  user processes is disabled by default. The sysmips() system call 
+		  can be used to enable access. See SDK documentation for details. 
+		- The kernel is now built with -msym32 option for better performance. 
+		- The default CONFIG_HZ has been reduced from 250 to 100. 
+		- A new libata based driver is added for Compact Flash. 
+		- The KGDB usage model has changed slightly. Please see SDK documentation
+		  for details. 
+	- Kernel bug fixes:
+		- Miscellaneous USB driver fixes. 
+		- Fixed issues with RI/XI (Read Inhibit/Execute Inhibit) mappings. 
+		- Fixed a locking violation in the watchdog driver. 
+	- Ethernet Driver:
+		- Fixed the driver initialization code to detect link state correctly. 
+		- Modified the driver to use the new Simple Executive interface 
+		  cvmx_ipd_free() to free FPA buffers used by IPD. 
+		- Fixed a race condition between ethtool APIs and the timer. 
+		- Fixed the driver to function properly under low memory conditions. 
+		- Performance improvements. 
+		- Added ethtool_ops to the Management port driver.
+		- Fixed IP re-assembly issues caused by large SKBs allocated by the 
+		  Management port driver. 
+		- Fixed the high rate of packet drops on TX for the Management port driver. 
+	- Embedded rootfs:
+		- Added a new utility called "bootoct" to boot Simple Exec applications
+		  on idle cores from Linux. 
+		- All oct-pci-* utilities have been enhanced and renamed as oct-remote-*. 
+		  See SDK documentation for details. 
+		- Following packages have been removed: flex, readline, openssl, iptables
+		  and ipsec. 
+		- Upgraded MTD tools to version 1.2.0. 
+
+Release 1.8.1
+        - New kernel features:
+		- Implemented XAUI link polling.
+		- Use the CIU write/clear registers on the new chips that support them.
+		- Updated PCI latency timer, PCIe payload, and PCIe max read to allow larger 
+		  transactions.
+		- Added support for second TWSI interface on 56XX and 52XX.
+		- Added a new USB driver (octeon-usb-host.c) based on simple executive APIs.
+		- Performance improvements to the compact flash driver. 
+	- Kernel bug fixes:
+		- Added a dummy PCIe controller to use up bus number zero. This
+		  forces the real PCIe controllers to start at one. IDT PCIe switches
+		  don't work properly with bus numbers of zero.
+		- Fixed a kernel crash caused by illegal syscall numbers. 
+		- Fixed a bug where user processes receiving signals could crash due to lack
+		  of icache flush across all cores.
+		- Fixed an IO port addressing bug for PCIe. 
+		- Sets HugeTLB page correctly when configured for 64KB pages.
+		- Fixed system lockup under load when using futexes (upstream).
+	- Ethernet Driver
+		- Make the number of packet buffers a module parameter. 
+		- Added support for the PCI/PCIe packet engines.
+		- Added support for jumbo packets to the management port.
+		- Fix the MTU when VLAN_8021Q is configured. 
+	- Embedded rootfs
+		- Proper L2 cache detection for CN52XX in oct-linux-identify
+
+
+Release 1.8.0
+	- New kernel features:
+		- Kernel link address is changed from 0x81100000 to 0x80100000.
+		- New optimized TLB handler.
+		- New Octeon specific optimized kernel memcpy().
+		- Added support for MSI devices needing multiple interrupts.
+	- Kernel bug fixes:
+		- Both PCI-X slots on 56XX host mode boards are now disabled by default.
+		  Users are required to enable the ports which are populated.
+		- Fixed kernel builds on Fedora Core 9.
+		- Fixed incorrect jump labels in atomic*_sub_if_positive() routines
+		- Reduce PCI/PCI-X prefetching to avoid DMAs to addresses beyond end
+		  of memory.
+		- Fixed problem with built-in drivers not being able to allocate from
+		  RESERVE32 memory.
+		- Fixed support for extended partitions on Compact Flash.
+	- Ethernet driver:
+		- Added multicast support to the management port ethernet driver.
+                - Added a workaround for erratum titled "Collision During Packet Extend",
+                  which causes the GMX block to hang if a collision occurs towards the
+                  end of a <68 byte packet and the link is in half duplex mode. This
+                  erratum only effects OCTEON 3XXX chips. There is also a performance
+                  penalty associated with this work around. If half duplex mode is not
+                  being used, this work around can be removed to avoid the performance
+                  penalty.
+	- Embedded rootfs:
+		- Added lockstat library to collect pthread lock statistics.
+		- Upgraded pciutils to 3.0.0.
+		- Added iputils which includes utilities like ping, arping, etc.
+		- Added /etc/protocols for traceroute and other utilities.
+		- Added /etc/{shadow,gshadow,group} for deluser and delgroup.
+		- Made some minor changes to htlbremap library.
+
+Release 1.7.3
+	- New kernel features:
+		- Added support for CN52XX based hardware.
+			- Modified interrupt handling to support CN52XX.
+			  CN52XX now adds CIU_INTX_SUM0 style bits to CIU_INT_SUM1.
+			- Added preliminary support for 2 USB ports on CN52XX.
+			- Added support for third uart on CN52XX.
+			- Extensive PCIe updates for CN52XX.
+		- Improved trace buffer support.
+		- Preliminary support for CN5000-REF-HS5 board
+		  (Triple Play Broadband Gateway Reference Platform).
+		- Added callbacks to support accelerated IP forwarding.
+	- Kernel bug fixes:
+		- Fixed kernel hooks to support KAME IPSec module.
+		- Re-enabled support for KGBD.
+	- Ethernet driver:
+		- Added configurable QOS support.
+		  GET_SKBUFF_QOS() defines the mapping to output queues.
+		- Support reception of dynamic short packets
+		  (when configured by concurrent Simple Executive applications).
+		- Ethernet-POW : Changed virtual port number to avoid conflicts.
+		- Modified to free Tx buffers more aggressively.
+		- Fixed reference to freed WQE when using intercept callback.
+	- Embedded rootfs
+		- Fixed traceroute option parsing.
+		- Restored support for NFS root filesystem.
+
+
+Release 1.7.2
+	- Kernel bug fixes:
+		- Modified copy_page() to never prefetch data outside of
+		  the copy region.
+		- Modified the storage of the RI/XI bits to allow for large
+		        physical addresses. The new storage system will allow
+		        up to 56 bits of physcal address, much more than the
+		        49 bits required for Octeon CSRs.
+		        RI/XI support is now enabled by default.
+		- Fixed bug#1476 where USB enumeration failed for hubs
+		- Fixed intermittent Ethernet driver failure on rmmod
+		- Fixed SATA Sil3124 driver problems on NAC38 board
+		        where command queueing was disabled.
+		- Moved the watchdog poking back into interrupt context.
+		        Poking from a timer had the unintended consequence of
+		        lowering the watchdog priority and allowed the
+		        ethernet receive tasklet to starve the watchdog timer.
+		- Corrected interrupt mapping for PCI devices behind
+		        the PLX bridge on EBH5600.
+	- Embedded rootfs:
+		- Upgraded iptables to 1.4.0, fixed "mangle" tables (bug#1473)
+
+
+Release 1.7.1
+	- Kernel bug fixes:
+		- Fix bug where DDR ECC errors were not enabled properly.
+
+
+Release 1.7.0
+	- New kernel features:
+		- Kernel upgrade 2.6.21.7.
+		- Support for CN5XXX series TLB XI/RI bits. Pages are now
+			marked execute inhibit and read inhibit as necessary
+			based on the mmap() flags. For toolchain compatibility,
+			execute permission also implies read permission.
+		- Added support for CN50XX, CN56XX, CN57XX based hardware.
+		- Added support for PCIe.
+		- Add support for the CN3005_evb_hs5 board.
+		- Kernel N32 system call interface updated to match new GCC.
+			Note that this kernel will not work with previous SDK
+			toolchain releases.
+		- Add support for PCI/PCIe MSI interrupts. Tested with a single
+			LSI LOGIC SAS controller.
+		- Added CVMX files to kernel to provide a more complete CVMX
+			based API to kernel modules. The kernel now uses CVMX
+			heavily instead of having its own private copy of many
+			functions and data structures.
+		- Compile time simulator checks are now runtime. This makes it
+			easier to run the same kernel on hardware and the
+			simulator.
+		- Switch the simulator filesystem from a mtdram device to a
+			mtd slram device. This can be configured at runtime to
+			allow a hardware kernel to run in the simulator.
+		- New driver for the CN56XX 10/100 management port.
+		- Added new API to enable/disable COP2 for use in kernel space.
+			The functions are octeon_cop2_enable() and
+			octeon_cop2_disable(). Refer to the SDK HTML
+			documentation.
+    		- Passing debug=1 with the PCI debugger will cause the kernel
+			to stop early in the init sequence.
+		- Implemented a fair ticket / now serving based spinlock for
+			Octeon.
+		- Kernel now uses the "executive" files instead of
+			"gpl-executive". The CVMX files are now dual licensed
+			so they can be used directly.
+		- Add Sky2 driver for Marvell PCIe network cards.
+		- CN56XX: Initial true IDE compact flash support (no DMA)
+			Detects PCMCIA vs IDE mode based on low bits of base
+			address that is passed.
+		- Change the watchdog driver to poke the watchdog every 100ms
+			instead of waiting for an interrupt.
+	- Kernel bug fixes:
+		- Export octeon_get_clock_rate() for use by modules.
+		- [MIPS] TLB: Fix instruction bitmasks.
+		- [MIPS] mmap: Add len and addr validation for MAP_FIXED mappings.
+		- Add dwarf debugging information to assembly files.
+		- Set USB reference clock divisor to allow running on parts
+			at frequencies greater than 600Mhz.
+		- Import clear_user_highpage() fix from mainline.
+		- Move L2 functions out of the kernel and into CVMX.
+		- Rate limit USB TX FIFO interrupts on CN31XX and CN3020. This
+			greatly reduces the system load using many USB devices
+			but reduces USB throughput.
+		- Fix generic_swap() to work with sizes larger than 15 bytes.
+		- CF driver: Fix locking deadlock found by kernel lock debugger.
+		- CF driver: Fix potential bug where a large lba address could
+			overflow into the drive field.
+		- Minor locking cleanups to allow the kernel to run cleanly
+			with full lock debugging.
+		- Fix arguments to compat_sys_lookup_dcookie() for O32
+			applications. This bug caused oprofile to not report
+			correct results for Debian.
+		- Fix bug where oprofile reports backtrace on cpus that don't
+			support it. This causes debian to show script errors
+			when starting oprofile.
+		- Revert changes to the kernel which changed the register
+			ordering for GDB and core dumps. This makes the kernel
+			match Debian's GDB but also breaks compatibility with
+			previous Octeon toolchains.
+		- Octeon USB: Fix warnings.
+		- Remove outdated fields from /proc/octeon_info.
+		- Many of the Octeon specific files have been reformatted to
+			match the kernel coding standards.
+		- Fix bug where DMA mapping would return maps for PCI even with
+			platform devices that use Octeon physical addresses
+			directly. This cause the USB DMA to fail in bizarre
+			ways when the 2nd 256MB was used. This only really
+			affects CN56XX since the returned address for CN30XX
+			would be truncated to a valid value by HW.
+		- Fix bug where dma cohernece check wasn't returning a value.
+		- Oprofile: Disable conditional clocks when oprofile starts
+			samplings.
+		- Disable conditional clocks when /proc/octeon_perf is in use.
+		- Race condition between IRQ enable/disable and shutdown of CIU
+			interrupts fixed. This could cause interrupts to be
+			mistakenly disabled causing device lockups.
+	- Ethernet driver:
+		- Fix crash with bridging and ebtables. Reuse of SKB is
+			now disabled as soon as CONFIG_NETFILTER is enabled.
+		- Change dev->priv to netdev_priv(dev). This works around an
+			issue where dev->priv is corrupted when kernel debug
+			information it turned on.
+		- Switch to the new CVMX common command queues for PKO queues.
+			This allows better locking between other applications.
+		- Update for new PKO enumeration for locking type.
+		- Fix setting of MTU for 57XX, 56XX, and 50XX.
+		- Don't set MAC filter and jabber for SPI. It isn't supported
+			by the hardware.
+		- Move the cavium-ethernet driver into
+			linux/drivers/net/cavium-ethernet so it can support
+			static linking as well as being a module. There is a
+			new kernel config option under 1000Mbps network
+			adapters.
+	- Embedded rootfs:
+		- Upgrade Openssl to 0.9.8f
+		- Speed up repeated builds by marking completed openssl builds
+			with .build_complete. Only install is performed if this
+			file exists.
+		- New CFG_UCLIBC_DEBUG_SUPPORT, define to install gdbserver and
+			thread_db library for uClibc.
+		- New utility oct-linux-pow for displaying the POW state.
+		- Binary stripping is now configurable. This allows debugging
+			with the standard binaries. Default is still with
+			stripping for size.
+		- oct-linux-mdio: Add utility to read/write SMI/MDIO devices
+		- htlbremap no longer requires contiguous heap so
+			preallocation of heap with HTLB_HEAP_SIZE environment
+			variable is no longer needed and the variable is
+			ignored.  End of heap is now programmatically
+			determined instead of old heuristic of assuming one
+			page after end of data.  The morecore handler now
+			supports trimming.  Messages from htlbremap are
+			prefixed in order to distinguish them from program
+			messages.  Private mapping is used everywhere.  Files
+			backing the hugetlb pages have more meaningful names
+			(prog- or heap-).
+		- Add support for lspci and setpci to the filesystem.
+
+
+
+Release 1.6.0
+	- New kernel features:
+		- Add new kernel option to use wired TLB entries for the
+			RESERVE32 memory.
+		- Add support for 8KB, 16KB, 32KB, and 64KB page sizes. HugeTLB
+			pages become 8MB, 32MB, 128MB, and 512MB.
+		- Updated makefiles to work properly with "-j#" parallel builds.
+		- Optimize fls() for Octeon.
+		- CN5xxx: SAA/SAAD atomic ops for Linux.
+		- Allow gdb to access xkphys addresses (both io and mem).
+		- Create a Watchdog and NMI handler. It will perform a soft
+			reset if any core running Linux stop poking the
+			watchdog.
+		- Transition the kernel to the gpl-executive files.
+		- Improved error reporting for many error conditions reported
+			through the RML interrupt bit.
+		- Add ability to poweroff the NA-C38 rev 2 board.
+	- Performance improvements:
+		- Optimize Icache flushing to happen much less often. In some
+			cases the amount of flushing is 1/10 of previous
+			releases.
+		- Set marked write buffer entries to use the same timeout as
+			normal entries instead of the max. This makes a stall
+			because of the write buffer being full less likely.
+		- Move performance counters to IRQ 6 so they don't interfere
+			with count/compare.
+		- USB: Disable Start Of Frame interrupts when idle. This
+			greatly reduces the performance hit caused by using
+			USB on CN31XX and CN30XX. USB no longer requires
+			polling when the devices are idle.
+		- In page copy, remove prepare for stores since they cause
+			unnecessary bus traffic. All the writes will merge and
+			perform a full write anyway.
+	- PCI Host mode:
+		- Redo Via Southbridge stuff to use normal PCI_FIXUP routines.
+		- Enable Big bar on CN58XX and print a message telling the
+			status of big bar.
+		- Fix bug 936: PCI read/writes can bypass slower NPI writes. The
+			low level NPI write routine has been modified to always
+			read back the new value. This ensures the new value is
+			complete before anything later.
+		- Don't put PCI data into L2 to limit cache thrashing.
+		- sata_svw.c: A patch is needed to sata_svw.c to limit the DMA
+			gather list to fit in BAR1 since this device uses 32bit
+			addressing.
+		- Add delay in config space reads/writes to allow latest Atheros
+			G mini-pci card to work.
+	- PCI Target mode:
+		- Add PCI console support.
+	- Update L1 cache error handler:
+		- Differentiate icache/dcache errors.
+		- Clear error registers after errors.
+		- Cleanup names for Icache and Dcache COP0 registers to match
+			the kernel's default.
+	- Kernel bug fixes:
+		- Only enable single bit ECC error interrupts when ECC verbose
+			is on. Before the counting of single bit errors could
+			cause performance slowdowns without any benefit.
+		- The kernel was mistakenly enabling DFA_ERROR[CP2PARENA], which
+			reported parity errors even when the cores aren't using
+			the parity mode of LLM memory. It is the responsibility
+			of the application to check parity, it can't be done
+			globally.
+		- Fix bug where syscall indirect could be used to pass an
+			invalid syscall number into the kernel. For O32, a
+			syscall value less that 4000 would cause the kernel to
+			try and jump to a garbage address. This only affects
+			programs bypassing the normal glibc syscall wrappers.
+		- Added a halt trap for extra cores if someone tries to boot a
+			uniprocessor kernel with multiple cores. This prevents
+			a common mistake of specifying multiple cores with a
+			uniprocessor kernel and causing a crash.
+		- Disable BIST on reset only for CN38XX and CN31XX. All other
+			chips should run BIST.
+		- Fix bug where userspace was allowed to access IO space even
+			if CONFIG_CAVIUM_OCTEON_USER_IO wasn't set.
+		- Fix bug where FAU timeouts were enabled by the kernel. These
+			are now disabled. This caused some applications, notably
+			linux-filter, to crash under load.
+		- Fix access_ok to support size=0 (as in writev/readv).
+		- Checkin workaround for Core-401. Always use two syncw in a
+			row. Under some very rare circumstances a single syncw
+			might not completely maintain ordering.
+		- Bug #797: Fix MAP_PRIVATE mappings, mlock() and other
+			miscellaneous kernel crashes related to hugetlbs.
+		- Compact Flash: Fix minor bug where the read to prevent FIFO
+			overflow was performed every 8 writes instead of 16
+			when in 16bit mode. Also minor change to skip the read
+			on the first iteration of the loop.
+		- The size of CVMSEG wasn't set before the first access by
+			secondary cores. We now set the size in the first few
+			assembly instructions.
+	- Ethernet driver changes:
+		- Preliminary support for CN56XX SGMII, XAUI, and loopback
+			ports. This involved a complete restructuring of the
+			ethernet driver.
+		- Set GMXX_RX_FRM_MAX when MTU is changed.
+		- Don't pollute L2 with packet data.
+		- Bug#946: Add more checking for fragments and destructors
+			before reusing an skbuff. Add a global define to easily
+			enable and disable the reuse for skbuffs without
+			freeing.
+  		- Use the GPLed simple executive files and helper functions.
+			Ethernet driver is now GPL licensed.
+		- Add new define to control if IOBDMAs are used. Defaults to on.
+		- Fix Bug #1015. The RGMII status was mistakenly reported to
+			linux as up before the actual port negotiation
+			completes. This caused IPv6 to send discovery packets
+			before the GMX hardware was completely setup.
+		- Fix ethernet RX hang if INTERRUPT_LIMIT=0 and more than 60
+			packets are received in an interrupt.
+		- Ignore length errors on min size packets. Some equipment
+			incorrectly pads packets to 64+4FCS instead of 60+4FCS.
+			Note these packets still get counted as frame errors.
+		- Enable reporting SPI4 error condition interrupts. On error
+			a retraining is attempted.
+		- Support SPI4000 at 100Mbps.
+	- Embedded rootfs changes:
+		- oct-*-csr: Dynamically choose the CSR database based on
+			the chip.
+		- Add a simplified version of the openssl testsuite.
+		- Add option, on by default, to strip debugging information
+			from modules.
+		- Add /mnth with hugetlbfs mounted.
+		- Make oct-linux-csr show the address.
+		- Add new utility oct-linux-memory for generic memory
+			read / write.
+		- Add new utility to identify Octeons (oct-linux-identify).
+		- Add new utility oct-pci-tra for working with the TRA unit
+		- Add htlbremap to the embedded rootfs.
+		- Add small script (net-load) for measuring network throughput
+			under busybox.
+		- Enabled DHCP server as part of busybox build.
+		- load-llm: When loading narrow data, the load_llm utility was
+			mistakenly returning everything received and not just
+			the user's data. This caused bit 36, xxor, to be set
+			incorrectly sometimes.
+  		- Oprofile event numbering fixed. Previous versions of Oprofile
+			would choose the wrong counter for all values above 9.
+			(Bug#1037)
+		- Fix missing quotes on CC. Causes distcc to fail for ABIs
+			other than N64.
+	- Debian changes:
+		- Upgraded from 3.1(Sarge) to 4.0(Etch)
+		- Source packages updated under the Debian directory for
+			Oprofile and glibc.
+  		- Oprofile event numbering fixed. (Bug#1037)
+	- Iptables fixes:
+		- Fix Bug #1103. Iptables wasn't detecting the mistmatch
+			between 32 bit userspace and the 64bit kernel. This
+			will likely fix other issues.
+		- Change the declaration of the variables below from
+		"unsigned long" to "u_int32_t" to make certain iptables
+		functionality to work correctly on Octeon.
+		linux/kernel_2.6/linux/net/ipv6/netfilter/ip6table_mangle.c
+		Line 152: unsigned long nfmark;
+                linux/kernel_2.6/linux/net/ipv4/netfilter/iptable_mangle.c
+		Line 136: unsigned long nfmark;
+                linux/kernel_2.6/linux/include/linux/netfilter/xt_MARK.h
+		Line 6:   unsigned long mark;
+		Line 17:  unsigned long mark;
+	- Minor changes:
+		- Increase allowed frequency range to 1.1Ghz.
+		- Rename CN3XXX-SDK to OCTEON-SDK.
+		- Enable the LED unit on CN56XX.
+		- Add Octeon model number to board description.
+		- Modify /proc/octeon_perf to show the HW configured counter
+			names instead of the user's selection. This makes it
+			much easier to see if something else (Oprofile) has
+			reconfigured the counters without telling you.
+
+
+Release 1.5.0
+	- Embedded root filesystem:
+		- Add module-init-tools
+		- Updated testsuite
+		- Do a modules_prepare to get build setup for new config files
+		- Add Oprofile
+		- Fix path for iptables finding its shared libraries
+		- Add cpu-load script for getting load percent
+		- Uclibc support
+		- NFS root: Fix path to ethernet driver and chroot
+		- Load IPv6 kernel module if it exists
+		- Fix bug where fwd rule not supported by ipsec-tools
+		- Improve logic on stripping to only strip ELF files
+		- Add fold for wrapping lines
+		- Bug 799: Disable crypto in tcpdump with --without-crypto
+		- Calculate the size of the ext3 filesystem instead of
+			hardcoding a value
+		- Move modules into /lib/modules/<kernel version>
+		- Add iproute2 package for IPv6 support
+		- Add oct-linux-profile
+		- Add missing cramfs in help message
+		- Add global option to turn on/off IPv6
+		- Add ethtool
+		- Add distclean target and make oldconfig silent
+		- Fix bug where mii-tool isn't installed
+		- Include user-include if it exists and a different dir
+			wasn't specified. This makes it easy to add files
+			without affecting the rootfs config. It is also
+			more like the old minimal_rootfs.
+		- Update OpenSSL version from 0.9.8b to 0.9.8d
+		- Fix OpenSSL function typecast incompatibility with GCC 4.x
+	- Ethernet driver:
+		- Add NETPOLL support so we can support netconsole
+		- Add define DONT_WRITEBACK to control if FPA frees also tell
+			the L2 to throw away changes to the buffer
+		- Set carrier status when link goes up or down
+		- Provide help information for module parameters
+		- Only enable the ethtool interface on RGMII ports
+		- Fix long standing bug where RGMII ports are assigned the
+			wrong PHY_ID if they're on interface 2 after an
+			enabled SPI.
+		- Increment RX counters for virtual ports
+		- Don't use bootloader MAC addresses for virtual ports
+		- Add workaround if bootloader mistakenly leaves GMX enabled
+		- Set the MTU before the device comes up. It was defaulting to
+			10k
+		- Added parameter to skip SPI interface initialization
+		- Large rewrite of the RGMII speed code. This code works for
+			plug and unplug. It has trouble with unplug/plug with
+			half duplex.
+		- Fix crash when bridging. Don't put shared/cloned packets in
+			the HW pool.
+		- Remove reference to non-existent skb->tc_classid
+		- Enable backpressure for SPI and RGMII
+		- Set NETIF_F_LLTX - We do our own locking, Linux doesn't need
+			to. This gives us a major performance boost
+		- Add a new option (CVMX_ENABLE_LEN_M8_FIX) for enabling
+			hardware fix for errata PKI-100
+		- Cleanup simulator support. Don't do RGMII autonegotiation
+			and don't read/write unmodeled CSRs.
+		- Fix Bug 804. Non aligned buffers were being put in the FPA,
+			causing memory corruption.
+	- Intercept Module Example
+		- Don't crash if ethernet driver isn't loaded. Just print a
+			message and stop loading.
+	- Add DRAM utilization to /proc/octeon_perf
+	- Add sysn32_rt_sigtimedwait back that was removed in 2.6.16. Fixes
+		N32 sigtimedwait
+	- Change blocksize to 4 in NULL crypto cypher so performance isn't
+		quite so bad for kernel IPSEC null encryption.
+	- Add CN58XX simulator support.
+	- Add CN56XX simulator support.
+	- TWSI driver: Fixed problem with multi-byte read transfers (bug#793)
+	- Kernel memcpy: Fix bug where prefetches were disabled.
+	- Implement set_affinity for IRQs
+	- PCI: Updated PCI bus bridge initialization
+	- PCI: Fix PCI bug with Intel bridges causing poor performance. Intel bridges
+		interpret a cache line size of 128 as an error case. Changed
+		PCI cache line size to 64 to avoid this problem.
+	- PCI: Enable error detection and propagation on all PCI bridges.
+	- PCI: Configure arbiter to use round robin priority instead of fixed.
+		This should prevent a single device from hogging the bus.
+	- PCI: Improve EBH3000 interrupt routing
+	- PCI: Fix DMA mask determination in dma_map_single to correctly use
+		dev->dma_mask. Fix SATA Sil 3124 driver to set DMA mask
+		properly. As a side effect, the E1000 is now picked up as a
+		64bit device. This fixes the problem with BAR mapping during
+		unload.
+	- PCI: Eliminate reads from Bar1 index registers on dma_map/unmap.
+		This should be much faster.
+	- PCI: Enabling smart prefetch and divided fifos for PLX 6540 bridge
+	- PCI: Move BAR2 mapping code before BAR0/1 so there isn't ever an
+		overlap. Clear pending PCI error interrupts after init.
+	- PCI: Add workaround for PCI-302 errata
+	- Debian: Refuse to destroy disks larger than 4GB
+	- Debian glibc: Update to add missing .set mips0 after code Octeon added
+	- Debian: Add uClibc libaries to file system.
+	- Implementation of fast TLS access. See the SDK documentation for more
+		information.
+	- Fix Bug where a RLM interrupt on CN30XX would read Zip block, causing
+		strange failures
+	- Use sparsemem static instead of extreme. The extreme version uses some
+		very early mem alloc that have addressing requirements. These
+		can randomly corrupt low memory with any sign. The static
+		version is just as good for us.
+	- Add POW only ethernet driver for use with networking between cores
+		running different Linux kernels. Driver is GPL.
+	- CIU interrupt processing assembly was optimized to remove loops.
+	- Add config options to lock often used kernel code in the L2
+	- Added Octeon specific cache error exception handler.
+	- Remove writing zero to L2C perf counters. They are read only.
+	- Memcpy: Minor optimizations to save a few cycles
+	- Use runtime checks in modules. Undefine OCTEON_MODEL so we'll get
+		warnings and errors when it is used.
+	- Rewrite RML interrupt handling code to handle all interrupts except
+		for GXM and SPI. These should be done in the ethernet driver.
+	- Add the natsemi PCI driver to the kernel config
+	- Enable IPsec as modules
+	- Fix oversight: enable the perfcounter interrupt. This caused Oprofile
+		results to be incorrect.
+        - Fixed hugetlb support broken in SDK 1.4.0. Under some circumstances
+		huge pages may be leaked on program exit.
+	- Only enabled the LED block when not simulating and running on a
+		CN38XX or CN58XX. CN30XX and CN31XX don't have a LED block.
+	- Fix failure of the Silicon Image SATA driver with drives that take
+		extremely long times to initialize (Deskstar drives).
+	- Disabled reporting of PIP CRC error messages. The work queue entry
+		still shows the errors.
+
+Release 1.4.0
+	- Kernel upgrade to 2.6.16.26. A changelog overview for 2.6.16 is
+		available at http://wiki.kernelnewbies.org/Linux_2_6_16
+	- Upgrade busybox to 1.2.1
+	- Replaced the minimal rootfs with a new configurable embedded rootfs.
+		The new system support dynamically adding and removing packages
+		from the root filesystem using a config interface based on the
+		kernel's menuconfig. See the SDK HTML documentation for more
+		information.
+	- Add support for SATA_SIL24.
+	- Add support for the EBH3000.
+	- Improved Via IDE support.
+	- Fix sign problem causing overflow on loop in dma-octeon.c.
+	- Support VESA framebuffer on ATI ES1000.
+	- Enable UART interrupts on CN30XX and CN31XX.
+	- Add Octeon TWSI driver.
+	- Enable kernel preempt support. Disabled by default for better performance.
+	- Add branch emulation for Octeon bbit opcodes.
+	- Ethernet driver:
+		- Enable RED dropping.
+		- Fix warnings.
+		- Fix bug 582 - freeing wrong pointer to FPA WQE pool.
+	- Use console uart boot flag from bootloader to select console uart.
+	- Use BAR2 for 64bit PCI devices. This allows these devices to access
+		all of memory.
+	- Increase number of segments allowed to the fusion drivers.
+	- CN30XX/CN31XX USB updates.
+	- Add kernel parameter ecc_verbose to turn on single bit errors.
+	- Fix Bug 608: Export mips_hpt_frequency
+	- Fix Silicon Image SATA driver to fully support 64bit controllers.
+	- Compact Flash driver now checks DRQ.
+	- Added option for Accelerated IPSEC module (not part of the base SDK).
+	- Make NEC USB irq handling more generic.
+	- Fix bug where ERET ends up in branch delay slot of TLB handler.
+	- Flush pages that might be executable even if they aren't marked
+		executed yet. Shared libraries sometimes reset the bits during
+		clones.
+	- Enable MTD partitioning, cramfs, jffs2.
+	- Disable icache prefetch and use random replacement for CN30XX.
+	- Add workaround for Core-301 errata. Under rare circumstances IO
+		reads could be reordered before IO writes.
+	- Add poweroff message on lcd.
+	- Change default IO scheduler to CFQ.
+	- Add PCI big bar support for CN30XX.
+
+Release 1.3.1
+	- High speed USB 2.0 on CN31XX.
+	- Cleanup PCI i8259 code.
+	- Add Hikari board support.
+	- Ethernet changes:
+		- Cleanup switch handling to work more automatically for
+			CN31XX and CN30XX.
+		- Fix Bug #494, JABBER must be 8 byte aligned.
+		- Improve packet drop counter.
+	- Kernel upgrade to 2.6.14. A changelog overview for 2.6.14 is
+		available at http://wiki.kernelnewbies.org/Linux_2_6_14
+	- Remove unused OCTEON_PASS1_ADEL workaround.
+	- Cleanup references to octeon-app-init.h in smp.c and setup.c.
+	- Use Octeon specific version of udelay that works for more than
+		999 usecs.
+	- Redo board support so a single config supports almost all boards.
+	- Update chroot to work with 2.6.14.
+	- Fix IRQ routing for NA-038 board.
+	- Use flag from bootloader to determine if we are in PCI host mode.
+	- Add the processor id to /proc/octeon_info.
+	- Rewrite the DMA mapping logic with an Octeon specific version. This
+		uses Bar1 to dynamically map memory for PCI DMAs. This allows
+		PCI devices to access all of memory up until there are 32
+		mappings.
+	- Synchronize the core cycle counters on boot. Use the counters for
+		faster gettimeofday.
+	- Support for SPARSEMEM. This allows Linux to access the 2nd 256MB
+		of memory.
+	- Reimplemented 32bit reserved memory using standard mmap calls. 32bit
+		applications can now access hardware on boards with less than
+		2GB of ram.
+
+Release 1.3.0
+	- Optimized bitops.h to use Octeon specific bit operations.
+	- Add support for CN31XX.
+	- Support 16bit Compact Flash access for CN31XX.
+	- Improved page zero and copy functions.
+	- Upgraded kernel to 2.6.13.5.
+	- Cleanup Busybox dhcp support.
+	- Don't allocate the high 256MB of memory. It cost 300MB of page
+		tables, so using it gives less usable memory.
+	- Add support for MEM= to set the amount of memory in MB. Setting
+		it to 0 uses all memory.
+	- Add support for different boards:
+		EBT3000, EBH3100, Asus-NA038, Gadwin, Thunder
+	- Ethernet changes:
+		- Process 60 packet per interrupt instead of 30. At the current
+			max, 254k, the max of 300k was getting in the way.
+		- Add module interface for interception.
+		- Add tag switch to NULL when bail early and don't get NULL
+			from get work.
+		- Add support for more generic SPI4, not just the SPI4000.
+		- Add CRC when using SPI without SPI4000.
+		- Enable relaxed RGMII preamble checking for pass2.
+		- Support HW free of sent packets when possible.
+		- Add proc interface to get detailed statistics.
+		- Fix bug where pow send list didn't set the hard start xmit
+			correctly.
+		- Print the error code on receive error.
+		- Switch to netif_receive_skb for better performance.
+		- Bug fix in dealing with TCP/UDP payload checksum errors.
+			Previous drivers would silently accept these and tell
+			the kernel to not check them. The fix still passes them
+			to the kernel, but without disabling the L4 checksum
+			validation.
+	- Use per cpu stats instead of global stats to reduce cache thrashing
+		for floating point emulator.
+	- Disable LL/SC on non SMP systems. It is faster to disable interrupts
+		for atomic access than a LL/SC.
+	- PCI Host mode support.
+	- New utility oct-linux-profile.
+	- Add syncw before wait instruction.
+	- Preliminary support for CN31XX USB.
+	- Add support for determining flash location and size from bootbus
+		region configuration. This allows a single kernel image to
+		support various flash sizes.
+	- Add intercept example.
+	- Replace memaccess with oct-linux-csr.
+	- Fix build failure when HugeTLB is off.
+
+Release 1.2.0
+	- Added /dev/mtdblock0 for on board flash access
+	- Save/Restore COP2, CVMSEG, and MULT on context switch. See the SDK
+		documentation for the Linux kernel for more information.
+	- Improve efficiency of cache flushing.
+		- Only flush cores that a vma has used
+		- Directly send IPI signal instead of using smp_call_function
+	- Fix bug where interrupts aren't enabled early enough
+	- Ethernet driver
+		- Fix problems with unloading the ethernet driver.
+		- Fix crash if packet comes in for non existent Linux device
+		- Reduce the number of buffers from 4096 to 1024 to improve
+			forwarding performance.
+		- Fix problems with multicore input.
+		- Fix bug in tx free list. Use 64bit scratch for IOBDMA instead
+			of 32bit.
+		- Use hardware counters for byte and packet counter to
+			eliminate the need for locking.
+		- Add define USE_MULTICORE_RECEIVE to use the all cores for
+			receive. Turned on by default.
+		- Add preliminary MII and ethtool support.
+		- Don't throw away packets that exceed the max L2 frame
+		- Move the ethernet driver out of the kernel tree into its own
+			directory.
+		- Change MAC address handing. Multicast was backwards
+		- Don't throw away packets that exceed the max L2 frame
+		- Use tasklets instead of processing in interrupt context.
+			Improves performance by reducing dcache thrashing. Each
+			packet is processed immediately instead of being queued
+			and then processed.
+		- Rate limit debug messages
+		- Limit each core to processing 30 packets without a break.
+			This way the RX can't starve the TX task.
+		- Jumbo packet support
+	- Removed creation of separate bootmem list for 32 bit applications
+		- If a 32 bit memory region is configured, the kernel will not
+			allocate memory for itself from that region. (This is
+			not a change of behaviour, it is now just implemented
+			differently.)
+	- Improve time accuracy on Pass2 and higher chips.
+	- Improve lock/unlock primitives
+	- Fix bug where cpu 0 isn't signaled when other cores come up.
+	- Fix bug where the BKL was configured for preemption.
+	- Pass 2 support
+		- Use cache mode 7 for Octeon Pass2 special marking
+		- Only disable prefetching for Octeon Pass1
+	- Reduce the amount of messages displayed as cores come up. Only one
+		line per core now.
+	- Add support for GDB console.
+	- Add  read_current_timer for better calibration delay calculation.
+	- Fix spinlock deadlock on sysrq key.
+	- Fix bug where writev would fail for zero byte entries.
+	- Don't waste time calibrating the delay on secondary cores
+	- Skip calibration delay on the simulator
+	- Use optimized interrupt enable/disable on Octeon
+	- Make generic_swap routine use 64bit loads/stores as much as possible
+	- Fix to use OCTEON_IPD_CLK_COUNT on Pass2 and nothing on Pass1
+ 	- Fix problems when building with SMP disabled
+	- Make the Adel workaround a kernel config option. On for EBT3000, off
+		for sim.
+	- Cleanup handling of bootmem. Kernel now only depends on
+		target/include/open-license
+	- Fix emulation of rdhwr to not suppress cop0 errors.
+	- HugeTLB support
+
+Release 1.1.0
+	- Upgrade to Linux 2.6.13
+	- Initial release Debian GNU/Linux for Octeon.
+		- Oprofile support.
+		- Native toolchains for O32, N32, and N64.
+		- Native GDB.
+		- "oncpu" utility for controlling CPU affinity.
+		- See SDK HTML documentation.
+	- Improved performance of the ethernet driver.
+		- Added memory prefetches.
+		- Use MAC addresses configured in flash.
+		- Switched from atomic to ordered tags.
+		- Use the POW WQ timer to limit interrupts to 10k per core.
+		- Change CVMX_ASXX_*_CLK_SETX to 24.
+		- Cleanup RGMII polling.
+		- Reduce xmit common case FAU accesses by one.
+		- Handle low level receive errors by dropping the packet.
+		- Fix race condition on statistics update.
+		- Added parameter "always_use_pow" to override ethernet output.
+			See the Linux documentation for a description.
+		- Use the normal CVMX config for FPA pool numbering and PKO
+			queue configuration. cvmx-config can be used to create
+			multiple output queues per port.
+	- Move Compact flash accesses into a kernel thread.
+	- Minimal root filesystem:
+		- Add fstab for better mount support.
+		- Mount /sys by default.
+		- Switch away from devfs. It is deprecated. Now the filesystem
+			is expected to supply everything in /dev. Device names
+			now match what most distributions expect.
+	- Added support for 50Mhz reference clock.
+	- Disable interrupts to all cores when disabling or shutting down
+		and interrupt line. The freeing of the interrupt handler
+		may be done on a different core than the request_irq.
+	- Various system calls fixed for N32 and N64.
+	- Fix initialization of L2 counters for /proc/octeon_perf.
+	- Report POW memory ECC errors.
+	- New interface "/proc/octeon_info" to pass bootloader information
+		into userspace.
+	- Disable serial port 2 under Linux. It interferes with using simple
+		executive applications on other cores. The simple executive
+		debugger was being triggered.
+
+Release 1.0.0
+	- Added kernel support for Oprofile
+	- Replace MTD compact flash driver with a full block device supporting
+		partitions. Device names have changed from /dev/mtdblock/1 to
+		/dev/cfa/part1. Compact flashes can now contain multiple
+		partitions.
+	- Added userspace access to the Octeon performance counters through
+		/proc/octeon_perf. Documentation can be found in the Linux
+		userspace documentation of the SDK.
+	- Improved hardware BIST checking
+	- Modified memory allocation order. Using the 256MB located at
+		0x410000000 caused problems with userspace.
+	- System call sys_lookup_dcookie() fixed for O32 applications.
+	- Increased the clock frequency on hardware to 1khz. Simulator still
+		uses 100hz.
+
+Prerelease 0.9.1
+	- Added support for hardware fixups of unaligned accesses
+	- Always use VFAT instead of FAT so long filenames work
+	- Add cvmx_bootmem_alloc support for 32bit applications
+	- Add support for NPTL
+	- Support building examples with different ABIs
+	- Change toolchain name to mips64-octeon-linux-gnu-*
+
+Prerelease 0.8.5
+	- Add support for EBT3000 as well as the Octeon simulator
+	- Removed the pipeline example
+	- Added preliminary compact flash support (/dev/mtdblock/1)
+	- Enabled kernel bridging support (brctl)
+	- Added configurable CVMSEG through Linux kernel config
+	- Added 32bit userspace hardware access. Requires special kernel config.
+	- Added automatic CIU decoding of chained interrupts
+	- Added kernel debugging with KGDB and the Cavium debugger
+	- Improved ethernet support:
+		MAC addresses, multicore, 32bit userspace compatibility,
+		zero copy support, 10/100/1000 negotiation
+	- Change kernel start address for EBT3000 support
+	- Workaround for the Adel exception in early Pass 1 chips
+	- Added support for SPI4.2 and the SPI4000
+	- ECC checking for memory, L2T and L2D. BIST checking
+	- Implement Octeon specific cache flushing
+	- Support arguments from bootloader
+	- Fix double accounting for first processor
+	- Fix missing memory barrier in floating point emulation
+	- Support for N32/N64 binaries and shared libraries
+	- Add support for NFS filesystems. Look at initramfs_init
+	- Added utility "oncpu" for running programs on specific cores
+
+Prerelease 0.8.0
+	- Updated kernel for compatibility with cvmx-config.
+	- Enable kernel debugging using the second uart. "/dev/ttyS1"
+	  is no longer available under Linux.
+	- Specifically enable interrupts for each core. The bootloader
+	  now disables them by default.
+
+Prerelease 0.07
+        Initial release contains
+	  - Linux 2.6.10 Kernel ported for Octeon.
+	  - Minimum file system with busybox.
+	  - Ethernet driver as loadable module.
+	  - Communication driver as variant of Ethernet driver to communicate
+	    with simple exec data plane application.

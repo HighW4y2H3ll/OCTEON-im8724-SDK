@@ -1,0 +1,216 @@
+#
+# This Makefile bootstaps Debian from an existing Debian Mips system. It
+# can be used to recreate the Octeon Debian filesystem. Read the README
+# before using this file.
+#
+EXTRA_PACKAGES=ssh ntp cvs python strace gdb ntpdate apt-transport-https \
+	build-essential libpopt-dev binutils-dev flex bison less \
+	file netcat tcpdump nfs-common locales psmisc dejagnu expect tcl \
+	gawk dstat time debian-keyring debian-archive-keyring aptitude
+KERNEL_VERSION=2.6.32.13-Cavium-Octeon
+MIRROR=http://mirrors.kernel.org/debian/
+LOCALMIRROR=http://apt-proxy:9999/debian/
+
+.PHONY: all
+all: debian_octeon.tgz
+
+debian_octeon.tgz: debootstrap_download_only.tgz
+	#
+	# Make sure any leftover mounts are gone
+	#
+	- umount bootstrap/proc
+	- umount bootstrap/sys
+	- umount bootstrap/dev/pts
+	- umount bootstrap/dev/shm
+	- umount bootstrap/dev
+	- umount bootstrap
+	#
+	# Extract the initial tar of .debs
+	#
+	rm -rf bootstrap debootstrap_download_only
+	mkdir bootstrap
+	mount -t tmpfs tmpfs bootstrap
+	tar -C bootstrap -zxf debootstrap_download_only.tgz
+	mv bootstrap/debootstrap_download_only/* bootstrap/
+	rmdir bootstrap/debootstrap_download_only
+	#
+	# Bootstrap Debian
+	#
+	debootstrap --arch mips --include=kmod jessie bootstrap
+	#
+	# Add the kernel module directory
+	#
+	# Update inittab for serial console
+	#
+	cd bootstrap/etc; patch -p0 < ~/inittab.patch
+	#
+	# Squeeze sets default passwd for root.
+	#
+	sed -i 's/^root:\*:/root::/g' bootstrap/etc/shadow
+	#
+	# Update kmod to run depmod
+	#
+	cd bootstrap/etc/init.d; patch -p0 < ~/kmod-depmod.patch
+	#
+	# Create fstab
+	#
+	echo "/dev/cfa2	/	ext3	noatime  0 0" > bootstrap/etc/fstab
+	echo "none	/proc	proc	defaults 0 0" >> bootstrap/etc/fstab
+	echo "none	/sys	sysfs	defaults 0 0" >> bootstrap/etc/fstab
+	echo "/dev/cfa1	/boot	vfat	defaults 0 0" >> bootstrap/etc/fstab
+	#
+	# Create /etc/hosts
+	#
+	echo "127.0.0.1       localhost octeon" > bootstrap/etc/hosts
+	#
+	# Add the ethernet driver to the automatically loaded modules
+	#
+	echo "octeon-ethernet" >> bootstrap/etc/modules
+	echo "octeon3-ethernet" >> bootstrap/etc/modules
+	#
+	# Write the network configuration
+	#
+	echo "# Used by ifup(8) and ifdown(8). See the interfaces(5) manpage or" > bootstrap/etc/network/interfaces
+	echo "# /usr/share/doc/ifupdown/examples for more information." >> bootstrap/etc/network/interfaces
+	echo "auto lo eth0" 			>> bootstrap/etc/network/interfaces
+	echo "iface lo inet loopback" 		>> bootstrap/etc/network/interfaces
+	echo "iface eth0 inet dhcp" 		>> bootstrap/etc/network/interfaces
+	echo "#iface eth0 inet static" 		>> bootstrap/etc/network/interfaces
+	echo "#       address 10.0.0.2" 	>> bootstrap/etc/network/interfaces
+	echo "#       netmask 255.255.255.0" 	>> bootstrap/etc/network/interfaces
+	#
+	# Write the APT sources list
+	#
+	echo "deb ${MIRROR} jessie main non-free contrib" >> bootstrap/etc/apt/sources.list
+	echo "deb-src ${MIRROR} jessie main non-free contrib" >> bootstrap/etc/apt/sources.list
+	echo "deb http://security.debian.org/ jessie/updates main contrib non-free" >> bootstrap/etc/apt/sources.list
+	#
+	# Remove hwclock from the init scripts. We don't have one
+	#
+	rm -f bootstrap/etc/rc?.d/*hwclock*
+	#
+	# Make block devices for the EBT3000 compact flash
+	#
+	mknod bootstrap/dev/cfa b 254 0
+	mknod bootstrap/dev/cfa1 b 254 1
+	mknod bootstrap/dev/cfa2 b 254 2
+	mknod bootstrap/dev/cfa3 b 254 3
+	mknod bootstrap/dev/cfa4 b 254 4
+	#
+	# Mount system dirs so we can chroot
+	#
+	mount -t proc proc bootstrap/proc
+	mount -t sysfs sysfs bootstrap/sys
+	mount --rbind /dev bootstrap/dev
+	#
+	# Copy /etc/resolv.conf so DNS works
+	#
+	cp /etc/resolv.conf bootstrap/etc/
+	#
+	# Use Aptitude to update and install packages
+	#
+	chroot bootstrap apt-get update
+	chroot bootstrap apt-get install aptitude
+	chroot bootstrap aptitude dist-upgrade
+	# Answer prompts
+	chroot bootstrap aptitude install ${EXTRA_PACKAGES}
+
+	# Remove systemd
+	chroot bootstrap apt-get remove --purge --auto-remove systemd
+
+	# Prevent apt from installing systemd package in the furture
+	chroot bootstrap echo -e 'Package: systemd\nPin: origin ""\nPin-Priority: -1' > /etc/apt/preferences.d/systemd
+
+	# Prevent apt from installing any systemd like packages in the future
+	chroot bootstrap echo -e '\n\nPackage: *systemd*\nPin: origin ""\nPin-Priority: -1' >> /etc/apt/preferences.d/systemd
+
+	#
+	# Update keys
+	chroot bootstrap apt-key update
+	# Answer prompts
+	#
+	# Update ntp to call ntpdate
+	#
+	- chroot bootstrap /etc/init.d/ntp stop
+	cd bootstrap/etc/init.d; patch -p0 < ~/ntp-ntpdate.patch
+	#
+	# Stop the nfs-common stuff since it stops us from unmounting /dev
+	#
+	- chroot bootstrap /etc/init.d/nfs-common stop
+	- chroot bootstrap /etc/init.d/portmap stop
+	- chroot bootstrap /etc/init.d/rpcbind stop
+	#
+	# Clean out extra stuff so the final tar is smaller
+	#
+	- chroot bootstrap aptitude clean
+	rm bootstrap/etc/resolv.conf
+	#
+	# Set the timezone
+	#
+	chroot bootstrap tzconfig
+	# Answer prompts
+	#
+	# Fix locales settings so perl doesn't complain. I hate
+	# perl...
+	#
+	chroot bootstrap dpkg-reconfigure locales
+	#
+	# rewrite the APT sources list removing our local mirror
+	#
+	echo "deb ${MIRROR} jessie main non-free contrib" >> bootstrap/etc/apt/sources.list
+	echo "deb-src ${MIRROR} jessie main non-free contrib" >> bootstrap/etc/apt/sources.list
+	echo "deb http://security.debian.org/ jessie/updates main contrib non-free" >> bootstrap/etc/apt/sources.list
+
+	#
+	# change default shell to bash instead of dash
+	#
+	cd bootstrap/bin; rm sh; ln -s bash sh; cd -
+
+	#
+	# Unmount stuff
+	#
+	umount bootstrap/proc
+	umount bootstrap/sys
+	umount bootstrap/dev/pts
+	umount bootstrap/dev/shm
+	umount bootstrap/dev
+	#
+	# Create the final tar
+	#
+	cd bootstrap; tar -zcf ../debian_octeon.tgz *
+	umount bootstrap
+
+/usr/sbin/debootstrap:
+	#
+	# Create this dir if it was blown away to save space
+	#
+	mkdir -p /var/lib/apt/lists/partial
+	#
+	# Use Aptitiude on the host to get deboootstrap
+	#
+	aptitude update
+	aptitude install debootstrap
+	# Answer prompts
+
+debootstrap_download_only.tgz: /usr/sbin/debootstrap
+	#
+	# Cleanup from previous runs
+	#
+	- umount debootstrap_download_only
+	rm -rf debootstrap_download_only
+	mkdir debootstrap_download_only
+	#
+	# Download stuff into a tmpfs
+	#
+	mount -t tmpfs tmpfs debootstrap_download_only
+	debootstrap --arch mips --include=kmod  --download-only jessie debootstrap_download_only 
+	#
+	# Tar it up
+	#
+	tar -zcf debootstrap_download_only.tgz debootstrap_download_only
+	#
+	# Cleanup
+	#
+	umount debootstrap_download_only
+	rmdir debootstrap_download_only
+

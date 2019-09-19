@@ -1,0 +1,21 @@
+config CONFIG_octeon-libraries-n32
+	bool "octeon-libraries-n32"
+	default y
+	help
+		Install the gcc and glibc shared libraries required for N32
+		applications to run on all Octeon models.
+
+config CONFIG_octeon2-libraries-n32
+	bool "octeon2-libraries-n32"
+	default y
+	help
+		Install the gcc and glibc shared libraries required for N32
+		applications to run only on Octeon II models.
+
+config CONFIG_octeon3-libraries-n32
+	bool "octeon3-libraries-n32"
+	default y
+	help
+		Install the gcc and glibc shared libraries required for N32
+		applications to run only on Octeon III models.
+

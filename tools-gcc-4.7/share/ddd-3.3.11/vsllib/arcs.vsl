@@ -1,0 +1,67 @@
+// $Id: arcs.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Arcs and steep lines for VSL
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+// Version
+arcs_version() = "$Id: arcs.vsl 14384 2006-04-11 21:46:04Z cchavva $";
+
+// Synonyms
+arcthickness() = rulethickness();
+arc(start, length) = arc(start, length, arcthickness());
+
+// Makros
+// Arcs
+arc360() = arc(0, 360);
+arc180(start) = arc(start, 180);
+arc90(start) = arc(start, 90);
+
+ne_arc90() = arc90(0);
+nw_arc90() = arc90(90);
+sw_arc90() = arc90(180);
+se_arc90() = arc90(270);
+
+n_arc180() = arc180(0);
+w_arc180() = arc180(90);
+s_arc180() = arc180(180);
+e_arc180() = arc180(270);
+
+// Ovals
+_ovalbody(box) = fix(hrule() | box | hrule());
+_oval(box) = 
+  fix(w_arc180() ^ (square(vspace(box) - 1) / box(2,1)))
+& box 
+& fix(e_arc180() ^ (square(vspace(box) - 1) / box(2,1)));
+oval(box) = _oval(_ovalbody(whiteframe(box)));
+
+// Ellipses
+ellipse() = arc360();
+_ellipse(box) = fix((space(box) * 2) ^ ellipse() ^ center(box));
+ellipse(box) = _ellipse(whiteframe(box, arcthickness() + whitethickness()));
+
+// Circles
+_circle(box) = fix(square(box) ^ ellipse() ^ center(box));
+circle(box) = _circle(whiteframe(box, arcthickness() + whitethickness()));

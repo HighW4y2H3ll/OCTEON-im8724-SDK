@@ -1,0 +1,78 @@
+--- kexec/arch/mips/crashdump-mips.c.orig	2017-06-16 07:00:48.000000000 -0700
++++ kexec/arch/mips/crashdump-mips.c	2017-10-06 17:24:02.118678264 -0700
+@@ -201,7 +201,7 @@
+ 		memory_ranges++;
+ 
+ 		/* Segregate linearly mapped region. */
+-		if ((MAXMEM - 1) >= start && (MAXMEM - 1) <= end) {
++		if (MAXMEM && (MAXMEM - 1) >= start && (MAXMEM - 1) <= end) {
+ 			crash_memory_range[memory_ranges - 1].end = MAXMEM - 1;
+ 
+ 			/* Add segregated region. */
+@@ -304,7 +304,7 @@
+ 	data : ELFDATALOCAL,
+ 	machine : EM_MIPS,
+ 	page_offset : PAGE_OFFSET,
+-	lowmem_limit : MAXMEM,
++	lowmem_limit : 0, /* 0 == no limit */
+ };
+ 
+ static struct crash_elf_info elf_info32 = {
+@@ -315,6 +315,30 @@
+ 	lowmem_limit : MAXMEM,
+ };
+ 
++static int patch_elf_info(void)
++{
++	const char cpuinfo[] = "/proc/cpuinfo";
++	char line[MAX_LINE];
++	FILE *fp;
++
++	fp = fopen(cpuinfo, "r");
++	if (!fp) {
++		fprintf(stderr, "Cannot open %s: %s\n",
++			cpuinfo, strerror(errno));
++		return -1;
++	}
++	while (fgets(line, sizeof(line), fp) != 0) {
++		if (strncmp(line, "cpu model", 9) == 0) {
++			/* OCTEON uses a different page_offset. */
++			if (strstr(line, "Octeon"))
++				elf_info64.page_offset = 0x8000000000000000ULL;
++			break;
++		}
++	}
++	fclose(fp);
++	return 0;
++}
++
+ /* Loads additional segments in case of a panic kernel is being loaded.
+  * One segment for backup region, another segment for storing elf headers
+  * for crash memory image.
+@@ -331,6 +355,9 @@
+ 	struct crash_elf_info *elf_info = &elf_info32;
+ 	unsigned long start_offset = 0x80000000UL;
+ 
++	if (patch_elf_info())
++		return -1;
++
+ 	if (arch_options.core_header_type == CORE_TYPE_ELF64) {
+ 		elf_info = &elf_info64;
+ 		crash_create = crash_create_elf64_headers;
+--- kexec/arch/mips/crashdump-mips.h.orig	2017-06-16 07:00:48.000000000 -0700
++++ kexec/arch/mips/crashdump-mips.h	2017-10-06 17:23:59.334624391 -0700
+@@ -6,12 +6,13 @@
+ 				unsigned long max_addr, unsigned long min_base);
+ #ifdef __mips64
+ #define PAGE_OFFSET	0xa800000000000000ULL
++#define MAXMEM		0
+ #else
+ #define PAGE_OFFSET	0x80000000
++#define MAXMEM		0x80000000
+ #endif
+ #define __pa(x)		((unsigned long)(X) & 0x7fffffff)
+ 
+-#define MAXMEM		0x80000000
+ 
+ #define CRASH_MAX_MEMMAP_NR	(KEXEC_MAX_SEGMENTS + 1)
+ #define CRASH_MAX_MEMORY_RANGES	(MAX_MEMORY_RANGES + 2)

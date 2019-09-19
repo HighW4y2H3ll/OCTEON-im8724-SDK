@@ -1,0 +1,655 @@
+/dts-v1/;
+/*
+ * Cavium Inc. sim CN7800
+ */
+/ {
+	model = "cavium,ebb7800";
+	compatible = "cavium,ebb7800";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	soc@0 {
+		interrupt-parent = <&ciu3>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+		cavium,node-trim = "0,soc";
+
+		ciu3: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		/* BGX definitions here must match sim_board.c settings. */
+		/* BGX 0*/
+		ethernet-mac-nexus@11800e0000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe0000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* SerDes 0, may differ from PCS Lane/LMAC */
+			ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			/* SerDes 1, may differ from PCS Lane/LMAC */
+			ethernet-mac@1 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			/* SerDes 2, may differ from PCS Lane/LMAC */
+			ethernet-mac@2 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			/* SerDes 3, may differ from PCS Lane/LMAC */
+			ethernet-mac@3 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* BGX 1*/
+		ethernet-mac-nexus@11800e1000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe1000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@1 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@2 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@3 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* BGX 3*/
+		ethernet-mac-nexus@11800e3000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe3000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* BGX 4*/
+		ethernet-mac-nexus@11800e4000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe4000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		/* BGX 5*/
+		ethernet-mac-nexus@11800e5000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe5000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@1 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@2 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+			ethernet-mac@3 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+			};
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0x10000 0x1d020000  0x10000>,
+				 <5 0  0x10000 0x50000000  0x10000>,
+				 <6 0  0x10000 0x60000000  0x10000>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			cavium,cs-config@4 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <4>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <10>;
+				cavium,t-oe   = <160>;
+				cavium,t-we   = <100>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <0>;
+				cavium,t-pause  = <50>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <300>;
+				cavium,t-rd-dly = <10>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x800000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0 0x200000>;
+					read-only;
+				};
+				partition@200000 {
+					label = "kernel";
+					reg = <0x200000 0x200000>;
+				};
+				partition@400000 {
+					label = "cramfs";
+					reg = <0x400000 0x3fe000>;
+				};
+				partition@7fe000 {
+					label = "environment";
+					reg = <0x7fe000 0x2000>;
+					read-only;
+				};
+			};
+		};
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+		};
+
+		serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		ocla0@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 1>, /* Fsm0 */
+				     <0xa800d 1>; /* Fsm1 */
+		};
+
+		ocla1@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 1>, /* Fsm0 */
+				     <0xa900d 1>; /* Fsm1 */
+		};
+
+		ocla2@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 1>, /* Fsm0 */
+				     <0xaa00d 1>; /* Fsm1 */
+		};
+
+		ocla3@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 1>, /* Fsm0 */
+				     <0xab00d 1>; /* Fsm1 */
+		};
+
+		ocla4@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 1>, /* Fsm0 */
+				     <0xac00d 1>; /* Fsm1 */
+		};
+	};
+
+	soc@10000000000 {
+		interrupt-parent = <&ciu13>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges = <0 0 0x10 0x00000000 0x20000 0x00000000>;
+		cavium,node-trim = "1,soc";
+
+		ciu13: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		bootbus1: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0x10000 0x1d020000  0x10000>,
+				 <5 0  0x10000 0x50000000  0x10000>,
+				 <6 0  0x10000 0x60000000  0x10000>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			cavium,cs-config@4 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <4>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <10>;
+				cavium,t-oe   = <160>;
+				cavium,t-we   = <100>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <0>;
+				cavium,t-pause  = <50>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <300>;
+				cavium,t-rd-dly = <10>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+		};
+		serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+		};
+
+		serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		ocla10@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 4>, /* Fsm0 */
+				     <0xa800d 4>; /* Fsm1 */
+		};
+
+		ocla11@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 4>, /* Fsm0 */
+				     <0xa900d 4>; /* Fsm1 */
+		};
+
+		ocla12@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 4>, /* Fsm0 */
+				     <0xaa00d 4>; /* Fsm1 */
+		};
+
+		ocla13@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 4>, /* Fsm0 */
+				     <0xab00d 4>; /* Fsm1 */
+		};
+
+		ocla14@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 4>, /* Fsm0 */
+				     <0xac00d 4>; /* Fsm1 */
+		};
+	};
+
+	soc@20000000000 {
+		interrupt-parent = <&ciu23>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges = <0 0 0x20 0x00000000 0x20000 0x00000000>;
+		cavium,node-trim = "2,soc";
+
+		ciu23: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		bootbus2: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0x10000 0x1d020000  0x10000>,
+				 <5 0  0x10000 0x50000000  0x10000>,
+				 <6 0  0x10000 0x60000000  0x10000>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			cavium,cs-config@4 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <4>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <10>;
+				cavium,t-oe   = <160>;
+				cavium,t-we   = <100>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <0>;
+				cavium,t-pause  = <50>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <300>;
+				cavium,t-rd-dly = <10>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+		};
+		serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+		};
+
+		serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		ocla20@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 4>, /* Fsm0 */
+				     <0xa800d 4>; /* Fsm1 */
+		};
+
+		ocla21@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 4>, /* Fsm0 */
+				     <0xa900d 4>; /* Fsm1 */
+		};
+
+		ocla22@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 4>, /* Fsm0 */
+				     <0xaa00d 4>; /* Fsm1 */
+		};
+
+		ocla23@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 4>, /* Fsm0 */
+				     <0xab00d 4>; /* Fsm1 */
+		};
+
+		ocla24@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 4>, /* Fsm0 */
+				     <0xac00d 4>; /* Fsm1 */
+		};
+	};
+
+	soc@30000000000 {
+		interrupt-parent = <&ciu33>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges = <0 0 0x30 0x00000000 0x20000 0x00000000>;
+		cavium,node-trim = "3,soc";
+
+		ciu33: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		bootbus3: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0x10000 0x1d020000  0x10000>,
+				 <5 0  0x10000 0x50000000  0x10000>,
+				 <6 0  0x10000 0x60000000  0x10000>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			cavium,cs-config@4 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <4>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <10>;
+				cavium,t-oe   = <160>;
+				cavium,t-we   = <100>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <0>;
+				cavium,t-pause  = <50>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <300>;
+				cavium,t-rd-dly = <10>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+		};
+		serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+		};
+
+		serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <1843200>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		ocla30@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 4>, /* Fsm0 */
+				     <0xa800d 4>; /* Fsm1 */
+		};
+
+		ocla31@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 4>, /* Fsm0 */
+				     <0xa900d 4>; /* Fsm1 */
+		};
+
+		ocla32@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 4>, /* Fsm0 */
+				     <0xaa00d 4>; /* Fsm1 */
+		};
+
+		ocla33@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 4>, /* Fsm0 */
+				     <0xab00d 4>; /* Fsm1 */
+		};
+
+		ocla34@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 4>, /* Fsm0 */
+				     <0xac00d 4>; /* Fsm1 */
+		};
+	};
+ };

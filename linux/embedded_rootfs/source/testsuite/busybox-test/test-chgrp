@@ -1,0 +1,21 @@
+#!/bin/sh
+
+source ./functions.sh
+
+#verify /etc/group,if not create
+test -f /etc/group
+if [ $? != 0 ];
+then
+  assert echo "# first line is reserved fro root" > /etc/group
+fi
+
+# create new group & file, change the file to created group
+assert addgroup hope
+assert touch $0.log
+ls -l $0.log | grep -q hope
+if [ $? != 1 ]; then exit 1; fi
+
+assert chgrp hope $0.log
+require_good ls -l $0.log | grep -q hope
+assert rm -f $0.log
+assert delgroup hope

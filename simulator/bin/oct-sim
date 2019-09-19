@@ -1,0 +1,665 @@
+#!/usr/bin/perl
+
+# Copyright (c) 2003-2015, Cavium Inc.. All rights reserved.
+#  
+# This Software is the property of Cavium Inc..  The Software and all 
+# accompanying documentation are copyrighted.  The Software made available 
+# here constitutes the proprietary information of Cavium Inc..  You 
+# agree to take reasonable steps to prevent the disclosure, unauthorized use 
+# or unauthorized distribution of the Software.  You shall use this Software 
+# solely with Cavium hardware.  
+#  
+# Except as expressly permitted in a separate Software License Agreement 
+# between You and Cavium Inc., you shall not modify, decompile, 
+# disassemble, extract, or otherwise reverse engineer this Software.  You 
+# shall not make any copy of the Software or its accompanying documentation, 
+# except for copying incident to the ordinary and intended use of the 
+# Software and the Underlying Program and except for the making of a single 
+# archival copy.  
+#  
+# This Software, including technical data, may be subject to U.S.  export 
+# control laws, including the U.S.  Export Administration Act and its 
+# associated regulations, and may be subject to export or import regulations 
+# in other countries.  You warrant that You will comply strictly in all 
+# respects with all such regulations and acknowledge that you have the 
+# responsibility to obtain licenses to export, re-export or import the 
+# Software.  
+#  
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" 
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR 
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT 
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY 
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT 
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES 
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR 
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET 
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT 
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.  
+
+
+
+# This script wraps the Octeon simulator to make invocation simpler.  It handles
+# its own options, and passes the rest to the Octeon simulator.
+
+use strict;
+use Env qw(OCTEON_SIM OCTEON_ROOT OCTEON_MODEL);
+
+use IO::File;
+use POSIX qw(tmpnam);
+my($size_file, $nodes_file, $flags_file, $fh); # for tmp file
+
+my $SaveTemps = 0;
+
+sub min
+{
+   my($a, $b) = @_;
+   if ($a < $b)
+   {
+      return($a);
+   }
+   else
+   {
+      return($b);
+   }
+}
+
+# Create $memsize RAM for the $node (#1,#2,#3... - not used for node#0)
+sub alloc_RAM_node
+{
+	my($node, $memsize) = @_;
+	my(@early_args);
+	my($bytes_left) = $memsize*1024*1024;
+	my($tmp);
+
+	print "node#$node: mem size is $memsize Megabytes\n";
+
+	$tmp = sprintf("-ld=0x%x00000000:0x%x", $node<<(40-32), min(256*1024*1024, $bytes_left));
+	
+	push(@early_args, $tmp);
+	$bytes_left -= 256*1024*1024;
+	if ($bytes_left > 0)
+	{
+		$tmp = sprintf("-ld=0x%x20000000:0x%x", $node<<(40-32), $bytes_left);
+		push(@early_args, $tmp);
+	}
+
+	return @early_args;
+}
+
+
+my($sim) = "";
+if ($OCTEON_MODEL =~ /OCTEON_CN31XX/ || $OCTEON_MODEL =~ /OCTEON_CN3020/)
+{
+   $sim = "cn31xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN3010/ || $OCTEON_MODEL =~ /OCTEON_CN3005/)
+{
+   $sim = "cn30xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN58XX/)
+{
+   $sim = "cn58xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN54XX/ || $OCTEON_MODEL =~ /OCTEON_CN55XX/ || $OCTEON_MODEL =~ /OCTEON_CN56XX/ || $OCTEON_MODEL =~ /OCTEON_CN57XX/)
+{
+   $sim = "cn56xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN38XX/ || $OCTEON_MODEL =~ /OCTEON_CN36XX/)
+{
+   $sim = "cn38xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN50XX/ )
+{
+   $sim = "cn50xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN52XX/ )
+{
+   $sim = "cn52xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN63XX/ || $OCTEON_MODEL =~ /OCTEON_CN62XX/ )
+{
+   $sim = "cn63xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN66XX/ )
+{
+   $sim = "cn66xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN68XX/ )
+{
+   $sim = "cn68xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN61XX/ || $OCTEON_MODEL =~ /OCTEON_CN60XX/ )
+{
+   $sim = "cn61xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CNF71XX/ )
+{
+   $sim = "cnf71xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN70XX/ || $OCTEON_MODEL =~ /OCTEON_CN71XX/ )
+{
+   $sim = "cn70xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN78XX/ || $OCTEON_MODEL =~ /OCTEON_CN76XX/ )
+{
+   $sim = "cn78xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN73XX/ || $OCTEON_MODEL =~ /OCTEON_CN23XX/ )
+{
+   $sim = "cn73xx-simulator";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CNF75XX/ )
+{
+   $sim = "cnf75xx-simulator";
+}
+else
+{
+   print "ERROR: unsupported OCTEON_MODEL: $OCTEON_MODEL\n";
+   exit;
+}
+
+my($machine) = `uname -m`;
+chomp($machine);
+if ($machine eq "x86_64")
+{
+   $sim = $sim . "64";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CNF75XX/ )
+{
+   print "Simulator not supported for 32-bit host.\n";
+   exit(-1);
+}
+
+unless ($OCTEON_ROOT)
+{
+   print "The oct-sim script requires the OCTEON_ROOT environment variable to be set.\n";
+   exit(-1);
+}
+if ($OCTEON_SIM)
+{
+   $sim= $OCTEON_SIM;
+}
+if (system("which $sim &> /dev/null"))
+{
+   print "Unable to find the simulator executable \"$sim\". Check your PATH.\n";
+   exit(-1);
+}
+
+
+if (scalar(@ARGV) == 1 && $ARGV[0] =~ /^-v/)
+{
+   system("$sim -v");
+   exit(0);
+}
+
+if (scalar(@ARGV) == 1 && $ARGV[0] =~ /^--print-sim/)
+{
+   print "$sim\n";
+   exit(0);
+}
+
+if (scalar(@ARGV) < 1 || $ARGV[0] =~ /^-+h/)
+{
+   print "Usage: oct_sim executable [-memsize=size] [-envfile=filename] [-debug] [simulator options]\n";
+   print "\n";
+   print "oct-sim option descriptions:                                                       \n";
+   print "      -memsize=size[,size].. size is in megabytes.  Defaults to 384 megabytes.     \n";
+   print "      -envfile=filename      u-boot will load environment from file 'filename'.    \n";
+   print "      -debug                 enables debugging of application.                     \n";
+   print "      -stacksize=0xXXX       sets stack size in bytes for simple exec applications (1 MB default)\n";
+   print "      -heapsize=0xXXX        sets heap size in bytes for simple exec applications (3 MB default) \n";
+   print "      -appargs=\"arg string\"  passes \"arg string\" to application as argc/argv   \n";
+   print "\n";
+   system("$sim -v;$sim");
+   exit(-1);
+}
+my($exe) = shift(@ARGV);
+ 
+if ($exe =~ /^-.*/)
+{
+   print "Error: exe file (not an option) must be first argument\n";
+   exit(-1);
+}
+
+my(@sim_args, $arg);
+my(@early_args);  # simulator arguments that we want before user suplied args
+
+if (grep(/^-save-temps$/, @ARGV))
+{
+    print "Saving temporary files!\n";
+    $SaveTemps = 1;
+}
+
+# if memsize arg given, then create appropriate memory regions, and create file
+# with memsize in it.  If no memsize given, provide a reasonable default, and indicate
+# that default used
+unless (grep(/^-memsize/, @ARGV))
+{
+   my($default_memsize) = "384,256,256,256";
+   unshift(@ARGV, "-memsize=$default_memsize");
+   print "No -memsize argument provided, using default: $default_memsize Megabytes\n";
+}
+
+# If the -debug argument wasn't supplied, add a zero at the the debug flag
+# address so reading it gets a zero
+unless (grep(/^-debug$/, @ARGV))
+{
+   unshift(@early_args, "-ld=0x1ffffff0:0x8");
+}
+
+# Since most of the arguments are passed through to the simulator, we can't use
+# getopt and friends, since that will gobble up all the arguments.  We are left with
+# a clunkier parser for just the arguments that we are interested in.
+my($flags) = 0;
+my($mode_args);
+my($app_args) = '';
+my($envfile, $stack_size, $heap_size);
+my($numnodes) = 1;
+my($memsize) = 0;
+my(@memsizeN);
+
+foreach $arg (@ARGV)
+{
+   if ($arg =~ /^-memsize=(\S+)/)
+   {
+	   print "memsize=", $1, "\n";
+	@memsizeN = split(/,/, $1);
+      $memsize = $memsizeN[0];
+      # convert memsize to decimal from either hex, octal, or decimal
+      $memsize = oct $memsize if $memsize =~ /^0/;
+      my($bytes_left) = $memsize*1024*1024;
+      my($tmp);
+      print "node#0: mem size is $memsize Megabytes\n";
+
+      $tmp = sprintf("-ld=0x0:0x%x", min(256*1024*1024, $bytes_left));
+
+      push(@early_args, $tmp);
+      $bytes_left -= 256*1024*1024;
+      if (($OCTEON_MODEL =~ /OCTEON_CN3/) or ($OCTEON_MODEL =~ /OCTEON_CN5/))
+      {
+         if ($bytes_left > 0)
+         {
+            $tmp = sprintf("-ld=0x410000000:0x%x", min(256*1024*1024, $bytes_left));
+            push(@early_args, $tmp);
+         }
+         $bytes_left -= 256*1024*1024;
+      }
+      if ($bytes_left > 0)
+      {
+         $tmp = sprintf("-ld=0x20000000:0x%x", $bytes_left);
+         push(@early_args, $tmp);
+      }
+   }
+   elsif (($arg =~ /^-numnodes=(\w+)/))
+   {
+       $numnodes = $1;
+       push(@sim_args, "-numnodes=$numnodes");
+   }
+   elsif (($arg =~ /^-envfile=(\S+)/))
+   {
+      $envfile = $1;
+      print "Loading u-boot environment from file: $envfile\n";
+      push(@sim_args, "-ld=0x1fe00000:$envfile"); # load environment file
+
+   }
+   elsif (($arg =~ /^-debug$/))
+   {
+      $flags |= DEBUG_FLAG();
+   }
+   elsif (($arg =~ /^-stacksize=(\S+)/))
+   {
+      $stack_size = $1;
+   }
+   elsif (($arg =~ /^-heapsize=(\S+)/))
+   {
+      $heap_size = $1;
+   }
+   elsif (($arg =~ /^-appargs=(.+)/))
+   {
+      # The shell takes care of the quoting, so the option here may contain spaces,
+      # but is does not include the leading/trailing quotes
+      $app_args = $1;
+   }
+   elsif (($arg =~ /^-save-temps$/))
+   {
+      # Already processed, so just eat arg here....
+   }
+   elsif (($arg =~ /^-modes=(\S+)/))
+   {
+      $mode_args = $1;
+      if ($mode_args =~ /realhw/)
+      {
+         print "Setting nomagic flag\n";
+         $flags |= NO_MAGIC_FLAG();
+      }
+      
+   }
+   elsif (($OCTEON_MODEL =~ /CN30XX/ || $OCTEON_MODEL =~ /CN3010/ || $OCTEON_MODEL =~ /CN3005/) && ($arg =~ /^-numcores=(\w+)/))
+   {
+      # 30xx simulator doesn't support numcores arg, so strip
+      if ($1 != 1)
+      {
+         print "ERROR: CN30xx simulator only supports a single core.\n";
+         exit;
+      }
+      print "Notice: -numcores option not supported on CN30xx simulator, ignoring option.\n";
+   }
+   else
+   {
+      push(@sim_args, $arg);
+   }
+}
+
+
+###############################################
+# Create $memsizeN[$i] RAM for the  remote nodes
+###############################################
+	if ($OCTEON_MODEL =~ /OCTEON_CN78XX/)
+	{
+		my($i);
+		for $i (1..7) {
+			if ($i < $numnodes) {
+				push( @early_args, alloc_RAM_node($i, $memsizeN[$i]) );
+			} else {
+				$memsizeN[$i] = 0;
+			}
+		}
+	}
+########
+
+# Create memsize and numnodes in a temp file
+if ($memsize || $numnodes)
+{
+      if ($SaveTemps) {
+	  $nodes_file = "octsim_nodes_file.tmp";
+	  open ($fh, "> $nodes_file") or die "Can't open temporary file $nodes_file: $!";
+	  binmode $fh
+      }
+      else {
+	  # create temporary file with memory size in it
+	  do { $nodes_file = tmpnam()}
+	  until $fh = IO::File->new($nodes_file, O_RDWR|O_CREAT|O_EXCL);
+
+	  # clean up tmp file on exit...
+	  END {
+	      if (!($SaveTemps)) {
+		  $nodes_file and (unlink($nodes_file) or die "ERROR couldn't unlink $nodes_file : $!\n");
+	      }
+	  }
+      }
+
+      my($bin_size) = pack( "NN", $memsize, $numnodes);
+      print $fh "$bin_size";
+      close($fh);
+
+      # put mem size in megabytes in top word of boot bus
+      push (@early_args, "-ld=0x1ffffff8:$nodes_file");
+
+}
+
+
+# Create node#0..node#7 memsizes in a temp file
+if ($memsize || $numnodes)
+{
+      if ($SaveTemps) {
+	  $size_file = "octsim_size_file1.tmp";
+	  open ($fh, "> $size_file") or die "Can't open temporary file $size_file: $!";
+	  binmode $fh
+      }
+      else {
+	  # create temporary file with memory size in it
+	  do { $size_file = tmpnam()}
+	  until $fh = IO::File->new($size_file, O_RDWR|O_CREAT|O_EXCL);
+
+	  # clean up tmp file on exit...
+	  END {
+	      if (!($SaveTemps)) {
+		  $size_file and (unlink($size_file) or die "ERROR couldn't unlink $size_file : $!\n");
+	      }
+	  }
+      }
+
+      my($bin_size) = pack( "NNNNNNNN", 
+			    $memsizeN[0], $memsizeN[1], $memsizeN[2], $memsizeN[3],
+			    $memsizeN[4], $memsizeN[5], $memsizeN[6], $memsizeN[7]);
+      print $fh "$bin_size";
+      close($fh);
+
+      # put mem size in megabytes in top word of boot bus
+      push (@early_args, "-ld=0x1fffffd0:$size_file");
+
+}
+
+# Check for conflicting options
+if ($envfile && ($app_args || $stack_size || $heap_size))
+{
+   print "ERROR: -envfile option is not compatible with the -appargs, -stacksize, or -heapsize arguments.\n";
+   exit(-1);
+}
+
+my($gen_env_file);
+if ($app_args || $stack_size || $heap_size)
+{
+   # Generate temp env file for args, stack, and/or heap
+   $gen_env_file = "gen_env_file.$$.tmp";
+   my($stack_arg, $heap_arg);
+
+   if ($stack_size)
+   {
+      $stack_arg = "stack=$stack_size";
+   }
+   if ($heap_size)
+   {
+      $heap_arg = "heap=$heap_size";
+   }
+
+
+   # If we have application args, create a temporary env file
+   open ($fh, "> $gen_env_file") or die "Can't open temporary file $gen_env_file: $!";
+   print $fh "bootcmd=bootoct 0x10000000 $stack_arg $heap_arg endbootargs $exe $app_args";
+   close($fh);
+   
+   # Load the env file to boot bus
+   push(@sim_args, "-ld=0x1fe00000:$gen_env_file");
+   
+   END {
+      # clean up tmp file on exit...
+          if (!($SaveTemps)) {
+             $gen_env_file and (unlink($gen_env_file) or die "ERROR couldn't unlink $gen_env_file : $!\n");
+          }
+       }
+
+}
+
+
+if ($flags)
+{
+    if ($SaveTemps) {
+	$flags_file = "octsim_flags_file.tmp";
+	open ($fh, "> $flags_file")  or die "Can't open temporary file $flags_file: $!";;
+    }
+    else {
+	# create temporary file with the debug flag in it
+	do { $flags_file = tmpnam()}
+	until $fh = IO::File->new($flags_file, O_RDWR|O_CREAT|O_EXCL);
+
+	# clean up tmp file on exit...
+	END {
+	    if (!($SaveTemps)) {
+		$flags_file and (unlink($flags_file) or die "ERROR couldn't unlink $flags_file : $!\n");
+	    }
+	}
+    }
+
+   # Each "N" write 4 bytes, so do two to meet the minimum simulator file size
+   my($bin) = pack( "NN", $flags,0);
+   print $fh "$bin";
+   close($fh);
+
+   # put bootloader flags near top of boot bus
+   unshift (@sim_args, "-ld=0x1ffffff0:$flags_file");
+
+}
+
+if (!(($flags & NO_MAGIC_FLAG())))
+{
+   # add sim_magic code, bootloader 
+   unshift(@sim_args, "$OCTEON_ROOT/target/bin/sim-magic-elf");
+}
+
+unshift(@sim_args, "-ld=0x1fc00000:0x40000 -ld=0x1fc00000:$OCTEON_ROOT/target/bin/u-boot-octeon_sim.bin");
+
+
+push(@early_args, "-ld=0x1fe00000:0x1000"); # blank spot for optional boot environment to go
+push(@early_args, "-ld=0x100001D020000:0x10"); # blank spot so 4 char LED writes don't cause assert
+
+# Determine which pass to simulate based on OCTEON_MODEL
+# If specific _PASSN model is used, use that
+# Otherwise map non-pass specific names to implied version
+my $pass_str = "pass1";  # Default for most chips
+if ($OCTEON_MODEL =~/^OCTEON_\w+_PASS(\d)$/)
+{
+   $pass_str = "pass$1";
+}
+elsif ($OCTEON_MODEL =~/^OCTEON_\w+_PASS(\d)_(\d)$/)
+{
+   $pass_str = "pass$1.$2";
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN31XX")
+{
+   $pass_str = "pass1";  # Default 31xx pass
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN38XX" || $OCTEON_MODEL eq "OCTEON_CN36XX")
+{
+   $pass_str = "pass3";  # Default 38xx pass3
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN58XX")
+{
+   $pass_str = "pass2";  # Default 58xx pass2
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN52XX")
+{
+   $pass_str = "pass2";  # Default 52xx pass2
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN54XX/ || $OCTEON_MODEL =~ /OCTEON_CN55XX/ || $OCTEON_MODEL =~ /OCTEON_CN56XX/ || $OCTEON_MODEL =~ /OCTEON_CN57XX/)
+{
+   $pass_str = "pass2";  # Default 56xx pass2
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN63XX")
+{
+   $pass_str = "pass2";  # Default 63xx pass2
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN66XX")
+{
+   $pass_str = "pass1";  # Default 66xx pass1
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN68XX")
+{
+   $pass_str = "pass2";  # Default 68xx pass2
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN61XX")
+{
+   $pass_str = "pass1";  # Default 61xx pass1
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CNF71XX")
+{
+   $pass_str = "pass1";  # Default 71xx pass1
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN70XX" || $OCTEON_MODEL eq "OCTEON_CN71XX")
+{
+   $pass_str = "pass1";  # Default 70xx pass1
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN78XX" || $OCTEON_MODEL eq "OCTEON_CN76XX")
+{
+   $pass_str = "pass2";  # Default 78xx pass2
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CN73XX" || $OCTEON_MODEL eq "OCTEON_CN23XX")
+{
+   $pass_str = "pass1";  # Default 73xx pass1
+}
+elsif ($OCTEON_MODEL eq "OCTEON_CNF75XX")
+{
+   $pass_str = "pass1";  # Default 75xx pass1
+}
+
+# Set mode_args that will be passed to the simulator.  Care must be taken as these can be passed
+# from the user as well.
+# Extra leading , on list does not matter
+
+# Set simulator options for various Octeon models
+if ($OCTEON_MODEL =~ /OCTEON_CN3020/)
+{
+   $mode_args .= ",128kbl2,narrowpackage,";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN36XX/)
+{
+   $mode_args .= ",512kbl2,";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN3005/)
+{
+   $mode_args .= ",64kbl2,narrowpackage,";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN54XX/)
+{
+   $mode_args .= ",1mbl2,norad,";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN55XX/)
+{
+   $mode_args .= ",1mbl2,";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN56XX/)
+{
+   $mode_args .= ",norad,";
+}
+elsif ($OCTEON_MODEL =~ /OCTEON_CN76XX/)
+{
+   $mode_args .= ",alternatepackage,";
+}
+
+
+# if 'nofastboot' option passed, don't add fastboot option
+if (($mode_args =~ /nofastboot/))
+{
+   $mode_args =~ s/nofastboot,//;
+   $mode_args =~ s/,nofastboot//;
+   $mode_args =~ s/nofastboot//;
+}
+else
+{
+   $mode_args .= "fastboot,";
+}
+
+
+# Set pass mode based on OCTEON_MODEL unless nopass mode is supplied
+if ($mode_args =~ /nopass/)
+{
+   # strip 'nopass' mode, don't add other pass mode.  This allows the simulator default to be used.
+   # This should not be used much in practice.
+   $mode_args =~ s/nopass,//;
+   $mode_args =~ s/,nopass//;
+   $mode_args =~ s/nopass//;
+}
+elsif (!($mode_args =~ /pass/))
+{
+   # Set the pass mode based on OCTEON_MODEL
+   $mode_args .= "$pass_str,";
+}
+else
+{
+   die "Error: -modes options pass* are not allowed, use OCTEON_MODEL to specify the chip model"
+}
+
+push(@early_args, "-modes=$mode_args"); 
+
+print "Using simulator: $sim\n";
+print "Loading $exe to boot bus address 0x1000000\n";
+print "Starting simulator....\n";
+my($sys_str) = "$sim -ld=0x10000000:$exe @early_args @sim_args";
+print "Executing command: $sys_str\n";
+system("$sys_str");
+
+##################################################################################
+# These must not change - they are defined in octeon-app-init.h in toolchain
+# No new flags should be added
+sub DEBUG_FLAG {2}
+sub NO_MAGIC_FLAG {4}

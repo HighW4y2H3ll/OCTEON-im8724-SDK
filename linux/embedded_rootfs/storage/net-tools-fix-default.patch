@@ -1,0 +1,44 @@
+--- lib/inet_sr.c_original	2006-06-02 16:19:04.000000000 -0700
++++ lib/inet_sr.c	2006-06-02 16:19:13.000000000 -0700
+@@ -104,7 +104,6 @@
+        isnet = 1; break;
+     case 2:
+        isnet = 0; break;
+-    default:
+     }
+ 
+     /* Fill in the other fields. */
+--- hostname.c_original	2006-06-02 16:17:53.000000000 -0700
++++ hostname.c	2006-06-02 16:18:17.000000000 -0700
+@@ -77,7 +77,6 @@
+         case EINVAL:
+             fprintf(stderr, _("%s: name too long\n"), program_name);
+             break;
+-        default:
+         }
+ 	exit(1);
+     }
+@@ -97,7 +96,6 @@
+ 	case EINVAL:
+ 	    fprintf(stderr, _("%s: name too long\n"), program_name);
+ 	    break;
+-	default:
+ 	}
+ 	exit(1);
+     };
+@@ -116,7 +114,6 @@
+ 	case EINVAL:
+ 	    fprintf(stderr, _("%s: name too long\n"), program_name);
+ 	    break;
+-	default:
+ 	}
+ 	exit(1);
+     };
+@@ -173,7 +170,6 @@
+ 	    *p = '\0';
+ 	printf("%s\n", hp->h_name);
+ 	break;
+-    default:
+     }
+ }
+ 

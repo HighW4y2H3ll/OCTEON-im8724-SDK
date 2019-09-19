@@ -1,0 +1,8 @@
+#!/bin/sh
+
+source ./functions.sh
+
+require test -f /usr/bin/oct-linux-csr
+
+assert oct-linux-csr ciu_fuse 0 | wc | grep -q "0"
+assert oct-linux-csr ciu_fuse | grep -q "CIU_FUSE[(]0x[0-9\|a-f]*[)] ="

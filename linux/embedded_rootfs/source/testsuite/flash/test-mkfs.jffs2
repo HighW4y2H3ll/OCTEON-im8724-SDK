@@ -1,0 +1,6 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert mkfs.jffs2 -r /bin -o jff2.test
+assert jffs2dump -c jff2.test > /dev/null

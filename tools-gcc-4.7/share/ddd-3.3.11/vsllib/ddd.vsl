@@ -1,0 +1,283 @@
+// $Id: ddd.vsl 14384 2006-04-11 21:46:04Z cchavva $ -*- c++ -*-
+// VSL functions for DDD graph display
+// Generated automatically from ddd.vsl.m4 by m4.  DO NOT EDIT.
+
+// Copyright (C) 1995-1998 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+// Includes
+#include "std.vsl"
+#include "tab.vsl"
+#include "fonts.vsl"
+#include "colors.vsl"
+#include "list.vsl"
+
+// Font settings
+#pragma replace stdfontfamily
+stdfontfamily() = family_typewriter();
+
+// Small fonts.
+// Note: ALL THESE DEFINITIONS WILL BE OVERRIDDEN BY DDD.
+// Use `ddd --fonts' to see the actual definitions.
+small_size()  = (0, 100);
+small_rm(box) = rm(box, stdfontfamily(), small_size());
+small_bf(box) = bf(box, stdfontfamily(), small_size());
+small_it(box) = it(box, stdfontfamily(), small_size());
+small_bi(box) = bi(box, stdfontfamily(), small_size());
+
+// Tiny fonts.
+// Note: ALL THESE DEFINITIONS WILL BE OVERRIDDEN BY DDD.
+// Use `ddd --fonts' to see the actual definitions.
+tiny_size()  = (0, 100);
+tiny_rm(box) = rm(box, family_helvetica(), tiny_size());
+tiny_bf(box) = bf(box, family_helvetica(), tiny_size());
+tiny_it(box) = it(box, family_helvetica(), tiny_size());
+tiny_bi(box) = bi(box, family_helvetica(), tiny_size());
+
+// Colors
+display_color(box)   = color(box, "black", "white");
+title_color(box)     = color(box, "black");
+disabled_color(box)  = color(box, "white", "grey50");
+simple_color(box)    = color(box, "black");
+text_color(box)      = color(box, "black");
+pointer_color(box)   = color(box, "blue4");
+struct_color(box)    = color(box, "black");
+list_color(box)      = color(box, "black");
+array_color(box)     = color(box, "blue4");
+reference_color(box) = color(box, "blue4");
+changed_color(box)   = color(box, "black", "#ffffcc");
+shadow_color(box)    = color(box, "grey");
+
+// Fonts
+// Note: rm, bf, it, bi will be overridden by DDD.
+// Use `ddd --fonts' to see the actual definitions.
+title_rm(box) = rm(box);
+title_bf(box) = bf(box);
+title_it(box) = it(box);
+title_bi(box) = bi(box);
+
+value_rm(box) = rm(box);
+value_bf(box) = bf(box);
+value_it(box) = it(box);
+value_bi(box) = bi(box);
+
+// Shadow effects
+shadow(box, thickness) =
+  box & (square(thickness) | shadow_color(vrule(thickness)))
+| square(thickness) & shadow_color(hrule(thickness));
+shadow(box) = shadow(box, 1);
+
+// Non-expanding alignments
+fixed_hlist(_) = hnull();
+fixed_hlist(_, head) = hfix(head);
+fixed_hlist(sep, head, ...) = hfix(head) & sep & fixed_hlist(sep, ...);
+
+fixed_vlist(_) = vnull();
+fixed_vlist(_, head) = vfix(head);
+fixed_vlist(sep, head, ...) = vfix(head) | sep | fixed_vlist(sep, ...);
+
+// Titles.
+title (disp_nr, name) -> 
+  title_color(title_rm(disp_nr & ": ") & title_bf(name) & hfill());
+title (name) -> 
+  title_color(title_bf(name) & hfill());
+
+// Edge annotations.
+annotation (name) ->
+  tiny_rm(name);
+
+// The "disabled" string
+disabled () -> 
+  disabled_color(vcenter(value_it("(Disabled)") & hfill()));
+
+// No value
+none () -> "";
+
+// Ordinary values
+simple_value (value) -> 
+  simple_color(vcenter(value_rm(value) & hfill()));
+numeric_value (value) -> 
+  simple_color(vcenter(hfill() & value_rm(value)));
+
+// Collapsed ordinary values
+collapsed_simple_value () -> 
+  simple_color(vcenter(value_rm("...") & hfill()));
+
+// Info texts: single lines
+text_line (line) -> 
+  text_color(line & hfill());
+
+// Multiple lines
+text_value (...) -> valign(...);
+
+// Collapsed ordinary values
+collapsed_text_value () -> 
+  text_color(value_rm("...") & hfill());
+
+// Ordinary pointers
+pointer_value (value) -> 
+  pointer_color(vcenter(value_rm(value) & hfill()));
+
+// Collapsed pointers
+collapsed_pointer_value () -> 
+  pointer_color(vcenter(value_rm("...") & hfill()));
+
+// Dereferenced pointers
+dereferenced_pointer_value (value) -> 
+  pointer_color(vcenter(value_bf(value)) & hfill());
+
+// Collapsed array
+collapsed_array () -> 
+  array_color(vcenter(value_rm("[...]") & hfill()));
+
+// Empty array
+empty_array () -> 
+  array_color(vcenter(value_rm("[]") & hfill()));
+
+// Vertical array
+vertical_array (...) -> 
+  array_color(frame(indent(vlist(hwhite() | hrule() | hwhite(), ...))));
+
+// Horizontal array
+horizontal_array (...) -> 
+  array_color(frame(indent(fixed_hlist(vwhite() & vrule() & vwhite(), ...))) 
+	      & hfill());
+
+// Two-dimensional arrays
+twodim_array (...) -> 
+  array_color(dtab(...));
+twodim_array_elem (value) -> 
+  value_rm(value);
+
+// Struct value
+struct_value (...) -> 
+  struct_color(frame(indent(valign(...))));
+
+// Collapsed struct
+collapsed_struct_value () -> 
+  struct_color(vcenter(value_rm("{...}") & hfill()));
+
+// Empty struct
+empty_struct_value () ->
+  struct_color(vcenter(value_rm("{}") & hfill()));
+
+// Unnamed struct
+horizontal_unnamed_struct (...) -> horizontal_array(...);
+vertical_unnamed_struct   (...) -> horizontal_array(...);
+
+// Struct member name
+struct_member_name (name) -> 
+  struct_color(value_rm(name));
+
+// Struct member
+struct_member (name, sep, value, name_width) -> 
+  vcenter(value_rm(name) | hspace(name_width)) 
+  & vcenter(value_rm(sep)) & value_rm(value);
+
+// Same, but with suppressed member name
+struct_member (value) -> 
+  value_rm(value);
+
+// List value
+list_value (...) -> 
+  list_color(valign(...));
+
+// Collapsed list
+collapsed_list_value () -> 
+  list_color(vcenter(value_rm("...") & hfill()));
+
+// Empty list
+empty_list_value () -> 
+  list_color(vcenter(value_rm("") & hfill()));
+
+// Unnamed list
+horizontal_unnamed_list (...) -> horizontal_array(...);
+vertical_unnamed_list  (...)  -> horizontal_array(...);
+
+// List member name
+list_member_name (name) -> 
+  list_color(value_rm(name));
+
+// List member
+list_member (name, sep, value, name_width) -> 
+  vcenter(name | hspace(name_width)) 
+  & vcenter(sep) & value & hfill();
+
+// Same, but with suppressed member name
+list_member (value) -> 
+  value;
+
+// Sequence
+sequence_value (...) -> 
+  simple_color(fixed_hlist(vwhite(), ...) & hfill());
+
+// Collapsed sequence
+collapsed_sequence_value () -> 
+  collapsed_simple_value();
+
+// Reference
+reference_value (ref, value) -> 
+  reference_color(vcenter(value_rm(ref & ": ")) & value & hfill());
+
+// Collapsed reference
+collapsed_reference_value () -> 
+  reference_color(vcenter(value_rm("...") & hfill()));
+
+// Changed value
+changed_value (value) -> 
+  changed_color(value_it(value));
+
+// A value that is repeated N times
+repeated_value (value, n) ->
+  value & vcenter(value_rm(" <" & dec(n) & "\327>"));
+
+// The entire value
+value_box (value) -> 
+  value;
+
+// The entire box
+display_box (title, value) -> 
+  fix(shadow(display_color(
+      frame(title | hrule() | hwhite () | value_rm(value)))));
+
+// The entire box, but without title
+display_box (value) -> 
+  fix(shadow(display_color(frame(value_rm(value)))));
+
+// For VSL
+main (_...) -> 
+  display_box(title("1", "pi"), value_box(simple_value("3.1415")))
+| display_box(title("2", "p"), value_box(pointer_value("(Object *) 0x0")))
+| display_box(title("3", "p"), 
+	      value_box(dereferenced_pointer_value("(Object *) 0xdeadbeef")))
+| display_box(title("4", "s"), value_box(struct_value(
+    struct_member ("x", " = ", value_box("1"), "x"),
+    struct_member ("y", " = ", value_box("2"), "x"))))
+| display_box(title("5", "a"), 
+	      value_box(horizontal_array(
+		  value_box(simple_value("1")), 
+		  value_box(simple_value("2")), 
+		  value_box(simple_value("3")))));
+

@@ -1,0 +1,118 @@
+// $Id: tree.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Draw trees
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "std.vsl"
+#include "slopes.vsl"
+
+// Version
+tree_version() = "$Revision: 14384 $";
+
+// Tree functions
+
+// 1. Vertical Trees
+
+// Ratio HEIGHT : WIDTH (1:10)
+
+treeheight(width) = vspace(square(width)) / 10;
+
+// draw the connections from the root to the children
+// return a box of width HROOT * 2 and height HEIGHT
+// There will be a line from the center of the upper edge of HSUM + BOX/2 
+// to the center of the upper edge of the box
+
+vbranch(height, hroot, hsum, hbox2) =
+( height & 
+  if hsum & hbox2 < hroot then
+        // Box in left half
+	hsum & hbox2 & rise() & hroot
+  elsif hsum & hbox2 > hroot then
+        // Box in right half
+	hroot & fall() & hspace(hroot * 2 - hsum - hbox2)
+  else
+	// Box in center
+	hcenter(vrule())
+  fi
+);
+
+vbranches(height, hroot, hsum, box) = 
+  vbranch(height, hroot, hsum, hspace(box)/2);
+
+vbranches(height, hroot, hsum, box, ...) = 
+  vbranches(height, hroot, hsum, box) 
+^ vbranches(height, hroot, hsum & hspace(box), ...);
+
+
+// vtree(children...) connects a root with its children.  The edges
+// end in the center of the upper edge of the children.
+
+_vtree(align, ...) = 
+  vbranches(treeheight(hspace(align)), hspace(align)/2, 0, ...)
+| hcenter(align);
+
+vtree(root) = root;
+vtree(root, ...) = 
+  hcenter(root) 
+| _vtree(halign(...), ...);
+
+
+
+// 2. Horizontal Trees
+
+// Just the same, only rotated by 90 degrees.
+
+treewidth(height) = hspace(square(height)) / 10;
+
+hbranch(width, vroot, vsum, vbox2) =
+( width | 
+  if vsum | vbox2 < vroot then
+	// Box in upper half
+	vsum | vbox2 | rise() | vroot
+  elsif vsum | vbox2 > vroot then
+	// Box in lower half
+	vroot | fall() | vspace(vroot * 2 - vsum - vbox2)
+  else 
+        // Box in center
+	vcenter(hrule())
+  fi
+);
+
+hbranches(width, vroot, vsum, box) = 
+  hbranch(width, vroot, vsum, vspace(box)/2);
+
+hbranches(width, vroot, vsum, box, ...) = 
+  hbranches(width, vroot, vsum, box) 
+^ hbranches(width, vroot, vsum | vspace(box), ...);
+
+_htree(align, ...) = 
+  hbranches(treewidth(vspace(align)), vspace(align)/2, 0, ...)
+& vcenter(align);
+
+htree(root) = root;
+htree(root, ...) = 
+  vcenter(root) 
+& _htree(valign(...), ...);

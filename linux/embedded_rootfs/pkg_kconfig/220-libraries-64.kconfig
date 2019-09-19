@@ -1,0 +1,20 @@
+config CONFIG_octeon-libraries-64
+	bool "octeon-libraries-64"
+	default y
+	help
+		Install the gcc and glibc shared libraries required for N64
+		applications to run on all Octeon model.
+
+config CONFIG_octeon2-libraries-64
+	bool "octeon2-libraries-64"
+	default y
+	help
+		Install the gcc and glibc shared libraries required for N64
+		applications to run only on Octeon II model.
+
+config CONFIG_octeon3-libraries-64
+	bool "octeon3-libraries-64"
+	default y
+	help
+		Install the gcc and glibc shared libraries required for N64
+		applications to run only on Octeon III model.

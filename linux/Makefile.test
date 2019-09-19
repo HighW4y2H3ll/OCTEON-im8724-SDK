@@ -1,0 +1,362 @@
+#
+# Automated tests for Octeon Linux
+#
+# This makefile runs a series of automated test against the Linux kernel
+# and the minimal root filesystem. Each test produces a log file with the
+# output. Any failure will cause this makefile to fail.
+#
+
+#
+# The following defines some globals for every test
+#
+example_path=${OCTEON_ROOT}/examples
+top=${shell pwd}
+ifdef OCTEON_LE
+rootfs=${top}/embedded_rootfs/rootfs-le.ext2
+else
+rootfs=${top}/embedded_rootfs/rootfs.ext2
+endif
+kernel=${top}/kernel/linux/vmlinux.64
+mount_point:=/mnt/${USER}/linux_dev-$$PPID
+memsize=384
+ifdef OCTEON_SIM_UART_TCP_PORT
+uart_port=${OCTEON_SIM_UART_TCP_PORT}
+else
+uart_port=2023
+endif
+ifdef OCTEON_SIM_PACKET_TCP_PORT
+packet_port=${OCTEON_SIM_PACKET_TCP_PORT}
+else
+packet_port=2002
+endif
+
+TMP=${findstring OCTEON_CN68XX,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+  iport_num=2048
+  lfiport_num=2048
+  lfenv_file = linux-filter-2048.env
+else
+  iport_num=0
+  lfiport_num=
+  lfenv_file = linux-filter.env
+endif
+
+KERNEL_TYPE=
+LOGS=${KERNEL_TYPE}logs
+log_ext=-${OCTEON_MODEL}.log
+result= ( \
+echo -e "*******************************\n$1: $@\n*******************************"; \
+test "$1" = "PASS"; \
+)
+
+
+rootfs_address=0x40000000
+envfile=${top}/kernel/u-boot-env
+linux_cmd=time oct-sim ${kernel} -memsize=${memsize} -envfile=${envfile}
+tests=
+
+#
+# Each target found in the "tests" variable will be run one after the other.
+# Since all of the tests envolve a series of Linux shell commands and checking
+# the output, each test shares the same template target. The specifics of each
+# test are controlled by variables. Here is a description of each variable:
+#
+# TEST-time
+#	Expected runtime of test. Just for user info
+# TEST-cmds
+#	List of shell commands to execute in the simulator. Each comamnd
+#	should be surrounded by quotes. The command "poweroff" will be
+#	executed after these command to end the simulation.
+# TEST-opts
+#	Extra simulator arguments for the test. Most commonly used:
+#		-quiet -noperf
+# TEST-before
+#	Optional host linux command line to execute before the test
+# TEST-after
+#	Optional host linux command line to execute after the test
+# TEST-grep
+#	String expression for grep to determine the PASS condition for the
+#	test. In addition, any test producing the string "FAIL" will be
+#	considered a failure
+#
+
+#
+# Minimal boot of the root filesystem
+#
+tests += test-boot
+test-boot-time = 2 min (AMD64 3700+)
+test-boot-cmds = "echo TEST PASSED"
+test-boot-opts = -quiet -noperf -maxcycles=760000000
+test-boot-grep = "TEST PASSED"
+
+#
+# Run the crypto. It produces FAIL messages on errors, but no pass indicator.
+# Use the aes cbc output as a pass indicator.
+#
+tests += test-crypto
+test-crypto-time = 2 min (AMD64 3700+)
+test-crypto-cmds = "/examples/crypto"
+test-crypto-opts = -quiet -noperf -maxcycles=780000000
+test-crypto-grep = "aes cbc:  e5a82dea368354dcb2982f24ed13bc170b4256f2222e06362e54096ace81568f"
+
+#
+# Run the  standalone linux-filter example
+#
+tests += test-standalone-linux-filter
+test-standalone-linux-filter-time = 5 min (AMD64 3700+)
+test-standalone-linux-filter-before = make -C $(example_path)/linux-filter; (sleep 160; oct-packet-io -w 5 -p ${packet_port} -c -I $(iport_num):${example_path}/linux-filter/linux-filter.input) &
+test-standalone-linux-filter-cmds = "modprobe octeon-ethernet" "modprobe octeon-pow-ethernet receive_group=1 broadcast_groups=4 ptp_rx_group=14 ptp_tx_group=13" "ifconfig eth0 up promisc" "ifconfig pow0" "ifconfig eth0"
+test-standalone-linux-filter-opts = -ld0x11000000:${example_path}/linux-filter/linux-filter -serve=${packet_port} -quiet -noperf -numcores=3 -envfile=${lfenv_file} -maxcycles=1000000000
+test-standalone-linux-filter-sim-grep = "Received 98 byte packet. Filtered."
+test-standalone-linux-filter-exclude = OCTEON_CN31XX OCTEON_CN3020 OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN50XX OCTEON_CN78XX OCTEON_CN73XX
+
+#
+# Run the userspace linux-filter example
+#
+tests += test-userspace-linux-filter
+test-userspace-linux-filter-time = 7 min (AMD64 3700+)
+test-userspace-linux-filter-before =(sleep 100; oct-packet-io -w 20 -p ${packet_port} -c -I $(iport_num):${example_path}/linux-filter/linux-filter.input) &
+test-userspace-linux-filter-cmds = "schedtool -a 0x3 -e /examples/linux-filter ${lfiport_num} &" "modprobe octeon-ethernet" "modprobe octeon-pow-ethernet receive_group=1 broadcast_groups=4 ptp_rx_group=14 ptp_tx_group=13" "ifconfig eth0 up promisc" "ifconfig pow0 192.168.1.2" "ifconfig eth0" "ifconfig pow0" "sleep .1"
+test-userspace-linux-filter-opts = -serve=${packet_port} -quiet -noperf -numcores=4 -maxcycles=1000000000
+test-userspace-linux-filter-grep = "Received 98 byte packet. Filtered."
+test-userspace-linux-filter-exclude = OCTEON_CN31XX OCTEON_CN3020 OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN50XX OCTEON_CN78XX OCTEON_CN73XX
+
+#
+# Run the named-block example
+#
+tests += test-named-block
+test-named-block-time = 3 min (AMD64 3700+)
+test-named-block-cmds = "/examples/named-block"
+test-named-block-opts = -quiet -noperf -maxcycles=780000000
+test-named-block-grep = -o "All tests passed"
+test-named-block-exclude = OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN50XX OCTEON_CN52XX
+
+#
+# Run the hardware zip example
+#
+tests += test-zip
+test-zip-time = 3 min (AMD64 3700+)
+test-zip-cmds = "cp /sbin/rc input" "gzip < input > input.gz" "/examples/zip"
+test-zip-opts = -quiet -noperf -maxcycles=800000000
+test-zip-grep = "TEST PASSED"
+test-zip-exclude = OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN50XX OCTEON_CN52XX OCTEON_CNF71XX OCTEON_CN70XX
+
+#
+# Run the LLM example with two cores. Test creates pass / fail output.
+#
+tests += test-llm
+test-llm-time = 10 min (AMD64 3700+)
+test-llm-cmds = "/examples/low-latency-mem"
+test-llm-opts = -quiet -llsize=655360 -numcores=2 -maxcycles=380000000
+test-llm-grep = "TEST PASSED"
+test-llm-exclude = OCTEON_CN3020 OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN56XX OCTEON_CN57XX OCTEON_CN50XX OCTEON_CN52XX OCTEON_CN55XX OCTEON_CN54XX OCTEON_CN63XX OCTEON_CN68XX OCTEON_CN66XX OCTEON_CN61XX OCTEON_CNF71XX OCTEON_CN70XX OCTEON_CN78XX OCTEON_CN73XX
+
+# Run the passthrough example with 4 cores. We must spawn the oct-packet-io
+# utility before the test runs. Test creates fail output.
+#
+tests += test-passthrough
+
+passthrough_cores=4
+passthrough_cycles=560000000
+input_files=-i ${example_path}/passthrough/input-0.data -i ${example_path}/passthrough/input-1.data -i ${example_path}/passthrough/input-2.data -i ${example_path}/passthrough/input-3.data
+pass_msg = "Total 6064 packets"
+
+TMP=${findstring OCTEON_CN3020,${OCTEON_MODEL}}
+ifeq ($(TMP),)
+TMP=${findstring OCTEON_CN31XX,${OCTEON_MODEL}}
+endif
+ifeq ($(TMP),)
+TMP=${findstring OCTEON_CN50XX,${OCTEON_MODEL}}
+endif
+ifneq ($(TMP),)
+    passthrough_cores=2
+    passthrough_cycles=650000000
+    input_files=-i ${example_path}/passthrough/input-0.data -i ${example_path}/passthrough/input-1.data -i ${example_path}/passthrough/input-2.data
+    pass_msg= "Total 4548 packets"
+endif
+
+TMP=${findstring OCTEON_CN3010,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+    passthrough_cores=1
+    passthrough_cycles=550000000
+    input_files=-i ${example_path}/passthrough/input-0.data -i ${example_path}/passthrough/input-1.data -i ${example_path}/passthrough/input-2.data
+    pass_msg= "Total 4548 packets"
+endif
+
+TMP=${findstring OCTEON_CN3005,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+    passthrough_cores=1
+    passthrough_cycles=700000000
+    input_files=-i ${example_path}/passthrough/input-0.data -i ${example_path}/passthrough/input-1.data
+    pass_msg= "Total 3032 packets"
+endif
+
+TMP=${findstring OCTEON_CN68XX,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+    input_files=-i ${example_path}/passthrough/input-2048.data -i ${example_path}/passthrough/input-2064.data -i ${example_path}/passthrough/input-2080.data -i ${example_path}/passthrough/input-2096.data
+endif
+
+TMP=${findstring OCTEON_CNF71XX,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+    passthrough_cycles=700000000
+    input_files=-i ${example_path}/passthrough/input-0.data -i ${example_path}/passthrough/input-1.data
+    pass_msg= "Total 3032 packets"
+endif
+
+TMP=${findstring OCTEON_CN70XX,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+    passthrough_cycles=700000000
+    input_files=-i ${example_path}/passthrough/input-0.data
+    pass_msg= "Total 1516 packets"
+endif
+
+TMP=${findstring OCTEON_CN78XX,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+    passthrough_cycles=1700000000
+    input_files=-i ${example_path}/passthrough/input-2048.data -i ${example_path}/passthrough/input-2064.data -i ${example_path}/passthrough/input-2080.data -i ${example_path}/passthrough/input-2096.data
+endif
+
+TMP=${findstring OCTEON_CN73XX,${OCTEON_MODEL}}
+ifneq ($(TMP),)
+    passthrough_cycles=1700000000
+    input_files=-i ${example_path}/passthrough/input-2048.data -i ${example_path}/passthrough/input-2064.data -i ${example_path}/passthrough/input-2080.data -i ${example_path}/passthrough/input-2096.data
+endif
+
+test-passthrough-time = 13 min (AMD64 3700+)
+test-passthrough-before = pushd ${example_path}/passthrough; ./build_data.sh; popd; oct-packet-io -w 10 -p ${packet_port} ${input_files} > /dev/null &
+test-passthrough-cmds = "/examples/passthrough"
+test-passthrough-opts = -quiet -numcores=${passthrough_cores} -serve=${packet_port} -maxcycles=${passthrough_cycles}
+test-passthrough-grep = ${pass_msg}
+
+#
+# Run the passthrough example with 4 cores. We must spawn the oct-packet-io
+# utility before the test runs. Test creates fail output.
+#
+tests += test-passthrough_o3
+
+passthrough_o3_cores=4
+passthrough_o3_cycles=1700000000
+passthrough_o3_input_files=-i ${example_path}/passthrough_o3/input-2048.data -i ${example_path}/passthrough_o3/input-2064.data -i ${example_path}/passthrough_o3/input-2080.data -i ${example_path}/passthrough_o3/input-2096.data
+passthrough_o3_pass_msg = "PERF: Finished processing 6064 packets"
+
+test-passthrough_o3-time = 13 min (AMD64 3700+)
+test-passthrough_o3-before = pushd ${example_path}/passthrough_o3; ./build_data.sh; popd; oct-packet-io -w 10 -p ${packet_port} ${passthrough_o3_input_files} > /dev/null &
+test-passthrough_o3-cmds = "/examples/passthrough_o3"
+test-passthrough_o3-opts = -quiet -numcores=${passthrough_o3_cores} -serve=${packet_port} -maxcycles=${passthrough_o3_cycles}
+test-passthrough_o3-grep = ${passthrough_o3_pass_msg}
+test-passthrough_o3-exclude = OCTEON_CN38XX OCTEON_CN3020 OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN58XX OCTEON_CN56XX OCTEON_CN57XX OCTEON_CN50XX OCTEON_CN52XX OCTEON_CN55XX OCTEON_CN54XX OCTEON_CN63XX OCTEON_CN68XX OCTEON_CN66XX OCTEON_CN61XX OCTEON_CNF71XX OCTEON_CN70XX
+
+#
+# Test linux ethernet driver. The testcase creates bridge with the host machine,
+# the host machine cannot be accessed while this test is running.
+#
+tests += test-ethernet_driver
+port=eth0
+mac=`/sbin/ifconfig eth0  | grep HWaddr | sed 's/${port}.*HWaddr //'`
+test-ethernet_driver-time = 20 min (AMD64 3700+)
+test-ethernet_driver-before = sudo /sbin/ifconfig ${port} promisc; sleep 3 && sudo `which oct-packet-io` -w 5 -p ${packet_port} -b ${iport_num}:${port} > /dev/null &
+test-ethernet_driver-cmds = "modprobe octeon-ethernet" "ifconfig ${port} hw ether ${mac}" "ifconfig ${port} up" "udhcpc" "ping -c 3 www.cavium.com"
+test-ethernet_driver-opts = -quiet -numcores=2 -serve=${packet_port} -maxcycles=3560000000
+test-ethernet_driver-grep = "3 packets transmitted, 3 received, 0% packet loss"
+test-ethernet_driver-after= sudo /sbin/ifconfig ${port} -promisc
+test-ethernet_driver-exclude = OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN3020 OCTEON_CN78XX OCTEON_CN73XX
+
+#
+# Test AGL interface in linux ethernet driver. The testcase creates bridge
+# with the host machine, the host machine cannot be accessed while this test
+# is running.
+#
+tests += test-agl-port
+host_port=eth0
+agl_port=agl0
+agl_iport=24
+mac=`/sbin/ifconfig ${host_port}  | grep HWaddr | sed 's/${port}.*HWaddr //'`
+test-agl-port-time = 20 min (AMD64 3700+)
+test-agl-port-before = sudo /sbin/ifconfig ${host_port} promisc; sleep 3 && sudo `which oct-packet-io` -w 5 -p ${packet_port} -b ${agl_iport}:${host_port} > /dev/null &
+test-agl-port-cmds = "modprobe octeon-ethernet" "ifconfig ${agl_port} hw ether ${mac}" "ifconfig ${agl_port} up" "udhcpc -i ${agl_port}" "ping -c 3 www.cavium.com"
+test-agl-port-opts = -quiet -numcores=2 -serve=${packet_port} -maxcycles=5560000000
+test-agl-port-grep = "3 packets transmitted, 3 received, 0% packet loss"
+test-agl-port-after= sudo /sbin/ifconfig ${host_port} -promisc
+test-agl-port-exclude = OCTEON_CN38XX OCTEON_CN3020 OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN58XX OCTEON_CN56XX OCTEON_CN57XX OCTEON_CN50XX OCTEON_CN52XX OCTEON_CN55XX OCTEON_CN54XX OCTEON_CN63XX OCTEON_CN68XX OCTEON_CN66XX OCTEON_CN61XX OCTEON_CNF71XX OCTEON_CN78XX OCTEON_CN73XX
+
+#
+# Test Management ports, the testcase checks the mgmt ports are up or not
+#
+tests += test-mgmt-ports
+
+mgmt_port=mgmt
+num_mgmt_ports=2
+mac_base_addr=00:de:ad:be:ef
+mac_count=0
+ports=0 1
+
+MTMP=${findstring OCTEON_CN56XX,${OCTEON_MODEL}}
+ifeq ($(MTMP), )
+MTMP=${findstring OCTEON_CN68XX,${OCTEON_MODEL}}
+endif
+ifneq ($(MTMP), )
+    num_mgmt_ports=1
+    ports=0
+endif
+
+test-mgmt-ports-time = 20 min (AMD64 3700+)
+test-mgmt-ports-opts = -quiet -numcores=2 -serve=${packet_port} -maxcycles=450000000
+test-mgmt-ports-opts = -quiet -numcores=1 -serve=${packet_port} -maxcycles=1700000000
+test-mgmt-ports-cmds = "set -x ; for i in ${ports};do ip link set ${mgmt_port}\$$i up; done;\
+       sleep 1; \
+       for i in ${ports}; do ip link show ${mgmt_port}\$$i; ip link set ${mgmt_port}\$$i down;done; "
+test-mgmt-ports-after = for k in ${ports};do if [ `grep -c ${mac_base_addr}:0$$k ${LOGS}/$@${log_ext}` = 1 ];then mac_count=`expr $${mac_count} + 1`;fi;done;if [ `grep -c "BROADCAST,MULTICAST,UP" ${LOGS}/$@${log_ext}` = ${num_mgmt_ports} ] && [ $${mac_count} = ${num_mgmt_ports} ];then echo "TEST PASSED" >> ${LOGS}/$@${log_ext};else echo "TEST FAILED" >> ${LOGS}/$@${log_ext};fi
+test-mgmt-ports-grep = "TEST PASSED"
+test-mgmt-ports-exclude = OCTEON_CN3020 OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN57XX OCTEON_CN50XX OCTEON_CN58XX OCTEON_CN55XX OCTEON_CN54XX OCTEON_CN31XX OCTEON_CN38XX OCTEON_CNF71XX OCTEON_CN70XX OCTEON_CN78XX OCTEON_CN73XX
+
+# Run the busybox testsuite. Test creates pass / fail output.
+#
+tests += test-busybox
+test-busybox-time = 120 min (AMD64 3700+)
+test-busybox-cmds = "cd examples/busybox-testsuite" "rm -f cp/cp-copies-large-file" "./runtest -v"
+test-busybox-opts = -quiet -noperf
+test-busybox-grep = -o "xargs-works"
+test-busybox-exclude = OCTEON_CN3020 OCTEON_CN3010 OCTEON_CN3005 OCTEON_CN57XX OCTEON_CN50XX OCTEON_CN52XX OCTEON_CN55XX OCTEON_CN54XX OCTEON_CN56XX OCTEON_CN31XX OCTEON_CN52XX OCTEON_CN61XX OCTEON_CN63XX
+
+.PHONY: clean-all-tests
+clean-all-tests: clean setup all-tests
+
+.PHONY: setup
+setup: ${tests:=.rootfs}
+
+.PHONY: all-tests
+all-tests: ${tests}
+	@echo "RESULT: Run and passed ${words ${tests}} tests"
+
+.PHONY: clean
+clean:
+	echo Cleaning test results
+	rm -f *${log_ext} *.rootfs
+
+%.rootfs: ${rootfs}
+	echo Building $@
+	cp ${rootfs} /tmp/${USER}-$@-$$PPID
+	mkdir -p ${mount_point}
+	sudo mount -o loop  /tmp/${USER}-$@-$$PPID ${mount_point}
+	sudo chmod 777 ${mount_point}/sbin
+	sudo chmod 777 ${mount_point}/sbin/rc
+	for line in ${${@:.rootfs=}-cmds} poweroff; do echo "$$line" >> ${mount_point}/sbin/rc;done
+	sudo umount ${mount_point}
+	mv /tmp/${USER}-$@-$$PPID $@
+
+test-%: test-%.rootfs ${kernel} Makefile.test
+	# Also exclude other passes.
+	if [ ! -d $(LOGS) ];then mkdir -p ${LOGS};fi
+	echo "${$@-exclude}" | grep -v `echo ${OCTEON_MODEL} | cut -f1,2 -d '_'` > /dev/null || ( ${call result,SKIP}; exit -1; )
+	echo
+	echo "Starting:" $@ `date`
+	echo "Expected Time: ${$@-time}"
+	${$@-before}
+	oct-uart-io -q -t 30 -p ${uart_port} -l ${LOGS}/$@${log_ext} &
+	${linux_cmd} -uart0=${uart_port} ${$@-opts} -ld${rootfs_address}:$< > ${LOGS}/$@-sim${log_ext} || ${call result,FAIL}
+	${$@-after}
+	if grep "FAIL" ${LOGS}/$@${log_ext}; then ${call result,FAIL}; else exit 0;fi
+	grep "SIMULATION COMPLETE" ${LOGS}/$@-sim${log_ext} || ${call result,FAIL}
+	if [ x${$@-sim-grep} != "x" ];then grep ${$@-sim-grep} ${LOGS}/$@-sim${log_ext} || ${call result, FAIL};fi 
+	if [ x${$@-grep} != "x" ];then grep ${$@-grep} ${LOGS}/$@${log_ext} || ${call result,FAIL};fi
+	${call result,PASS}

@@ -1,0 +1,119 @@
+// $Id: builtin.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Builtin VSL functions
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+// Internal names
+
+// Operators
+__op_halign(...);		// &   -- horizontal alignment
+__op_valign(...);		// |   -- vertical alignment
+__op_ualign(...);		// ^   -- transparent alignment
+__op_talign(...);		// ~   -- textual alignment
+__op_plus(...);			// +   -- box arithmetic
+__op_mult(...);			// *   -- box arithmetic
+__op_cons(...);			// ::  -- list concatenation
+__op_minus(a, b);		// -   -- box arithmetic
+__op_div(a, b);			// /   -- box arithmetic
+__op_mod(a, b);			// %   -- box arithmetic
+__op_eq(a, b);			// =   -- box arithmetic
+__op_ne(a, b);			// !=  -- box arithmetic
+__op_gt(a, b);			// >   -- box arithmetic
+__op_ge(a, b);			// >=  -- box arithmetic
+__op_lt(a, b);			// <   -- box arithmetic
+__op_le(a, b);			// <=  -- box arithmetic
+__op_not(a);			// not -- box arithmetic
+
+// Functions
+__hspace(box);                  // Horizontal space
+__vspace(box);			// Vertical space
+__hfix(box);			// Fix horizontal extent
+__vfix(box);			// Fix vertical extent
+__rise(linethickness);		// Diagonal `/'
+__fall(linethickness);		// Diagonal `\`
+__arc(start, length, linethickness); // Arc
+__square(box);			// A square with BOX size
+__tag(box);			// A tag box
+__string(box);			// The string in BOX
+__chars(box);			// The characters in BOX
+__font(box, font);		// Set the font of BOX to FONT
+__fontfix(box);			// Freeze the font of BOX
+__background(box, color);	// Display BOX using COLOR as background
+__foreground(box, color);	// Display BOX using COLOR as foreground
+
+// Constants
+__fill();			// Stretchable white space
+__rule();			// Stretchable black space
+__diag();			// Diagnostic box
+
+// Error handling
+__fail(...);			// Issue an error message
+__undef();			// A box standing for `undefined content'
+
+
+// Public names
+
+// Operators
+(&)(...)   = __op_halign(...);
+(|)(...)   = __op_valign(...);
+(^)(...)   = __op_ualign(...);
+(~)(...)   = __op_talign(...);
+(+)(...)   = __op_plus(...);
+(*)(...)   = __op_mult(...);
+(::)(...)  = __op_cons(...);
+(-)(a, b)  = __op_minus(a, b);
+(/)(a, b)  = __op_div(a, b);
+(%)(a, b)  = __op_mod(a, b);
+(=)(a, b)  = __op_eq(a, b);
+(<>)(a, b) = __op_ne(a, b);
+(>)(a, b)  = __op_gt(a, b);
+(>=)(a, b) = __op_ge(a, b);
+(<)(a, b)  = __op_lt(a, b);
+(<=)(a, b) = __op_le(a, b);
+(not)(a)   = __op_not(a);
+
+// Other functions
+hspace(box)                       = __hspace(box);
+vspace(box)                       = __vspace(box);
+hfix(box)                         = __hfix(box);
+vfix(box)                         = __vfix(box);
+rise(linethickness)               = __rise(linethickness);
+fall(linethickness)               = __fall(linethickness);
+arc(start, length, linethickness) = __arc(start, length, linethickness);
+square(box)                       = __square(box);
+tag(box)                          = __tag(box);
+string(box)                       = __string(box);
+chars(box)                        = __chars(box);
+font(box, font)                   = __font(box, font);
+fontfix(box)                      = __fontfix(box);
+background(box, color)            = __background(box, color);
+foreground(box, color)            = __foreground(box, color);
+fill()                            = __fill();
+rule()                            = __rule();
+diag()                            = __diag();
+fail()                            = __fail();
+fail(message)                     = __fail(message);
+undef()                           = __undef();

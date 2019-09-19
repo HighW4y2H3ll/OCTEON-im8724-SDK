@@ -1,0 +1,78 @@
+menu "Toolchain Utilities"
+
+config CONFIG_toolchain-utils
+	bool "Include Toolchain Utilities"
+	default y
+	help
+		Include various toolchain utilities
+
+config CONFIG_gdb
+	bool "gdb"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default y
+	help
+		Include 64bit gdb, used for debugging both n32 and n64 applications.
+		Requires n64 ABI libraries.
+
+config TOOLCHAIN_UTILS_GDB_SIMPLE_EXE
+	bool "Simple exec gdb"
+	depends CONFIG_toolchain-utils
+	requires TOOLCHAIN_BIG_ENDIAN
+	select CONFIG_octeon-libraries-64
+	default y
+	help
+		Include 64bit gdb, used for debugging simple exec apps.
+		Requires n64 ABI libraries.
+
+config TOOLCHAIN_UTILS_GPROF
+	bool "gprof"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default y
+
+config TOOLCHAIN_UTILS_LDD
+	bool "ldd"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default y
+
+config TOOLCHAIN_UTILS_OBJDUMP
+	bool "objdump"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default y
+
+config TOOLCHAIN_UTILS_NM
+	bool "nm"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default y
+
+config CONFIG_gcov
+	bool "gcov"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default n
+	help
+		Include gcov, used for profiling the kernel and user space applications.
+		Requires n64 ABI libraries.
+
+config TOOLCHAIN_UTILS_READELF
+	bool "readelf"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default y
+
+config TOOLCHAIN_UTILS_STRINGS
+	bool "strings"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+	default y
+
+config TOOLCHAIN_UTILS_ADDR2LINE
+	bool "addr2line"
+	depends CONFIG_toolchain-utils
+	select CONFIG_octeon-libraries-64
+
+endmenu

@@ -1,0 +1,92 @@
+#MIRROR=http://mirrors.kernel.org/debian/
+MIRROR=http://apt-proxy:3142/debian/
+DEB_DATE=${shell date +"%a, %d %b %Y %H:%M:%S %z"}
+
+DIR_FINAL=/root/final-packages
+DIR_BINARY_MIPS=${DIR_FINAL}/dists/squeeze/main/binary-mips
+DIR_SOURCE=${DIR_FINAL}/dists/squeeze/main/source
+WEB_PREFIX=""
+
+.PHONY: default
+default:
+	echo Specify a target
+
+#
+# Create the web server dir structure needed for apt
+#
+.PHONY: setup-repository
+setup-repository:
+	# Cleanup after the last time this target was run
+	rm -rf ${DIR_FINAL}/dists
+	# Create the goofy dir structure
+	mkdir -p ${DIR_BINARY_MIPS}
+	mkdir -p ${DIR_SOURCE}
+	# Scan for all binary packages and save this list in "Packages"
+	cd  ${DIR_FINAL} && dpkg-scanpackages . /dev/null ${WEB_PREFIX} > ${DIR_BINARY_MIPS}/Packages
+	cd  ${DIR_FINAL} && dpkg-scanpackages -u . /dev/null ${WEB_PREFIX} >> ${DIR_BINARY_MIPS}/Packages
+	# Compress "Packages"
+	gzip ${DIR_BINARY_MIPS}/Packages
+	# Create the "Release" file
+	echo "Archive: squeeze" 	> ${DIR_BINARY_MIPS}/Release
+	echo "Component: main" 		>> ${DIR_BINARY_MIPS}/Release
+	echo "Origin: Debian" 		>> ${DIR_BINARY_MIPS}/Release
+	echo "Label: Debian" 		>> ${DIR_BINARY_MIPS}/Release
+	echo "Architecture: mips" 	>> ${DIR_BINARY_MIPS}/Release
+	# Scan for all source packages and save this list in "Sources"
+	cd  ${DIR_FINAL} && dpkg-scansources . /dev/null ${WEB_PREFIX} > ${DIR_SOURCE}/Sources
+	# Compress "Sources"
+	gzip ${DIR_SOURCE}/Sources
+	# Create the "Release" file
+	echo "Archive: squeeze" 	> ${DIR_SOURCE}/Release
+	echo "Component: main" 		>> ${DIR_SOURCE}/Release
+	echo "Origin: Debian" 		>> ${DIR_SOURCE}/Release
+	echo "Label: Debian" 		>> ${DIR_SOURCE}/Release
+	echo "Architecture: source" 	>> ${DIR_SOURCE}/Release
+	cd ${DIR_FINAL} && tar -zcf ~/octeon-debian-squeeze-web-server-data.tgz *
+
+#
+# Setup pbuilder so we can build things. This is very slow since lots
+# of packages need to be downloaded.
+#
+.PHONY: setup-pbuilder
+setup-pbuilder:
+	aptitude install debian-builder pbuilder debhelper cdebootstrap sudo dh-make
+	cp /etc/pbuilderrc ~/.pbuilderrc
+	#sed -i "s/#DISTRIBUTION=[a-z]*/DISTRIBUTION=squeeze/g" ~/.pbuilderrc
+	#sed -i "s/DEBEMAIL=\"\"/DEBEMAIL=\"Chad Reese <kreese@caviumnetworks.com>\"/g" ~/.pbuilderrc
+	echo "DISTRIBUTION=squeeze" >> ~/.pbuilderrc
+	echo "DEBEMAIL=\"Chandrakala Chavva <cchavva@caviumnetworks.com>\"" >> ~/.pbuilderrc
+	pbuilder create
+	rm -rf /usr/local/src/results
+	mkdir -p /usr/local/src/results
+	echo "#!/bin/sh" > ~/mypbuild.sh
+	#echo "pdebuild --configfile ~/.pbuilderrc --buildsourceroot fakeroot --pbuilderroot sudo --buildresult /usr/local/src/results --auto-debsign" >> ~/mypbuild.sh
+	echo "pdebuild --configfile ~/.pbuilderrc --buildsourceroot fakeroot --pbuilderroot sudo --buildresult /usr/local/src/results" >> ~/mypbuild.sh
+	chmod +x ~/mypbuild.sh
+
+OPROFILE_VER=0.9.7
+#
+#
+# Create a Oprofile package
+#
+create-oprofile-package:
+	mkdir -p ${DIR_FINAL}/storage
+	rm -rf /root/oprofile
+	mkdir -p /root/oprofile
+	cd /root/oprofile && tar -zxf ~/oprofile-${OPROFILE_VER}.tar.gz
+	cd /root/oprofile/oprofile-0.9.7 && dh_make -c gpl -s -e kreese@caviumnetworks.com -f ~/oprofile-${OPROFILE_VER}.tar.gz
+	cd /root/oprofile && patch -p0 < ~/oprofile-${OPROFILE_VER}-octeon.patch
+	# Add --with-kernel-support to the configure command
+	echo "1.0" > /root/oprofile/oprofile-${OPROFILE_VER}/debian/source/format
+	echo "override_dh_auto_configure:\n\tdh_auto_configure -- --with-kernel-support" >> /root/oprofile/oprofile-${OPROFILE_VER}/debian/rules
+	# Add libpopt-dev binutils-dev to build dependencies
+	cd /root/oprofile/oprofile-${OPROFILE_VER}/debian && sed -i "s/autotools-dev$$/autotools-dev, libpopt-dev, binutils-dev/g" control
+	# Fix name maintainer name
+	cd /root/oprofile/oprofile-${OPROFILE_VER}/debian && sed -i "s/Maintainer: root/Maintainer: Chad Reese/g" control
+	# Update the changelog
+	cd /root/oprofile/oprofile-${OPROFILE_VER} && DEBEMAIL="Chad Reese <kreese@caviumnetworks.com>" debchange --noquery -v ${OPROFILE_VER}.octeon.3 "Oprofile modified for Octeon"
+	cd /root/oprofile && dpkg-source -b oprofile-${OPROFILE_VER}.octeon.3 oprofile_${OPROFILE_VER}.orig.tar.gz
+	cd /root/oprofile/oprofile-${OPROFILE_VER}.octeon.3 && ~/mypbuild.sh
+	# Results in /usr/local/src/results
+	cp /usr/local/src/results/* ${DIR_FINAL}/storage/
+

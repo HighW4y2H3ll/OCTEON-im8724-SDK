@@ -1,0 +1,95 @@
+#!/usr/bin/python
+import os
+import sys
+import time
+import struct
+
+# This script works around an errata in CN57XX pass 1. A read from the
+# ROM bar register will cause Octeon to lockup. Since most PC BIOS read
+# the ROM register during boot, this will cause Octeon to lockup before
+# normal software has a chance to access it. As an alternative to modifying
+# the BIOS, this script uses the PCIe bridge/switch that Octeon is behind
+# to perform a hard reset to fix the lockup. Before performing the reset,
+# this scripts save all of Octeon's config space. It is then restored after
+# the reset.
+#
+# This script assumes there is a bridge/switch chip in front of Octeon that
+# can reset Octeon without affecting any other devices in the system. This
+# is normally true since PCIe is a point to point architecture.
+
+# This is the list of PCI IDs that we will recognize as an Octeon PCIe device
+OCTEON_PCIE_IDS = [0x0050177d]
+
+# This is the directory where Linux gives us access to the PCIe/PCI structure
+BASE_DIR = "/sys/bus/pci/devices"
+
+#
+#  This function does the actual reset once an Octeon is found
+#
+def do_reset(octeon_device, octeon_parent_device):
+    print "Found Octeon PCIe device at %s behind bridge at %s" % (octeon_device, octeon_parent_device)
+    octeon_config_file = "%s/%s/%s/config" % (BASE_DIR, octeon_parent_device, octeon_device)
+    parent_config_file = "%s/%s/config" % (BASE_DIR, octeon_parent_device)
+
+    # Save Octeon's config space
+    f = open(octeon_config_file, "rb")
+    octeon_config_settings = f.read(0x818) # PCIEEP_CFG517 ends at 0x818
+    f.close()
+
+    # Reset Octeon by telling the parent bridge to reset the secondary bus
+    # 1) Open the parent bridge config space
+    f = open(parent_config_file, "r+b")
+    # 2) Read the byte of the bridge control register that controls secondary reset
+    f.seek(0x3e)
+    bridge_control = f.read(1)
+    # 3) Set the secondary reset bit and write the bridge control update
+    bridge_control = "%c" % (ord(bridge_control) | (1<<6))
+    f.seek(0x3e)
+    f.write(bridge_control)
+    # 5) Leave the secondary bus in reset for 1 second
+    time.sleep(1)
+    # 6) Restore bridge control, taking the bus out of reset
+    f.seek(0x3e)
+    bridge_control = "%c" % (ord(bridge_control) ^ (1<<6))
+    f.write(bridge_control)
+    f.close()
+
+    # Wait a second for Octeon to finish reset
+    time.sleep(1)
+
+    # Restore Octeon's config space
+    f = open(octeon_config_file, "wb")
+    f.write(octeon_config_settings)
+    f.close()
+    print "Reset complete"
+
+#
+# Loop through every PCI/PCIe device
+found_octeon = 0
+pci_devices = os.listdir(BASE_DIR)
+for device in pci_devices:
+    device_dir =  "%s/%s" % (BASE_DIR, device)
+    sub_devices = os.listdir(device_dir)
+    # Loop through every sub device under this one
+    for sub_device in sub_devices:
+        # The sub device dirs are always of the form 0000:00:00.0. Skip
+        # everything else
+        if (len(sub_device) != 12) or (sub_device[4] != ':') or (sub_device[7] != ':') or (sub_device[10] != '.'):
+            continue
+        # Read the sub device's PCI ID
+        config_file = "%s/%s/config" % (device_dir, sub_device)
+        f = open(config_file, "rb")
+        id = f.read(4)
+        f.close()
+        # See if this device is the Octeon we wre looking for
+        pci_id = struct.unpack("<i", id)[0]
+        if pci_id in OCTEON_PCIE_IDS:
+            found_octeon = 1
+            do_reset(sub_device, device)
+
+if not found_octeon:
+    print "Unable to find Octeon PCIe device or its parent"
+    sys.exit(-1)
+
+
+

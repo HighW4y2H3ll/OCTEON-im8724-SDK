@@ -1,0 +1,1237 @@
+#!/usr/bin/python
+# Copyright (c) 2006, Cavium Inc.. All rights reserved.
+#
+# This Software is the property of Cavium Inc..  The Software and all
+# accompanying documentation are copyrighted.  The Software made available
+# here constitutes the proprietary information of Cavium Inc..  You
+# agree to take reasonable steps to prevent the disclosure, unauthorized use
+# or unauthorized distribution of the Software.  You shall use this Software
+# solely with Cavium hardware.
+#
+# Except as expressly permitted in a separate Software License Agreement
+# between You and Cavium Inc., you shall not modify, decompile,
+# disassemble, extract, or otherwise reverse engineer this Software.  You
+# shall not make any copy of the Software or its accompanying documentation,
+# except for copying incident to the ordinary and intended use of the
+# Software and the Underlying Program and except for the making of a single
+# archival copy.
+#
+# This Software, including technical data, may be subject to U.S.  export
+# control laws, including the U.S.  Export Administration Act and its
+# associated regulations, and may be subject to export or import regulations
+# in other countries.  You warrant that You will comply strictly in all
+# respects with all such regulations and acknowledge that you have the
+# responsibility to obtain licenses to export, re-export or import the
+# Software.
+#
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.
+#
+# File version info: $Id: perfzilla 112065 2015-01-22 12:07:05Z njogarao $
+
+#
+# Graphical performance viewer
+#
+import sys
+import os
+import re
+import time
+import thread
+import bisect
+import stat
+import operator
+import subprocess
+from gdbstub import toHex
+from gdbstub import fromHex
+from debuglib import DebugInfo
+from debuglib import DebugLineInfo
+from debuglib import getSdkVersion
+try:
+    import tkSimpleDialog
+    import tkMessageBox
+    import tkFileDialog
+    import tkFont
+    from Tkinter import *
+except:
+    print "The python module Tkinter is not installed properly. Tkinter is"
+    print "required for this program."
+    print
+    print "Redhat 9"
+    print "    You need tkinter-2.2.2-26. This can be found on the Redhat"
+    print "    install CD 3"
+    print
+    print "    $ rpm -i /mnt/cdrom/RedHat/RPMS/tkinter-2.2.2-26.i386.rpm"
+    print
+    print "Redhat 7.3"
+    print "    You need tkinter-2.2.2-16. This can be found on the Redhat"
+    print "    install CD 3"
+    print
+    print "    $ rpm -i /mnt/cdrom/RedHat/RPMS/tkinter2-2.2-16.i386.rpm"
+    print
+    print "Fedora Core 2"
+    print "    Install tkinter using the Yumm package manager"
+    print
+    print "    $ yum install tkinter"
+    print
+    print "Debian"
+    print "    Install tkinter using the aptitude package manager"
+    print
+    print "    $ aptitude install python-tk"
+    print
+    sys.exit(-1)
+
+MAX_CORES = 48
+HEXDIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                'a', 'b', 'c', 'd', 'e', 'f',
+                'A', 'B', 'C', 'D', 'E', 'F']
+
+REGION_UNKNOWN =    DebugLineInfo(0, "Unknown", 1)
+REGION_XKPHYS =     DebugLineInfo(0, "xkphys - 64bit Physical Memory", 1)
+REGION_CACHED =     DebugLineInfo(0, "Cached Physical Memory", 1)
+REGION_UNCAHCED =   DebugLineInfo(0, "Uncached Physical Memory", 1)
+REGION_KERNEL64 =   DebugLineInfo(0, "64bit Kernel", 1)
+REGION_KSEG0 =      DebugLineInfo(0, "kseg0 - 32bit Cached Kernel", 1)
+REGION_KSEG1 =      DebugLineInfo(0, "kseg1 - 32bit Uncached Kernel", 1)
+REGION_KSEG2 =      DebugLineInfo(0, "kseg2 - 32bit Mapped Kernel", 1)
+REGION_KUSEG =      DebugLineInfo(0, "kuseg - 32bit User space", 1)
+REGION_USER64 =     DebugLineInfo(0, "64bit User space", 1)
+REGION_SUPER =      DebugLineInfo(0, "Supervisor space", 1)
+REGION_VECTOR =     DebugLineInfo(0, "Exception Vector Region", 1)
+
+
+#
+# This function sums all the numbers in list that have a bit set in coreMask
+#
+def sumListWithMask(list, coreMask):
+    result = 0
+    i=-1
+    for active in coreMask:
+        i+=1
+        if active and (i<len(list)):
+            result += list[i]
+    return result
+
+#
+# This function returns the line number in a text widget as a integer
+#
+def getTextLine(widget, base):
+    loc = str(widget.index(base))
+    return int(loc.split(".")[0])
+
+class FunctionProfileEntry:
+    def __init__(self, parent, address,name):
+        self.name = name
+        self.addr = address
+        self.hits = []
+        self.parent = parent
+        for i in xrange(MAX_CORES) :
+            self.hits.append(0)
+
+    def addHits(self, cpuHits):
+        i = -1
+        for v in cpuHits:
+            i+=1
+            cpu =self.parent.app.appCoreMask[i]
+            self.hits[cpu] += v 
+        #str = self.getStr(4)
+        #print str
+
+    def getStr(self) :
+        hits = self.cpuHits()
+        str = ( "%8x %20s %6d " % (self.addr , self.name, hits) )
+        return str
+
+    def cpuHits (self):
+        sum = 0
+        coreMask = self.parent.coreMask
+        i=-1
+        result = 0
+        for active in coreMask:
+            i+=1
+            if active and (i< len(self.hits)):
+                result += self.hits[i]
+        return result
+
+class FunctionProfileData:
+    def __init__(self, app):
+        self.func_dict = dict()
+        self.func_list = []
+        self.app = app
+
+    def setCoreMask(self, coreMask):
+        #print coreMask
+        self.coreMask = coreMask
+        self.buildSortedFuncList()
+
+    def add_address_data(self, sym, name, cpuHits):
+        #print sym ,name
+        if sym in self.func_dict:
+            self.func_dict[sym].addHits(cpuHits)
+        else:
+            self.func_dict[sym] = FunctionProfileEntry(self, sym, name)
+            self.func_dict[sym].addHits(cpuHits)    
+            
+    def buildSortedFuncList(self):
+        print "sorting list"
+        self.func_list = []
+        for k,v in self.func_dict.items() :
+            self.func_list.append(v)
+        self.func_list = sorted(self.func_list, key= lambda FunctionProfileEntry: FunctionProfileEntry.cpuHits(), reverse=True )
+
+    def getTotalHits(self):
+        sum = 0
+        for i in self.func_list:
+            sum += i.cpuHits()
+        return sum
+
+    def getStr(self) :
+        totalHits = self.getTotalHits()
+        str  = ("%30s %16s %7s %10s \n" % ("Function", "Address", "Percent", "# sample") )
+        for i in self.func_list:
+            str += ("%30s %16s " % (i.name, toHex(i.addr,16)))
+            str += ("%.4f" % (100.0 * i.cpuHits()/totalHits) ).rjust(7)
+            str += ("%d" % i.cpuHits()).rjust(10)
+            str += "\n"
+        #print str
+        return str
+        
+                    
+#
+# This class represents all of the profile data for a specific file
+#
+class FileProfileData:
+    def __init__(self, parent, filename):
+        self.filename = filename
+        self.parent = parent                # The ProfileData object
+        self.hits = [0 for x in range(MAX_CORES)]  # Sum of all lines in the file by core
+        self.lineHits = {}                  # Indexed by line number. Returns hits per port
+        self.lineAddresses = {}             # Indexed by line number. Returns dict of all addresses for this line
+
+    # Add an address for a specified line
+    def addData(self, line, address, cpuHits):
+        if line in self.lineHits:
+            i=-1
+            for v in cpuHits:
+                i+=1
+                cpu =self.parent.app.appCoreMask[i]
+                self.lineHits[line][cpu] += v
+                self.hits[cpu] += v
+                self.parent.hits[cpu] += v
+            self.lineAddresses[line][address] = 1
+        else:
+            self.lineHits[line] = [0 for i in xrange(MAX_CORES)]
+            i=-1
+            for v in cpuHits:
+                i+=1
+                cpu = self.parent.app.appCoreMask[i]
+                self.lineHits[line][cpu] += v
+                self.hits[cpu] += v
+                self.parent.hits[cpu] += v
+            self.lineAddresses[line] = {address:1}
+        if not address in self.parent.addressHits:
+            self.parent.addressHits[address] = [0 for i in xrange(MAX_CORES)]
+        else:
+            i=-1
+            for v in cpuHits:
+                i+=1
+                cpu = self.parent.app.appCoreMask[i]
+                self.parent.addressHits[address][cpu] += v            
+
+#
+# This class contains all the profile data
+#
+class ProfileData:
+    def __init__(self, app):
+        self.fileData = {}                  # Per file data index by filename
+        self.hits = [0 for x in range(MAX_CORES)]  # Cumulative hits per core
+        self.totalHits = 1                  # Cumulative hits based onthe current coreMask
+        self.addressHits = {}               # Hit counts for each address
+        self.app = app;
+    # Add a file to the profile data
+    def addFile(self, filename):
+        self.fileData[filename] = FileProfileData(self, filename)
+    def getFileList(self):
+        return self.fileData.keys()
+    def getFileHits(self, filename, coreMask):
+        return sumListWithMask(self.fileData[filename].hits, coreMask)
+    def getAddressHits(self, address, coreMask):
+        return sumListWithMask(self.addressHits[address], coreMask)
+    # Update the total hits based on the current coreMask
+    def updateTotalHits(self, coreMask):
+        self.totalHits = sumListWithMask(self.hits, coreMask)
+        if self.totalHits == 0:
+            self.totalHits = 1
+
+
+#
+# The main GUI window. The only state it has is the current core. All
+# other state is stored in the CoreInformation for each core
+#
+class ApplicationWindow(Frame):
+    # Initialize the window
+    def __init__(self, master, app):
+        self.app = app
+        self.master = master
+        self.filename = ""
+        self.traversedfiles = []
+        self.findstring = ""
+        self.searchList = []
+        self.initCoreMask = app.appCoreMask
+        self.coresel = [IntVar() for x in range(MAX_CORES)]
+        Frame.__init__(self, master)                # I'm the top level frame for this app
+        self.createWidgets()                        # Create the GUI
+        self.grid(row=0, column=0, stick=NW+SE)     # Put the frame in grid 0,0
+        master.grid_columnconfigure(0, weight=1)    # Resize with the master window
+        master.grid_rowconfigure(0, weight=1)       # Resize with the master window
+        master.grid_propagate(0)                    # Don't change the master's size based on contents
+        master["width"] = 765                       # Starting width
+        master["height"] = 500                      # Starting height
+        master.config(menu=self.MENU)               # Attach the menu
+        master.title("Perfzilla")                   # Set the window title
+        self.need_update = 1
+        self.after(1000, self.doPeriodic)
+
+    # Create all the Tk widgets for the main window
+    def createWidgets(self):
+        self.MENU = Menu(self)
+        filemenu = Menu(self.MENU, tearoff=0)
+        filemenu.add_command(label="New window", command=self.app.createWindow)
+        filemenu.add_command(label="Save Source", command=self.saveSource)
+        self.MENU.add_cascade(label="File", menu=filemenu)
+
+        editmenu = Menu(self.MENU, tearoff=0)
+        editmenu.add_command(label="Copy", command=self.copySelectedText, accelerator="Ctrl+c")
+        self.MENU.add_cascade(label="Edit", menu=editmenu)
+
+        viewmenu = Menu(self.MENU, tearoff=0)
+        viewmenu.add_command(label="Previous Hit", command=self.doSearchBackward, accelerator="Alt-Up")
+        viewmenu.add_command(label="Next Hit", command=self.doSearchForward, accelerator="Alt-Down")
+        viewmenu.add_command(label="Function profile info", command=self.showFunctionPercentages)
+        self.MENU.add_cascade(label="View", menu=viewmenu)
+
+        searchmenu = Menu(self.MENU, tearoff=0)
+        searchmenu.add_command(label="Find", command=self.findText, accelerator="")
+        searchmenu.add_command(label="Find Next", command=self.findNext, accelerator="Press F5")
+        self.MENU.add_cascade(label="Search", menu=searchmenu)
+
+        row=1
+        frame = Frame(self)
+        frame.grid(row=row, column=1, columnspan=4, sticky=NW+SE)
+        Label(frame, text="Include Cores:", anchor=NW).grid(row=row, column=0, stick=N+SE)
+        i=0
+        nextRow=0
+
+        for corenum in range(MAX_CORES):
+            self.coresel[corenum].set(0)
+        #print self.initCoreMask
+        CORES = self.app.readVzFile("set PP")
+        for corenum in CORES:
+            self.coresel[corenum].set(1)
+
+        for core in self.app.knowncores:
+            i+=1
+            #self.coresel[core].set(1)
+            b = Checkbutton(frame, text=str(core), command=self.clickRadio, variable=self.coresel[core])
+            if i >16 :
+                nextRow = 1
+            if i >32 :
+                nextRow = 2
+            b.grid(row=1+nextRow, column=core+1-nextRow*16, stick=NW+S)
+        frame.grid_columnconfigure(len(self.app.knowncores)+1, weight=1)
+
+        row+=1
+        label = Label(self, text="Files", justify=LEFT, anchor=NW)
+        label.grid(row=row, column=1, stick=NW+SE)
+
+        label = Label(self, text="sample %   # samples", justify=CENTER, anchor=N)
+        label.grid(row=row, column=1, stick=NE)
+
+        self.SOURCE_LABEL = Label(self, text="Source - None", justify=LEFT, anchor=NW)
+        self.SOURCE_LABEL.grid(row=row, column=3, stick=NW+SE)
+
+        row+=1
+        self.FILELIST_SCROLL = Scrollbar(self)
+        self.FILELIST_SCROLL.grid(row=row, column=2, stick=NW+S)
+        self.FILELIST_HSCROLL = Scrollbar(self, orient=HORIZONTAL)
+        self.FILELIST_HSCROLL.grid(row=row+1, column=1, stick=NW+E)
+
+        self.FILELIST = Text(self, yscrollcommand=self.FILELIST_SCROLL.set, xscrollcommand=self.FILELIST_HSCROLL.set, height=7, wrap="none")
+        self.FILELIST.grid(row=row, column=1, stick=NW+SE)
+        self.FILELIST.tag_config("selected", foreground="white", background="blue")
+        self.FILELIST.tag_config("prof", foreground="gray", background="black")
+        self.FILELIST.tag_config("samples", foreground="black", background="green")
+        self.FILELIST_SCROLL.config(command=self.FILELIST.yview)
+        self.FILELIST_HSCROLL.config(command=self.FILELIST.xview)
+        self.FILELIST.bind("<ButtonPress-1>", self.clickFile)
+        self.FILELIST.bind("<Double-Button-1>", self.doubleClickFile)
+        self.FILELIST_SCROLL.bind('<Button-4>', lambda evt, temp=self.FILELIST: self.umouseScroll(evt, temp))
+        self.FILELIST_SCROLL.bind('<Button-5>', lambda evt, temp=self.FILELIST: self.dmouseScroll(evt, temp)) 
+
+        self.SOURCE_SCROLL = Scrollbar(self)
+        self.SOURCE_SCROLL.grid(row=row, column=4, rowspan=1, stick=NW+S)
+        self.SOURCE_HSCROLL = Scrollbar(self, orient=HORIZONTAL)
+        self.SOURCE_HSCROLL.grid(row=row+1, column=3, stick=NW+E)
+
+        self.SOURCE = Text(self, yscrollcommand=self.SOURCE_SCROLL.set, xscrollcommand=self.SOURCE_HSCROLL.set, height=7, background="darkblue", foreground="gray", wrap="none", insertbackground="white")
+        self.SOURCE.grid(row=row, column=3, rowspan=1, stick=NW+SE)
+        self.SOURCE.tag_config("line", foreground="gray", background="black")
+        self.SOURCE.tag_config("prof", foreground="white", background="red")
+        self.SOURCE.tag_config("a", foreground="white")
+        self.SOURCE.tag_config("a2", foreground="yellow")
+        self.SOURCE.tag_config("addresses", foreground="gray", background="black")
+        self.SOURCE.tag_config("selected", background="blue")
+        self.SOURCE_SCROLL.config(command=self.SOURCE.yview)
+        self.SOURCE_HSCROLL.config(command=self.SOURCE.xview)
+        self.grid_rowconfigure(row, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(3, weight=1)
+        self.SOURCE.bind("<Alt-KeyPress-Up>", self.doSearchBackward)
+        self.SOURCE.bind("<Alt-KeyPress-Down>", self.doSearchForward)
+        self.SOURCE.bind("<ButtonRelease-1>", self.clickSource)
+        self.SOURCE.bind("<F5>", self.findNext)
+        self.SOURCE_SCROLL.bind('<Button-4>', lambda evt, temp=self.SOURCE: self.umouseScroll(evt, temp))
+        self.SOURCE_SCROLL.bind('<Button-5>', lambda evt, temp=self.SOURCE: self.dmouseScroll(evt, temp))
+
+        row+=2
+        self.ADDRESS_SCROLL = Scrollbar(self)
+        self.ADDRESS_SCROLL.grid(row=row, column=2, stick=NW+S)
+        self.ADDRESS_HSCROLL = Scrollbar(self, orient=HORIZONTAL)
+        self.ADDRESS_HSCROLL.grid(row=row+1, column=1, stick=NW+E)
+
+        self.ADDRESS = Text(self, yscrollcommand=self.ADDRESS_SCROLL.set, xscrollcommand=self.ADDRESS_HSCROLL.set, height=7, wrap="none")
+        self.ADDRESS.grid(row=row, column=1, stick=NW+SE)
+        self.ADDRESS.tag_config("prof", foreground="gray", background="black")
+        self.ADDRESS.tag_config("selected", foreground="white", background="blue")
+        self.ADDRESS.bind("<ButtonRelease-1>", self.clickAddress)
+        self.ADDRESS_SCROLL.bind('<Button-4>', lambda evt, temp=self.ADDRESS: self.umouseScroll(evt, temp))
+        self.ADDRESS_SCROLL.bind('<Button-5>', lambda evt, temp=self.ADDRESS: self.dmouseScroll(evt, temp))
+        self.ADDRESS_SCROLL.config(command=self.ADDRESS.yview)
+        self.ADDRESS_HSCROLL.config(command=self.ADDRESS.xview)
+        self.grid_rowconfigure(row, weight=0)
+
+        self.ASM_SCROLL = Scrollbar(self)
+        self.ASM_SCROLL.grid(row=row, column=4, stick=NW+S)
+        self.ASM_HSCROLL = Scrollbar(self, orient=HORIZONTAL)
+        self.ASM_HSCROLL.grid(row=row+1, column=3, stick=NW+E)
+        self.ASM = Text(self, yscrollcommand=self.ASM_SCROLL.set, xscrollcommand=self.ASM_HSCROLL.set, height=7, background="darkblue", foreground="gray", wrap="none", insertbackground="white")
+        self.ASM.grid(row=row, column=3, stick=NW+SE)
+        self.ASM_SCROLL.bind('<Button-4>', lambda evt, temp=self.ASM: self.umouseScroll(evt, temp))
+        self.ASM_SCROLL.bind('<Button-5>', lambda evt, temp=self.ASM: self.dmouseScroll(evt, temp))
+        self.ASM.tag_config("prof", foreground="gray", background="black")
+        self.ASM.tag_config("selected", foreground="white", background="blue")
+        self.ASM_SCROLL.config(command=self.ASM.yview)
+        self.ASM_HSCROLL.config(command=self.ASM.xview)
+        self.grid_rowconfigure(row, weight=0)
+
+        row+=2
+        self.STATUS_LINE = Label(self, text="", justify=LEFT, anchor=NW)
+        self.STATUS_LINE.grid(row=row, column=1, columnspan=4, stick=NW+SE)
+
+    # Save the current source to a file with annotations
+    def saveSource(self):
+        outname = tkFileDialog.asksaveasfilename()
+        if not outname:
+            return
+        try:
+            # Get a reference for the profile data for this file
+            infile = open(self.filename, "r")
+            outfile = open(outname, "w")
+            lineHits = self.app.profileData.fileData[self.filename].lineHits
+            coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+            line_no = 0
+            for line in infile:
+                line_no += 1
+                if line_no in lineHits:
+                    hits = sumListWithMask(lineHits[line_no], coreMask)
+                else:
+                    hits = 0
+                # If there are hits, mark with profiling data
+                if hits:
+                    percent = 100.0 * hits / self.app.profileData.totalHits
+                    outfile.write("PERF " + ("%.4f" % percent).rjust(7))
+                else:
+                    outfile.write("            ")
+                outfile.write(" " + line)
+            infile.close()
+            outfile.close()
+        except:
+            tkMessageBox.showwarning("Save Source", "Error saving source:\n" + str(sys.exc_info()[0]), parent=self)
+
+    # Update the source window to show information about the supplied file
+    def updateSourceWindow(self, coreMask):
+        MAX_LINES = 999999
+        scrollx = self.SOURCE_HSCROLL.get()
+        scrolly = self.SOURCE_SCROLL.get()
+        original_loc = self.SOURCE.index(INSERT)
+        # Update the title and clear the window
+        self.SOURCE_LABEL["text"] = self.filename
+        self.SOURCE.delete(1.0, END)
+        if not self.filename in self.app.profileData.getFileList():
+            return
+        # Load the file
+        try:
+            # Get a reference for the profile data for this file
+            lineHits = self.app.profileData.fileData[self.filename].lineHits
+
+            infile = open(self.filename, "r")
+            line_no = 0
+            for line in infile:
+                line_no += 1
+                if line_no > MAX_LINES:
+                    self.SOURCE.insert(END, "*** Truncated ***\n", "prof")
+                    break;
+                if line_no in lineHits:
+                    hits = sumListWithMask(lineHits[line_no], coreMask)
+                else:
+                    hits = 0
+                # If there are hits, mark with profiling data
+                if hits:
+                    percent = 100.0 * hits / self.app.profileData.totalHits
+                    if percent>=10:
+                        attribute = "a2"
+                    else:
+                        attribute = "a"
+                    self.SOURCE.insert(END, ("%.4f" % percent).rjust(7), "prof")
+                else:
+                    attribute = None
+                    self.SOURCE.insert(END, "       ", "line")
+                self.SOURCE.insert(END, str(line_no).rjust(4), "line")
+                self.SOURCE.insert(END, " " + line, attribute)
+            infile.close()
+        except:
+            self.SOURCE.insert(END, self.filename + "\n")
+            self.SOURCE.mark_set(INSERT, "1.1")
+            return
+        self.SOURCE.mark_set(INSERT, original_loc)
+        self.SOURCE.xview_moveto(scrollx[0])
+        self.SOURCE.yview_moveto(scrolly[0])
+
+    # Update the file list
+    def updateFileListWindow(self, coreMask):
+        scrolly = self.FILELIST_SCROLL.get()
+        files = []
+        for f in self.app.profileData.getFileList():
+            hits = self.app.profileData.getFileHits(f, coreMask)
+            percent = 100.0 * hits / self.app.profileData.totalHits
+            files.append((percent, hits, f))
+        files.sort()
+        files.reverse()
+        self.FILELIST.delete(1.0,END)
+        max_len = 0
+        for percent,hits,name in files:
+            if len(name) > max_len:
+                max_len = len(name)
+        for percent,hits,name in files:
+            if name == self.filename:
+                self.FILELIST.insert(END, name.rjust(max_len), "selected")
+            else:
+                self.FILELIST.insert(END, name.rjust(max_len))
+            if percent != 0:
+                self.FILELIST.insert(END, (" %.4f" % percent).rjust(9), "prof")
+            else:
+                self.FILELIST.insert(END, " ".rjust(9), "prof")
+            if hits != 0:
+                self.FILELIST.insert(END, (" %.6d\n" % hits).rjust(9), "samples")
+            else:
+                self.FILELIST.insert(END, "\n".rjust(3), "samples")
+		
+        self.FILELIST.xview_moveto(1)
+        self.FILELIST.yview_moveto(scrolly[0])
+
+    # Put the addresses in up coresponding to the source file line
+    def updateAddressWindow(self, coreMask):
+        self.SOURCE.tag_remove("selected", 1.0, END)
+        self.ADDRESS.delete(1.0, END)
+        if not self.filename in self.app.profileData.getFileList():
+            return
+        line = getTextLine(self.SOURCE, INSERT)
+        if line in self.app.profileData.fileData[self.filename].lineAddresses:
+            self.SOURCE.tag_add("selected", "%d.11" % (line), "%d.0" % (line+1))
+            coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+            addresses = []
+            for a in self.app.profileData.fileData[self.filename].lineAddresses[line].keys():
+                hits = self.app.profileData.getAddressHits(a, coreMask)
+                addresses.append((hits, a))
+            addresses.sort()
+            addresses.reverse()
+            for a in addresses:
+                percent = 100.0 * a[0] / self.app.profileData.totalHits
+                self.ADDRESS.insert(END, ("%.4f" % percent).rjust(7), "prof")
+                self.ADDRESS.insert(END, " " + toHex(a[1], 16))
+                symbol = self.app.getSymbol(a[1])
+                if symbol:
+                    if symbol[0] == a[1]:
+                        self.ADDRESS.insert(END, " " + symbol[1] + "\n")
+                    else:
+                        self.ADDRESS.insert(END, " " + symbol[1] + "+" + hex(a[1] - symbol[0])[0:-1] + "\n")
+                else:
+                    self.ADDRESS.insert(END, "\n")
+        self.ADDRESS.mark_set(INSERT, "1.0")
+        self.clickAddress()
+
+    # Update the assembly window
+    def updateAsmWindow(self, coreMask):
+        self.ASM.delete(1.0, END)
+        line = getTextLine(self.ADDRESS, INSERT)
+        address = self.ADDRESS.get("%d.8" % (line), "%d.24" % (line))
+        if not address:
+            return
+        line_info = self.app.asm_dbg.getDebugLineInfo(fromHex(address))
+        if not line_info:
+            self.ASM.insert(END, "Unknown address\n")
+            return
+        try:
+            infile = open(line_info.sourcefile, "r")
+            line_no = 0
+            for line in infile:
+                line_no += 1
+                if line_no < line_info.row - 100:
+                    continue
+                if line_no > line_info.row + 100:
+                    break
+                try:
+                    sep = line.find(':')
+                    hits = self.app.profileData.getAddressHits(fromHex(line[0:sep]), coreMask)
+                except:
+                    hits = 0
+                if hits:
+                    percent = 100.0 * hits / self.app.profileData.totalHits
+                    self.ASM.insert(END, ("%.4f" % percent).rjust(7), "prof")
+                else:
+                    self.ASM.insert(END, "".rjust(7), "prof")
+                if line_no == line_info.row:
+                    self.ASM.see(END)
+                    self.ASM.insert(END, " " + line, "selected")
+                else:
+                    self.ASM.insert(END, " " + line)
+            infile.close()
+        except:
+            self.ASM.insert(END, "Error loading\n%s\n" % line_info.sourcefile)
+
+    # Update everything in the window
+    def update(self, event=None):
+        #print "update window called"
+        coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+        #self.app.funcProfileData.setCoreMask(coreMask)
+        #self.app.funcProfileData.buildSortedFuncList()
+        self.STATUS_LINE["text"] = self.app.status_message
+        self.app.profileData.updateTotalHits(coreMask)
+        self.updateFileListWindow(coreMask)
+        self.updateAddressWindow(coreMask)
+        self.updateSourceWindow(coreMask)
+
+    def doPeriodic(self):
+        if self.need_update:
+            self.need_update = 0
+            self.update()
+        self.after(1000, self.doPeriodic)
+
+    # Called when the user clicks on a filename
+    def clickFile(self, event):
+        w = event.widget
+        line = getTextLine(w, CURRENT)
+        text = w.get("%d.0" % line, "%d.end" % line)
+        self.filename = text[0:-15].strip()
+        #print "got line %s t=%s f=%s " % (line , text, self.filename)
+        self.update()
+        self.searchList = []
+        self.findstring = ""
+        for fname,line in self.traversedfiles:
+		if fname == self.filename:
+			self.SOURCE.mark_set(INSERT, "%d.11" % line)
+			self.SOURCE.see(INSERT)
+        #self.doSearchForward()
+
+    def doubleClickFile(self, event):
+        w = event.widget
+        line = getTextLine(w, CURRENT)
+        text = w.get("%d.0" % line, "%d.end" % line)
+        self.filename = text[0:-15].strip()
+        #print "got line %s t=%s f=%s " % (line , text, self.filename)
+        self.update()
+        self.doSearchForward()
+
+    # Called when the user clicks on a core checkbox
+    def clickRadio(self):
+        self.update()
+
+    # Called when the user clicks on a source line
+    def clickSource(self, event):
+        w = event.widget
+        line = getTextLine(w, CURRENT)
+        coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+        self.updateAddressWindow(coreMask)
+        self.traversedfiles.append((self.filename, line))
+
+    # Called when the user clicks on an address line
+    def clickAddress(self, event=None):
+        self.ADDRESS.tag_remove("selected", 1.0, END)
+        line = getTextLine(self.ADDRESS, INSERT)
+        self.ADDRESS.tag_add("selected", "%d.7" % (line), "%d.0" % (line+1))
+        coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+        self.updateAsmWindow(coreMask)
+
+    def copySelectedText(self, event=None):
+	sc_sel = self.SOURCE.tag_ranges(SEL)
+	fl_sel = self.FILELIST.tag_ranges(SEL)
+	add_sel = self.ADDRESS.tag_ranges(SEL)
+	asm_sel = self.ASM.tag_ranges(SEL)
+	self.clipboard_clear()
+	
+	if sc_sel:	
+		self.clipboard_append(self.SOURCE.get(*sc_sel))
+	if fl_sel:
+		self.clipboard_append(self.FILELIST.get(*fl_sel))
+	if add_sel:
+		self.clipboard_append(self.ADDRESS.get(*add_sel))
+	if asm_sel:
+		self.clipboard_append(self.ASM.get(*asm_sel))
+	
+    def findNext(self, event=None):
+        self.SOURCE.focus_set()
+	try:
+		if len(self.findstring) == 0:
+			tkMessageBox.showwarning('Find', 'Enter the string first by clicking Search->Find')
+			return
+	except:
+		tkMessageBox.showwarning('Find', 'Enter the string first by clicking Search->Find')
+		return	
+        revsearchList = self.searchList
+        revsearchList.reverse()
+
+        if revsearchList:
+                pos = revsearchList.pop()
+                pos_str = str(pos)	# Converted to string as it breaks in fc9
+                lline,char = pos_str.split('.')
+                revsearchList.reverse()
+                self.searchList = revsearchList
+        else:
+                tkMessageBox.showerror("Find", "End of search, String not Found!!")
+                return
+
+        line = getTextLine(self.SOURCE, INSERT)
+
+        line += 1
+        maxline = len(open(self.filename).readlines())
+        while line < maxline:
+                if line == lline:
+                        break
+                else:
+                        line += 1
+        if event:
+                line -= 1
+
+        stringtag = str(int(char) + len(self.findstring))
+        self.SOURCE.tag_remove(SEL, pos_str, lline+'.'+stringtag)
+        self.SOURCE.tag_add(SEL, pos_str, lline+'.'+stringtag)
+        self.SOURCE.tag_config(SEL, background="yellow", foreground="black")
+        self.SOURCE.mark_set(INSERT, "%d.%d" % (int(lline),  int(char)))
+        self.SOURCE.see(INSERT)
+
+    def findText(self, event=None):
+	try:
+		self.findstring = ""
+		self.searchList = []
+		self.update()
+		self.findstring = tkSimpleDialog.askstring('Find', 'Enter the string to be searched')
+		if len(self.findstring) == 0:
+			tkMessageBox.showwarning('Find', 'Entered empty string. Please enter valid string.')
+			return
+	except:
+		pass
+
+	try:
+		start = 1.0
+		while 1:
+			stringloc = self.SOURCE.search(self.findstring, start, stopindex=END)
+			if not stringloc:
+				break
+			self.searchList.append(stringloc)
+			strloc = str(stringloc)		# Converted to string as it breaks in fc9
+			start = strloc+'+1c'
+
+		self.findNext(self)
+	except:
+		pass
+
+    def doSearchBackward(self, event=None):
+        if not self.filename in self.app.profileData.getFileList():
+            return
+        line = getTextLine(self.SOURCE, INSERT)
+        lineHits = self.app.profileData.fileData[self.filename].lineHits
+        coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+        line -= 1
+        while line:
+            if line in lineHits:
+                hits = sumListWithMask(lineHits[line], coreMask)
+                if hits:
+                    break
+            line -= 1
+        if event:
+            line += 1
+        self.SOURCE.mark_set(INSERT, "%d.11" % line)
+        self.SOURCE.see(INSERT)
+       # self.after_idle(self.clickSource)
+
+    def umouseScroll(self, event, filename):
+            filename.yview("scroll", "-5", "units") 
+
+    def dmouseScroll(self, event, filename):
+            filename.yview("scroll", "5", "units")   
+ 	
+    def showFunctionPercentages(self):
+        #frame = Frame(self)
+        #funcRoot = self.app.root   # create a root window
+        funcWin = Toplevel()
+        funcWin.title("Perfzilla : Function based profile info")
+        funcWin_scroll = Scrollbar(funcWin)
+        funcWin_scroll.pack(fill=Y,side=RIGHT)
+        funcText = Text(funcWin, height=40,width=65,yscrollcommand=funcWin_scroll.set)
+        funcText.pack();
+        coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+        self.app.funcProfileData.setCoreMask(coreMask)
+        funcText.insert(INSERT, self.app.funcProfileData.getStr());
+        funcWin_scroll.config(command=funcText.yview)
+        funcWin_scroll.bind('<Button-4>', lambda evt, temp=funcText: self.umouseScroll(evt, temp))
+        funcWin_scroll.bind('<Button-5>', lambda evt, temp=funcText: self.dmouseScroll(evt, temp))
+        #funcRoot.mainloop()       # create an event loop
+
+    def doSearchForward(self, event=None):
+        if not os.path.exists(self.filename):
+            return
+        if not self.filename in self.app.profileData.getFileList():
+            return
+        line = getTextLine(self.SOURCE, INSERT)
+        lineHits = self.app.profileData.fileData[self.filename].lineHits
+        coreMask = [self.coresel[core].get() for core in xrange(MAX_CORES)]
+        maxLine = lineHits.keys()
+        if not maxLine:
+            return
+        maxLine.sort()
+        maxLine = maxLine[-1]
+        line += 1
+        while 1:
+            if line in lineHits:
+                hits = sumListWithMask(lineHits[line], coreMask)
+                if hits:
+                    break
+            if line > maxLine:
+                line = 1        
+            line += 1
+            
+        if event:
+            line -= 1
+
+        self.SOURCE.mark_set(INSERT, "%d.11" % line)
+        self.SOURCE.see(INSERT)
+       # self.after_idle(self.clickSource)
+
+#
+# The main application class
+#
+class Application:
+    def __init__(self, proffile, filelist):
+        self.symbols = []
+        self.profileData = ProfileData(self)
+        self.funcProfileData = FunctionProfileData(self)
+        self.dbg = DebugInfo()
+        self.asm_dbg = DebugInfo()
+        self.windows = []
+        self.root = Tk()
+        self.knowncores = range(MAX_CORES)
+        self.fname = proffile
+        self.status_message = ""
+        self.appCoreMask = []
+        self.setAppCoreMask(proffile)
+        self.createWindow()
+        thread.start_new_thread(self.backgroundThread, (proffile, filelist))
+
+    def readVzFile(self, arg):
+        if self.fname.endswith(".vz"):
+            process = subprocess.Popen(['grep', arg, self.fname], stdout=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            str = stdout.splitlines()[-1:].pop()
+            maxcore,trash = str[6:].split("_")
+            vzcore = int(maxcore)
+            return [core for core in xrange(vzcore+1)]
+        else:
+            return self.appCoreMask 
+
+    def setAppCoreMask(self, filename):
+        if filename.endswith(".vz"):
+            self.appCoreMask = [core for core in xrange(MAX_CORES)]
+            return
+        count = 0
+        infile = open(filename, "r")
+        found = 0
+        for line in infile:
+            if (line.find('core#') != -1 ):
+                found = 1;
+                break;
+        if found:
+            line = re.sub(' +',' ',line)
+            line = line.strip();
+            split_line = line.split(' ')
+            cnt=1
+            for item in split_line:
+                if cnt > 1 :
+                    core_num = int(item,10)
+                    if core_num < MAX_CORES :
+                        self.appCoreMask.append(core_num);
+                cnt+=1
+        else:
+            self.appCoreMask = [core for core in xrange(MAX_CORES)]            
+        infile.close();
+
+
+    def backgroundThread(self, proffile, filelist):
+        for f in filelist:
+            infile = open(f, "r")
+            header = infile.read(4)
+            infile.close()
+            if header[1:4] == "ELF":
+                self.loadElfSymbols(f)
+                self.loadDebugData(f)
+            else:
+                self.loadKallsyms(f)
+        if proffile.endswith(".vz"):
+            self.loadViewzillaData(proffile)
+        else:
+            self.loadProfileData(proffile)
+        print "Background processing done"
+
+    # The main processing loop
+    def mainloop(self):
+        self.root.mainloop()
+
+    # Create a new viewing window
+    def createWindow(self):
+        if self.windows:
+            window = ApplicationWindow(Toplevel(self.root), self)
+        else:
+            window = ApplicationWindow(self.root, self)
+        self.windows.append(window)
+
+    # Set status line text
+    def updateStatus(self, message):
+        if message:
+            print message
+        self.status_message = message
+        for w in self.windows:
+            w.need_update = 1
+
+    def showPercent(self, file_handle, message):
+        loc = file_handle.tell()
+        total_filesize = os.fstat(file_handle.fileno())[stat.ST_SIZE]
+        message = message + (" (%d%% Complete)" % (100*loc/total_filesize))
+        self.updateStatus(message)
+
+    # Load the debug line information
+    def loadDebugData(self, filename):
+        self.updateStatus("Reading line information for %s..." % filename)
+        old_length = self.dbg.addressInfo.getCount()
+        self.dbg.readLineInfo(filename)
+        if self.dbg.addressInfo.getCount() == old_length:
+            self.loadObjectDumpLineInfo(filename, self.dbg)
+        else:
+            self.loadObjectDumpLineInfo(filename, self.asm_dbg)
+        if self.dbg.addressInfo.getCount() == 0:
+            print "Unable to load line number information for %s" % filename
+        self.updateStatus("")
+
+    #
+    # Load fake line information by doing a objdump
+    #
+    def loadObjectDumpLineInfo(self, filename, dbg):
+        TMP_FILE = "perfzilla_objdump_%s.tmp" % (filename.split('/')[-1])
+        try:
+            stat_file = os.stat(filename)
+        except:
+            self.updateStatus("Unable to access " + filename)
+            return
+        try:
+            stat_dump = os.stat(TMP_FILE)
+        except:
+            stat_dump = None
+        if (not stat_dump) or (stat_dump.st_mtime != stat_file.st_mtime):
+            self.updateStatus("Creating objdump for %s..." % filename)
+            os.system("mips64-octeon-linux-gnu-objdump -m mips:octeon2 -d \"" + filename + "\" > " + TMP_FILE)
+            os.utime(TMP_FILE, (stat_file.st_mtime, stat_file.st_mtime))
+        self.updateStatus("Reading objdump data %s..." % TMP_FILE)
+        lineno = 0
+        infile = open(TMP_FILE, "r")
+        for line in infile:
+            line = line.strip()
+            lineno += 1
+            if (lineno & 0xffff) == 0:
+                self.showPercent(infile, "Reading objdump data %s..." % TMP_FILE)
+            if (not line) or (not line[0] in HEXDIGITS):
+                continue
+            sep = line.find(':')
+            if (sep < 1) or (sep > 16):
+                continue
+            if not line[sep-1] in HEXDIGITS:
+                continue
+            try:
+                address = fromHex(line[0:sep])
+                if address == 0:
+                    break
+                entry = address, TMP_FILE, lineno
+                dbg.addressInfo.add(entry)
+            except:
+                pass
+        infile.close()
+
+    # Load symbols from an ELF file
+    def loadElfSymbols(self, filename):
+        self.updateStatus("Loading ELF symbols for %s..." % filename)
+        infile = os.popen("mips64-octeon-linux-gnu-objdump -t \"" + filename + "\"", "r", 0)
+        for line in infile:
+            if not line[0] in HEXDIGITS:
+                continue
+            parts = line.split()
+            if len(parts) != 6:
+                continue
+            try:
+                address = fromHex(parts[0])
+                if address == 0:
+                    continue
+                name = parts[5]
+                self.symbols.append((address, name))
+            except:
+                pass
+        infile.close()
+        self.symbols.sort()
+        self.updateStatus("")
+
+    # Load kallsyms for module info. Found in /proc/kallsyms
+    def loadKallsyms(self, filename):
+        self.updateStatus("Loading kernel symbols from %s..." % filename)
+        infile = open(filename, "r")
+        for line in infile:
+            if not line[0] in HEXDIGITS:
+                continue
+            parts = line.strip().split()
+            if len(parts) < 3:
+                continue
+            try:
+                address = fromHex(parts[0])
+                if address == 0:
+                    continue
+                if len(parts) == 4:
+                    name = parts[3] + " " + parts[2]
+                else:
+                    name = parts[2]
+                self.symbols.append((address, name))
+            except:
+                pass
+        infile.close()
+        self.symbols.sort()
+        self.updateStatus("")
+
+    # Lookup a symbol for an address
+    def getSymbol(self, find_address):
+        if len(self.symbols) == 0:
+            return None
+        loc = bisect.bisect_left(self.symbols, (find_address, None))
+        if loc == len(self.symbols):
+            loc -= 1
+        (address, name) = self.symbols[loc]
+        if address <= find_address and address > find_address - 65536:
+            return (address, name)
+        elif loc > 0:
+            (address, name) = self.symbols[loc-1]
+            if address <= find_address and address > find_address - 65536:
+                return (address, name)
+            else:
+                return None
+        else:
+            return None
+
+    # Convert an unkown address into an information region
+    def handleUnknownAddress(self, address):
+        # All the numbers below should be hex. Damn python and its broken
+        # hex conversion. It doesn't work for numbers that have the top bit
+        # set.
+        if address < -8070450532247928832: # 0x9000000000000000
+            return REGION_XKPHYS
+        elif address < -7493989779944505344: # 0x9800000000000000
+            return REGION_CACHED
+        elif address < -4611686018427387904: # 0xC000000000000000
+            return REGION_UNCAHCED
+        elif address < -4611684918915760129: # 0xC00000ffffffffff
+            return REGION_KERNEL64
+        elif address < -2147483648: # 0xffffffff80000000
+            return REGION_UNKNOWN
+        elif address < -2147414016: # 0xffffffff80011000
+            ebase = (address>>12) & 0x1f
+            offset = address & 0xfff
+            if offset < 0x100:
+                return DebugLineInfo(address, "TLB Handler " + str(ebase), 1)
+            elif offset < 0x180:
+                return DebugLineInfo(address, "Cache Error Handler " + str(ebase), 1)
+            elif offset < 0x200:
+                return DebugLineInfo(address, "Exception Handler " + str(ebase), 1)
+            elif offset < 0x280:
+                return DebugLineInfo(address, "Interrupt Handler " + str(ebase), 1)
+            else:
+                return REGION_VECTOR
+        elif address < -1610612736: # 0xffffffffa0000000
+            return REGION_KSEG0
+        elif address < -1073741824: # 0xffffffffc0000000
+            return REGION_KSEG1
+        elif address < 0x0000000000000000:
+            return REGION_KSEG2
+        elif address < 0x0000000080000000:
+            return REGION_KUSEG
+        elif address < 0x000000ffffffffff:
+            return REGION_USER64
+        elif address < 0x4000000000000000:
+            return REGION_UNKNOWN
+        elif address < 0x400000ffffffffff:
+            return REGION_SUPER
+        else:
+            return REGION_UNKNOWN
+        
+    def getCoreMask(self, filename):
+        count = 0
+        infile = open(filename, "r")
+
+        found = 0
+        for line in infile:
+            if (line.find('core#') != -1 ):
+                found = 1;
+                break;
+        if found:
+            line = re.sub(' +',' ',line)
+            line = line.strip();
+            print line
+            split_line = line.split(' ')
+            for i in xrange(MAX_CORES):
+                self.windows[0].coresel[i].set(0)
+            cnt=1
+            for item in split_line:
+                if cnt > 1 :
+                    print "%d:%s " % (cnt, item)
+                    core_num = int(item,16)
+                    if core_num < MAX_CORES :
+                        self.windows[0].coresel[core_num].set(1)
+                cnt+=1
+        else:
+            for i in xrange(MAX_CORES):
+                self.windows[0].coresel[i].set(1)
+        infile.close();
+
+  
+    # Load profiler data
+    def loadProfileData(self, filename):
+        self.updateStatus("Reading profile data from %s..." % filename)
+        #self.getCoreMask(filename)
+        count = 0
+        try:
+            infile = open(filename, "r")
+            for line in infile:
+                count+=1
+                if count > 50000:
+                    self.showPercent(infile, "Reading profile data from %s..." % filename)
+                    count = 0
+                if (line[0] != '0') or (line[1] != 'x'): # This is faster than startwith()
+                    continue
+                address = fromHex(line[2:18])
+                if address == 0: # We don't care about stopped cores
+                    continue
+                cpuHits = [int(x) for x in line.split()[1:]]
+                sym  = self.getSymbol(address)
+                if sym == None :
+                    self.funcProfileData.add_address_data(address, "none", cpuHits)
+                else:
+                    self.funcProfileData.add_address_data(sym[0], sym[1], cpuHits)
+                line_info = self.dbg.getDebugLineInfo(address)
+                if not line_info:
+                    line_info = self.handleUnknownAddress(address)
+                    #print toHex(address, 16), line_info.sourcefile
+                if not line_info.sourcefile in self.profileData.fileData:
+                    self.profileData.addFile(line_info.sourcefile)
+                fileData = self.profileData.fileData[line_info.sourcefile]
+                fileData.addData(line_info.row, address, cpuHits)
+            infile.close()
+            #self.funcProfileData.buildSortedFuncList();
+            self.updateStatus("")
+        except:
+            print "Unable to parse profiler information: " + filename
+            print "EXCEPTION: ", sys.exc_info()[0]
+            sys.exit(-1)
+
+    def loadViewzillaData(self, filename):
+        self.updateStatus("Reading viewzilla data from %s..." % filename)
+        search_re = re.compile("PP([0-9]+):([0-9a-fA-F]+)[^:]*:[ ]?([0-9]+)@([0-1])")
+        last_cycle = [-1 for x in xrange(MAX_CORES)]
+        line_no = 0
+        try:
+            infile = open(filename, "r")
+            count = 0
+            for line in infile:
+                line_no+=1
+                count+=1
+                if count > 100000:
+                    self.showPercent(infile, "Reading viewzilla data from %s..." % filename)
+                    count = 0
+                match = search_re.search(line)
+                if not match:
+                    continue
+                parts = match.groups()
+                pipe = int(parts[3])
+                if pipe != 0:
+                    continue
+                cpu = int(parts[0])
+                address = fromHex(parts[1])
+                cycle = long(parts[2])
+                line_info = self.dbg.getDebugLineInfo(address)
+                if not line_info:
+                    line_info = self.handleUnknownAddress(address)
+                if not line_info.sourcefile in self.profileData.fileData:
+                    self.profileData.addFile(line_info.sourcefile)
+                fileData = self.profileData.fileData[line_info.sourcefile]
+                cpuHits = [0 for x in xrange(cpu+1)]
+                if last_cycle[cpu] == -1:
+                    last_cycle[cpu] = cycle
+                cpuHits[cpu] = cycle - last_cycle[cpu]
+                fileData.addData(line_info.row, address, cpuHits)
+                last_cycle[cpu] = cycle
+            infile.close()
+            self.updateStatus("")
+        except:
+            print "Unable to parse viewzilla information: " + filename
+            print "EXCEPTION: ", sys.exc_info()[0]
+            print "Line %d: \"%s\"" % (line_no, line)
+            sys.exit(-1)
+
+#
+# Application starts here
+#
+if len(sys.argv) < 3:
+    print "Usage: perfzilla profile.log elf [elf|kallsyms] ..."
+    print "    profile.log    Captured output of oct-pci-profile or a Viewzilla trace"
+    print "    elf            Mips ELF files to load debugging information from"
+    print "    [elf|kallsyms] Elf or Linux kallsyms file to load symbols from"
+    print
+    print "Version: " + getSdkVersion()
+    print
+    print "This program parses the output of oct-pci-profile and converts the"
+    print "address information into source line numbers. It displays a visual"
+    print "hit count for each file and line of source. The ELF file must "
+    print "contain Dwarf2 debugging information."
+    print
+    sys.exit(-1)
+
+app = Application(sys.argv[1], sys.argv[2:])
+app.mainloop()
+

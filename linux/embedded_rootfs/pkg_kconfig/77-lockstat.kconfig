@@ -1,0 +1,6 @@
+config CONFIG_lockstat
+	bool "lockstat"
+	default y
+	help
+		A library that can be added to LD_PRELOAD to print
+		pthread lock statistics after the program exits.

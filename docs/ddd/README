@@ -1,0 +1,22 @@
+This is the source distribution of DDD, the Data Display Debugger.
+
+To find out what's new in DDD, see the file `NEWS'.
+To find out how to build DDD, consult the file `INSTALL'.
+
+For further information, consult the following files:
+
+    ANNOUNCE     All about this DDD distribution, including FTP sites.
+    BUGS         Known bugs in this DDD distribution.
+    COPYING      The DDD license.
+    COPYING.LIB  The license applying to some included libraries.
+    INSTALL      How to build and install DDD.
+    NEWS         Release information and recent changes.
+    OPENBUGS     Reported bugs for this and earlier DDD distributions.
+    PROBLEMS     Hints for building DDD on specific systems.
+    README       This file.
+    TIPS         DDD hints (`tip of the day')
+    TODO         Possible future DDD features.
+
+-- 
+Andreas Zeller       Universitaet Passau, Germany
+                     ddd@gnu.org  http://www.gnu.org/software/ddd/

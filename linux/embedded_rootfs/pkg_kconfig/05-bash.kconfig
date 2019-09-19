@@ -1,0 +1,8 @@
+config CONFIG_bash
+	bool "bash"
+	default y
+	help
+		From the bash homepage:
+		Bash, the GNU Bourne-Again Shell. Bash is a freely-available
+		command interpreter with advanced features for both interactive
+		use and shell programming.

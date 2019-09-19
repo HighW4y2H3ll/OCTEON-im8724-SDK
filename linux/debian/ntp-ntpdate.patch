@@ -1,0 +1,10 @@
+--- ntp.orig	2010-07-29 13:24:23.000000000 -0700
++++ ntp	2010-07-29 13:25:18.000000000 -0700
+@@ -56,6 +56,7 @@ case $1 in
+ 			log_failure_msg "user \"$RUNASUSER\" does not exist"
+ 			exit 1
+ 		fi
++		ntpdate 0.debian.pool.ntp.org
+ 		lock_ntpdate
+   		start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE -u $UGID $NTPD_OPTS
+ 		status=$?

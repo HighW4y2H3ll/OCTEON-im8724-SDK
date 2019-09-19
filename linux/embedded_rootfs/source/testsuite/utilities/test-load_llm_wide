@@ -1,0 +1,22 @@
+#!/bin/sh
+
+source ./functions.sh
+
+have_cn30xx
+require [ $? != 0 ]
+have_cn58xx_pass1
+require [ $? != 0 ]
+have_cn56xx
+require [ $? != 0 ]
+have_cn52xx
+require [ $? != 0 ]
+have_cn50xx
+require [ $? != 0 ]
+have_cn6xxx
+require [ $? != 0 ]
+have_cnf71xx
+require [ $? != 0 ]
+have_cn7xxx
+require [ $? != 0 ]
+assert load_llm_wide | grep -q "Usage: load_llm_wide file_to_load"
+assert load_llm_wide utilities/llm-data.bin > $0.log

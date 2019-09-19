@@ -1,0 +1,57 @@
+#!/bin/sh
+
+source ./functions.sh
+
+# skip the test for large pagesize 
+check_pagesize
+
+# skip the test, doesn't have enough memory to run
+have_cn50xx
+require [ $? != 0 ]
+
+# make sure ldd is present
+require test -f /usr/bin/ldd
+
+# Skip this test under uclibc
+ldd /bin/sh | grep -q uclibc
+require_bad
+
+# Make sure Huge TLB is enabled
+require grep -q "Hugepagesize:" /proc/meminfo
+
+# Get the configured huge page size
+hpgsz=`grep Hugepagesize: /proc/meminfo | awk ' { print $2; } ' `
+
+# Assume test programs map 128MB of memory
+# Use the page size to figure out how many to allocate
+let nr_hpgs=131072/$hpgsz
+
+if [ $nr_hpgs -lt 8 ] ; then
+#
+# By default we need at least 8 pages.
+#
+    nr_hpgs=8
+fi
+
+# Skip the test if Hugepagesize is 128MB, as one hugepage is not enough for 
+# htlbremap libary.
+test $hpgsz -eq 131072 && exit 254 
+
+assert echo $nr_hpgs > /proc/sys/vm/nr_hugepages
+
+actual_hpgs=`cat /proc/sys/vm/nr_hugepages`
+
+if [ $actual_hpgs -ne $nr_hpgs ] ; then
+    # You lose.  You need more memory configured.
+    exit 254
+fi
+
+# Test htlbremap
+LD_PRELOAD=libhtlbremap.so /bin/sh -c "echo Echo worked" > $0.log 2>&1
+assert_good
+
+# Make sure the output is exactly correct
+assert grep -q "Echo worked" $0.log
+grep -q -v "Echo worked" $0.log
+assert_bad
+

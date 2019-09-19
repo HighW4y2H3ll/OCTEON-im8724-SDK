@@ -1,0 +1,9 @@
+config CONFIG_net-tools
+	bool "net-tools"
+	default y
+	help
+		The net-tools package contains a collection of programs that
+		form the base set of the NET-3 networking distribution for the
+		Linux operating system. It contains the important tools for
+		controlling the network subsystem of the Linux kernel including
+		arp, hostname, ifconfig, netstat, rarp and route.

@@ -1,0 +1,33 @@
+#!/bin/sh
+
+source ./functions.sh
+
+# skip the test for large pagesize 
+check_pagesize
+
+# skip the test, doesn't have enough memory to run
+have_cn50xx
+require [ $? != 0 ]
+
+require test -f ./hugetlb-shmget
+
+# Make sure Huge TLB is enabled
+require grep -q "Hugepagesize:" /proc/meminfo
+
+# Get the configured huge page size
+hpgsz=`grep Hugepagesize: /proc/meminfo | awk ' { print $2; } ' `
+
+# Assume test programs map 128MB of memory
+# Use the page size to figure out how many to allocate
+let nr_hpgs=131072/$hpgsz
+
+assert echo $nr_hpgs > /proc/sys/vm/nr_hugepages
+
+assert echo 134217728 > /proc/sys/kernel/shmmax
+assert ./hugetlb-shmget > $0.log 2>&1
+assert grep -q "shmid: 0x" $0.log
+assert grep -q "shmaddr: 0x" $0.log
+assert grep -q "Starting the writes:" $0.log
+assert grep -q ".." $0.log
+assert grep -q "Starting the Check...Done." $0.log
+

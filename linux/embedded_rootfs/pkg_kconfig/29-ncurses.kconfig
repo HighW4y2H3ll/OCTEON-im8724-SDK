@@ -1,0 +1,13 @@
+config CONFIG_ncurses
+	bool "ncurses"
+	default n
+	help
+		From the ncurses GNU homepage:
+		The Ncurses (new curses) library is a free software emulation of
+		curses in System V Release 4.0, and more. It uses Terminfo format, 
+		supports pads and color and multiple highlights and forms 
+		characters and function-key mapping, and has all the other 
+		SYSV-curses enhancements over BSD Curses.
+		The distribution includes the library and support utilities, 
+		including a terminfo compiler tic, a decompiler infocmp, clear, 
+		tput, tset, and a termcap conversion tool captoinfo.

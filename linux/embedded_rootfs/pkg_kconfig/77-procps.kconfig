@@ -1,0 +1,11 @@
+config CONFIG_procps
+	bool "procps"
+	select CONFIG_ncurses
+	default n
+	help
+		From procps sourceforge homepage:
+		procps is the package that has a bunch of small useful 
+		utilities that give information about processes using the /proc 
+		filesystem. The package includes the programs ps, top, vmstat, 
+		w, kill, free, slabtop, and skill.	
+

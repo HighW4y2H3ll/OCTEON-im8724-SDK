@@ -1,0 +1,28 @@
+Format: 1.8
+Date: Fri, 04 May 2012 05:50:22 +0000
+Source: oprofile
+Binary: oprofile
+Architecture: source mips
+Version: 0.9.7.octeon.3
+Distribution: unstable
+Urgency: low
+Maintainer: Chad Reese <kreese@caviumnetworks.com>
+Changed-By: Chandrakala Chavva <cchavva@caviumnetworks.com>
+Description: 
+ oprofile   - <insert up to 60 chars description>
+Changes: 
+ oprofile (0.9.7.octeon.3) unstable; urgency=low
+ .
+   * Oprofile modified for Octeon
+Checksums-Sha1: 
+ ad88dd76a0c67966ac9c9162e9f7fe11fedbbdb3 596 oprofile_0.9.7.octeon.3.dsc
+ 72fea22e0d021d8b66775af00cc2739e7a451961 1438943 oprofile_0.9.7.octeon.3.tar.gz
+ 6541f579e6b6dd9dce0160d48ae3bc7801567dd0 1498554 oprofile_0.9.7.octeon.3_mips.deb
+Checksums-Sha256: 
+ 15881451bfed5c20f6cacbc25e9da0c9024ea889186b83ff0fec274168b19a6e 596 oprofile_0.9.7.octeon.3.dsc
+ 883b373611b83e2f20d6908807d7da3034ca3807d2056c24fdd859fcad805b09 1438943 oprofile_0.9.7.octeon.3.tar.gz
+ e89d7e9abfcf3dfe5bb15a862ac34b261edd6834307f13a0f93064cc48470bc1 1498554 oprofile_0.9.7.octeon.3_mips.deb
+Files: 
+ d5b22be236349a1055784cb2d736fb3f 596 unknown extra oprofile_0.9.7.octeon.3.dsc
+ 70d56c98255bc09ea2b4a03c36729dc2 1438943 unknown extra oprofile_0.9.7.octeon.3.tar.gz
+ e0a939af9dfb923984d0d21094c56476 1498554 unknown extra oprofile_0.9.7.octeon.3_mips.deb

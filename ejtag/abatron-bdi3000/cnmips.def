@@ -1,0 +1,54 @@
+; COP0 Registers
+;
+;name          type   addr  size     reg,select
+index		cp0     0    64   ;    0, 0
+random		cp0     1    64   ;    1, 0
+entrylo0	cp0     2    64   ;    2, 0
+entrylo1	cp0     3    64   ;    3, 0
+context		cp0     4    64   ;    4, 0
+pagemask	cp0     5    64   ;    5, 0
+pagegrain	cp0    261   64   ;    5, 1
+wired		cp0     6    64   ;    6, 0
+hwrena		cp0     7    64   ;    7, 0
+badvaddr	cp0     8    64   ;    8, 0
+count		cp0     9    64   ;    9, 0
+entryhi		cp0     10   64   ;   10, 0
+compare		cp0     11   64   ;   11, 0
+status		cp0     12   64   ;   12, 0
+intctl		cp0    268   64   ;   12, 1
+srsctl		cp0    524   64   ;   12, 2
+cause		cp0     13   64   ;   13, 0
+epc		cp0     14   64   ;   14, 0
+prid		cp0     15   64   ;   15, 0
+ebase		cp0    271   64   ;   15, 1
+config		cp0     16   64   ;   16, 0
+config1		cp0    272   64   ;   16, 1
+config2		cp0    528   64   ;   16, 2
+config3		cp0    784   64   ;   16, 3
+watchlo0	cp0     18   64   ;   18, 0
+watchlo1	cp0    274   64   ;   18, 1
+watchhi0	cp0     19   64   ;   19, 0
+watchhi1	cp0    275   64   ;   19, 1
+xcontext	cp0     20   64   ;   20, 0
+debug		cp0     23   64   ;   23, 0
+perfcontrol0	cp0     25   64   ;   25, 0
+perfcontrol1	cp0    537   64   ;   25, 2
+depc		cp0     24   64   ;   24, 0
+perfcount0	cp0    281   64   ;   25, 1
+perfcount0	cp0    793   64   ;   25, 3
+icacheerror	cp0     27   64   ;   27, 0
+dcacheerror	cp0    283   64   ;   27, 1
+icachetaglo	cp0     28   64   ;   28, 0
+icachedatalo	cp0    284   64   ;   28, 1
+dcachetaglo	cp0    540   64   ;   28, 2
+dcachedatalo	cp0    796   64   ;   28, 3
+icachedatahi	cp0    285   64   ;   29, 1
+dcachetaghi	cp0    541   64   ;   29, 2
+dcachedatahi	cp0    797   64   ;   29, 3
+errorepc	cp0     30   64   ;   30, 0
+desave		cp0     31   64   ;   31, 0
+cvmctl		cp0   1801   64   ;    9, 7
+cvmmemct	cp0   1803   64   ;   11, 7
+cvmcount	cp0   1545   64   ;    9, 6
+multicoredebug	cp0     22   64   ;   22, 0
+

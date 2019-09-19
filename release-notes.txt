@@ -1,0 +1,2080 @@
+Release notes for OCTEON SDK OCTEON-SDK-5.1.0
+
+
+File inventory/description
+=====================================
+The following directories make up the OCTEON SDK.
+
+directory		description
+---------		---------------------
+bootloader		contains the source for the bootloader.
+docs			contains html documentation for the SDK.
+			It also contains original documentation and
+			copyright information for the toolchain,
+			debugger, and bootloader.
+ejtag			contains scripts for Ejtag probes to help in
+			accessing OCTEON chip CSRs. For the Majic
+			Ejtag probe, these scripts add windows for
+			each CSR group with bitfield decoding.
+examples		contains example applications. See
+                        sub-directories for details.
+executive 		contains the source for the simple executive.
+tools			contains the GCC 4.7-based toolchain,
+			including mipsisa64-octeon-elf target tools
+			based on newlib C library and
+			mips64-octeon-linux target tools based on the
+			glibc library.
+simulator 		contains the OCTEON simulators and related
+			utilities.
+host			contains links to all of the development host
+                        bin, include, and library files.
+target			contains links to all of the target (OCTEON)
+                        bin, include, and library files.
+
+
+The host and target directories are used by the examples and by other
+Cavium provided applications to reference the required SDK files.
+
+
+Change History
+========================================================================
+
+Release 5.1.0
+
+  General changes:
+  * Added cn73xx pass1.3, nicx40e and ebb7500 board support
+  * Added initial support of LiquidIO 10GBASET "copperhead" board in u-boot.
+  * Enabled Hush parser on all LiquidIO cards.
+  * Initial patch release to support CN78XX Pass2.0 chip.
+    - Adjust to new deskew byte lanes for cn78xx pass 2.0.
+    - Fixed 10G-KR and 40G-KR4 interfaces to work on pass2.0
+    - Updated CSRs
+    - Fixed oct-remote utils to access correct SLI CSRs, have
+      different addresses between pass1.x and pass2.0
+  * Added nic225e board support in u-boot
+  * Updated Avago phy for LiquidIO nic225e nic, now the links come up
+    quicker than before.
+  * Added NVME driver support in u-boot.
+  * Fixed code to go through each core to report IOBP_PP_BIST/IOBN_PP_BIST
+    errors.
+  * Fixed CCPI initialization code, now tunes CCPI lanes on both the nodes.
+    node#1 needs to run ocx-boot.bin image, CCPI boot code.
+  * Updated Octeon III error array table to show SBE/DBE flags for
+    co-processor blocks.
+  * Added new APIs to enable/disable error interrupts based on SBE/DBE flags.
+  * Added more functions for LMC & L2C ECC errors for OcteonII models.
+  * Enhanced L2C and LMC EDAC driver to handle SBE/DBE errors appropriately
+    for OcteonII and OcteonIII models.
+  * Updated PKI microcode, addresses performance issues.
+  * Fixed GSER to increase bandwidth of DLLs to address SATA link stability.
+  * Added oct-remote-app-ctl utility. This utility requires GCC5 or later
+    version of host compiler. Please install elfutils-libelf-devel-static
+    package to compile oct-remote-app-ctl utility.
+  * Use physical coremask to report IOBN BIST status on cn7xxx models.
+  * Added hotplug support to BGX interfaces for SE apps.
+  * Fixed following in DDR initialization code:
+     - Limit hardware write-leveling validity checks
+     - Fixed CSR reads to work on multi-node system.
+     - Check DDR speed against CPU speed for legal configuration
+     - Fix DDR3 configuration data for EBB7500.
+     - Use multi-sampling of DAC settings to calculate best values.
+     - Correctly handle 32-bit mode in several deskew and DAC routines.
+     - Enhance software write-leveling handling of the ECC byte.
+     - Set TIMING_PARAMS1[trfc_dlr] field appropriately for 3DS DIMMs
+     - Hardware write-leveling change for DDR4 x4 DIMMs
+     - Fix Vref calculation when RTT_WR==0 for 1-rank DIMMs
+     - Adjust tRFC for 7800 PASS2.x when too low
+     - Use "disable_sequential_delay_check" to disable HWL validity checking
+       and disable RL neighbor consideration, in addition to its original use.
+     - Update/correct DDR configuration data file for NIC23 and NIC225e.
+     - Added DDR3 4Rx4 RDIMM support.
+     - Improve DDR4 read-leveling accuracy
+     - Improve performance of 1-rank DIMMs
+     - Improve performance of 2-slot configurations
+     - Add support for mini-DIMMs and SO-DIMMs
+     - Allow read bit-deskew to be disabled
+     - Detection of 3DS and NV DIMMs
+     - Improve default DIMM information output.
+     - Added DBI support to DDR4.
+     - Added memory retaining feature to DDR4 type dimms.
+     - Added 100 MHz DCLK as an alternative reference clock to be triggered
+       by DDR4 for DDR rates above 2000 MT/s. Need latest MCU release.
+  * Fixed various issues with sff70xx, eap7000_ref and wave2 boards.
+  * Fixed nic23/nic73 to configure vs7224, the re-clocking chip, based on
+    cable connected when u-boot comes up.
+  * Updated USB driver to assert uphy PLL when lock is not detected.
+  * Updated eMMC driver to work at 52MHz speed.
+  * Added HiGig and HiGig2 support for BGX interfaces. 
+  * Fixed known issue: Warm/soft reset may corrupt Root.CvmCtl<31:24> and
+    Root.PRId[Revision] (Re-worked on this errata)
+  * Fixed known issue: 10GBASE-KR hardware training may not update PHY TX taps
+  * Fixed known issue: SERDES temperature issues (Some enhancements)
+  * Added NAND support on cn73xx.
+  
+  Toolchain Changes:
+  * Backport fix for fsf glibc bug 16009 (CVE-2015-8982)
+  * Backport fix for fsf glibc bug 18032 (CVE-2015-8984)
+  * Backport fix for fsf glibc bug 17269 (CVE-2015-8983)
+  * Backport fix for fsf glibc bug 21624 (CVE-2017-1000366)
+  * Backport fixes for thin archive needed to compile newer kernels: fsf
+    binutils bug 15151 and 15140
+  * Fixed wrong code dealing with some bitfields insertion in one case.
+  * Backport a few C++11 fixes (FSF bug 54086 and FSF bug 54341/54253)
+  * Backported fixes for glibc’s getaddrinfo so it no longer crashes
+  * Backport a gcc fix for creating wrong code in some cases when passing
+    struct argument to a function
+  * Debugging PIE applications on Linux userland works now
+  * Added cfi (unwind info) to clone, start, etc. so doing unwind (backtrace)
+    from a thread does not cause a crash
+  * Fixed some security issues in glibc: CVE-2016-3706, CVE-2016-4429
+  * Remove an assert inside GCC which was wrong causes internal compiler errors
+
+Release 5.0.0
+
+  * Added 68xx support to linux kernel 4.4.3.
+  * Fixed oct-remote utilities to use correct CSRs based on pass of the chip.
+
+  Toolchain changes:
+
+  * Fix internal compiler error when –g is used with optimization in some cases
+  * Fix wrong code with the __atomic_* functions when used with half-word
+    (16bit) or byte memory locations
+         o Note this is seen with cvmx_fau_atomic_add8 functions on Octeon3
+
+Release 3.1.2
+
+  Known Issues fixed:
+  (Please refer to cn78xx/cn73xx silicon’s known issues document for details):
+  * Fix for DDR4 tRRD_S Timing
+  * Fix for Write Leveling across Multiple Ranks
+  * Fix for Slot Control Default Settings
+  * Fix for DDR4 tWTR_L Timing
+  * Fix for CCPI Contended Local Allocation
+  * Fix for DM Pins
+  * Fix for L2C_TAD_CTL[MAXLFB] Reset Value
+  * Fix for GSER PLL initialization order
+  * Fix for 10G PHY Temperature Range
+  * Fix for KR Training Coefficient Update
+  * Fix for Backpressure IDs
+  * Fix for PCIe Gen3 Equalizer Adaptation
+  * Fix for Base-R Link Training after Auto-Negotiation
+  * Fix for LAPTR with L2_CUSTOM Header
+
+  General Changes:
+  - Fixed oct-remote utils to work on cn73xx
+  - Updated all the APIs to support cn73xx.
+  - Added support to oct-remote-boot to load the bootloader into L2 cache and
+    let the bootloader initialize DRAM instead of oct-remote-boot.
+  - Added ilkX:Y_speed, ilaX:Y_speed, ilaX:Y_lanes env variables
+    to configure speed, lanes for these interfaces.
+  - Added 10G-KR and 40G-KR4 support.
+  - Added simulator support for cnf75xx.
+  - Various bug fixes to linux-filter example for O2 and O3 Octeon models.
+
+  Bootloader Changes:
+  - Added nic73 board support
+  - Added EBB7304 board support
+  - Added Niagara board support
+  - Updated bootloaderupdate command to update spi bootloader
+  - Added DDR4 RDIMM support
+  - Fixed memory initializatio code to use environment variables for RODT,
+    etc. settings for Vref calculation, etc.
+  - Fixed periodic recalibration of DDR90 delay line in for 4-LMC mode
+  - Added ddrverbose tlv entry to set various verbosity while initializing
+    memory. Useful for remote boot.
+  - Added APIs to monitor LED activity.
+  - Various bug fixes to SATA low level driver.
+  - Various bug fixes to SPI stage2 bootloader.
+  - Various bug fixes to eMMC stage2 bootloader.
+  - Various bug fixes to USB driver.
+  - Added SPI bootloader support for new LiteOn boards.
+  - Added sff7800 board support
+  - Added wave2 board support
+  - Added 2500Base-X support in Wave2 board. 
+  - Fixed various issues with ref clock settings for cn70xx, requires fixing
+    parameters passed to initialize DLMs.
+  - Added sata support.
+  - Added multinode support in u-boot
+  - Created new generic stage 2 bootloaders for cn70xx.
+  - Added native API for SE applications
+
+  Executive Changes:
+  - Various bug fixes to PKI, PKO, FPA blocks.
+  - Various bug fixes to improve performance.
+  - Enhanced ILK APIs to support 128 channels for 78xx.
+  - Fixed incorrect block size limitation in FPA APIs
+  - Fixed alignment issue with setting up FPA pools
+  - Fixed large buffer count truncation issue with resource allocation
+  - Fixed memory leakage in SSO block when shutting down the interface
+  - Fixed the crash noticed when SE apps are compiled with 1-1 TLB
+     mapping
+  - Various bug fixes to LAP APIs.
+  - Fixed race condition while registering mailbox interrupts.
+  - Disabled some error interrupts which were status bits.
+
+  Toolchain Changes:
+  - Backported fix for http://gcc.gnu.org/PR52685
+  - Backported Fixes for many security issue for glibc
+  - Backported fix for http://gcc.gnu.org/PR54877
+  - Backported fix for http://gcc.gnu.org/PR53549
+  - Backport fix for http://gcc.gnu.org/PR52973
+  - Backported fix for http://gcc.gnu.org/PR52584
+  - Fixed gcov (and PGO) for multi-node on simple-exec
+  - Fixed CVE-2015-0235
+  - Fixed ldd usage for Octeon3
+  - Fixed CVE-2014-9402
+  - Fixed CVE-2012-3406
+  - Fixed CVE-2014-7817
+  - Fixed CVE-2013-4788
+  - Fixed CVE-2013-4458
+  - Fixed CVE-2012-4412.
+  - Fixed CVE-2012-4424.
+  - Fixed a few security issues
+  - Fixed symbolic link for usr/include to be
+  - Fixed GCC shared libraries
+  - Update to the latest Linux headers from the kernel
+
+Release 3.1.1
+
+  Known Issues fixed (Please refer to cn78xx silicon’s known issues
+  document for details):
+  * Fix for GSER(0..13)_CFG[BGX_QUAD]=1
+  * Fix for OCI remote atomics
+  * Fix for RSTP's don't work in pass 1
+  * Fix for  L2C_OCI_CTL[RLDD_PSHA]=1
+  * Fix for L2C_CTL[DISSBLKDTY]=0
+  * Fix for L2C_OCI_CTL[LOCK_LOCAL_STC]=1
+  * Fix hang when OCI victim hits home request
+  * Fix for  RED=1,DROP=1 behaving the same as RED=1,DROP=0
+  * Fix for PKI PCAM writes can cause ECC errors
+  * Fix for Calendar table writes when CAL_ENA=1
+  * Fix for PKI_BUF_CTL[FPA_WAIT]
+  * Fix for PKI_BUFLINK_S's are endian-swapped in big-endian mode
+  * Fix for  PKO may malfunction when PKO_SEND_HDR_S[CKL4] is set when
+    PKO_SEND_HDR_S[TOTAL] is large
+  * Fix for PKO_SEND_HDR_S[TOTAL]>32KB
+  * Fix for Local Pointers that are destination must allocate
+  * Fix for PKI_CL(0..3)_ECC_CTL reads return garbage
+  * Fix for PKO_SEND_HDR_S[N2]=1 may cause corruption
+  * Fix for Negative PKO_*_SHAPE[ADJUST] values may not work
+  78xx Pass 1.0 Fixes
+  * Fix for Electrical Idle logic can coast [Impacts pass1.0]
+  * Fix for GSER incorrect synchronizers hurts PCIe [Impacts pass1.0]
+  * Fix for GSER has wrong PCIe RX detect reset value [Impacts pass1.0]
+  * Fix for GSER PCIe Link bring up Unreliable [Impacts pass1.0]
+  * Fix for PCIe gen3 doesn't work [Impacts pass1.0]
+  * Fix for GEN3 Equalization may fail [Impacts pass1.0]
+  * Fix for STORE data FIFO overflow when OCI is used
+  * Fix for PKI stats may read as ones during packet flow [Impacts pass1.0]
+  * Fix for PKO hangs after DPFI flush [Impacts pass1.0]
+  * Fix for PCIE*(0..3)_CFG548[ECRD] reset value is incorrect for gen3 [Impacts
+    pass1.0]
+
+  General Changes:
+  * Updated oct-remote utils to work on cn78xx.
+  * Added new timer example.
+  * cvmx_bootmem now allocates from the end of a supplied range instead of from
+    the beginning.
+  * Many APIs have been extended to support multiple nodes.
+  * Removed the diagnostics directory as these do not support the OCTEONIII
+    family.  Instead use the BDK package for testing of memory and various
+    chip interfaces.
+
+  Executive Changes:
+  * Removed resource configuration language support. Resources are now
+    assigned using static defines in config/cvmx-config.h and
+    config/executive-config.h. Example template files exist in
+    executive/cvmx-config.h.template and
+    executive/executive-config.h.template, please see [OCTEON SDK config and
+    build system] for information.
+  * Added native support for cn78xx devices, along with backwards compatible
+    API support, see section [CN78XX backward compatibility support] in the
+    documentation for limitations and issues.
+  * passthrough_o3 example added to demonstrate cn78xx native api implementation.
+  * FAU emulation implemented on cn78xx using atomic memory.
+  * linux-filter now provides the appropriate modprobe command for cn78xx chips,
+    including the pki_packet_pool parameter.
+  * The debugger stub is not currently supported for more than one node on 78XX.
+
+  CN78XX native api details:
+  * PKO3 uses command descriptors, with commands pushed and popped to define
+    the operations involved in the transmission.
+    	* Multiple buffers can be sent in scatter-gather mode, each freed to its own aura
+	* Offload computation commands are used for tcp/udp checksum calculation
+    See section [CN78XX native api reference] for information on native pko3
+    programming.
+  * PKI uses qpg groups to specify per-port memory and group configurations,
+    please see section [CN78XX-specific packet input (PKI) details] for more
+    details.
+  * FPA3 uses a virtual pool structure, otherwise known as 'auras'. Physical
+    pools must be attached to auras in order to function. The CN78XX has 1024
+    auras and 64 pools. See [CN78XX-specific FPA3 API details] for more details.
+
+  Bootloader Changes:
+  * Support for Octeon CN78XX has been added.
+  * Added TB7600 board support.
+  * Enhanced QLM configuration environment variables for EBB78XX to handle
+    multiple nodes.
+  * Changed DDR initialization read and write leveling code to not change the
+    number of ways in the L2 cache when running in U-Boot.  This is required
+    for multi-node initialization.
+  * Add debug locks when debugging is enabled and cores are started for
+    applications or the Linux kernel.
+  * Improved core synchronization before starting SE applications.
+  * Moved where additional cores are powered up and taken out of reset to later
+    in the boot process.
+  * Enhanced the exception handler to display more information.
+  * Simplified the boot bus moveable region support and made it compatible with
+    the Linux kernel support.
+  * Added callback function for when the Ethernet driver detects a link state
+    change.
+  * Added support for CN70XX AP, NAS, and Router reference designs.  (please
+    note that the Ethernet switch on the Router reference board is functional
+    but still has some issues, when cables are unplugged/replugged.)
+  * Added support for Swordfish board
+  * Added hooks for pre and post USB initialization
+  * Added support to always scan USB storage and disable "usb start" message.
+  * Disable DDR debugging support for eMMC bootloader to reduce the size of
+    the bootloader so it will fit in CN70XX's L2 cache.
+  * There are still issues with the VSC8490 PHY and it should be considered
+    experimental.  Packet corruption occurs when sending at or near 100% line
+    rate and SGMII support currently does not work.  LED support also has not
+    been implemented.
+  * Support for additional PHY devices has been added including the
+    Vitesse VSC8490, Vitesse VSC8664 and the Cortina CS4223.
+  * Support for multi-node DDR initialization has been added.
+  * Support for USB, MDIO, TWSI and eMMC has been made multi-node aware.
+  * Numerous fixes and enhancements for bootoct and bootoctlinux commands in
+    order to support the CN78XX and multiple nodes.
+  * LED support for VSC8488 and the Vitesse CS4318 rev B has been added for
+    Liquid I/O boards.
+  * Fixed crash when shutting down USB if USB did not properly initialize.
+  * Automatically set dmack_pi according to how the boot bus is strapped for
+    compact flash.
+  * Added write support for compact flash (note: does not work with all cards)
+  * Added support for sub-PHY addresses in order to support the Cortina CS4223
+    PHY for 10 and 40Gbps.
+
+  Toolchain Changes:
+  * Improve performance of strcmp for Linux userland.
+  * Fix using of Static libstdc++ when using inside a shared library.
+  * Fix Internal Compiler Error in try_move_mult_to_index with array
+    accesses in some cases.
+  * Fixed where the result of an 'if' statement was miscompiled (bug #9436).
+  * Fixed where the result of an 'if' statement was miscompiled, a missing and instruction (bug #12749).
+  * Asan has been fixed to work correctly with n64.
+  * Fixed get_nprocs in glibc so it works when running on the simulator.
+  * Fixed some security bugs in glibc.
+  * Fixed a write beyond the current stack pointer in ld.so in glibc.
+  * Added new "set/show startup-with-shell" for gdb.
+
+Release 3.1.0
+
+  General Changes:
+
+  * cvmx-interrupt: APIs modified to allow for interrupt sources on cn78XX.
+  * cvmx-mbox: New API to generalize mailbox interrupt support.
+  * cvmx-coremask: APIs modified to support more cores and nodes.
+  * APIs for getting the CSR information are optimized, some of the old
+    APIs don't work, use new functions.
+  * Added simulators for CN70XX and CN78XX.
+  * Updated oct-remote utilities to support OCTEON3.
+  * Updated build system by adding new abi to generate floating point
+    instructions to run on OCTEON3.
+
+  Bootloader Changes:
+  * Updated bootloader to 2013.07 version.
+  * Added support for CN70XX.
+  * Fixed MMC/SD support for CN70XX.
+  * Fixed MMC/SD support for multiple slots.
+  * Added MMC/SD card detect and write protect GPIO support.
+  * Added MMC/SD power control support.  Power/reset can be common between
+    multiple slots in device tree.
+  * First MMC device is now 1, not 0.
+  * Various other MMC/SD fixes.
+  * Some changes to SATA/ATA code in preparation to AHCI support for CN70XX.
+  * SPI EEPROM support added.
+  * NAND driver changes for CN70XX.
+  * Added hardware BCH ECC support for NAND for CN70XX.
+  * Hardware BCH ECC uses the same layout as software BCH but ecc codes are not
+    compatible.
+  * Added EVB7000 SFF board.
+  * Added EVB7000 board.
+  * Use CRC32 to generate random MAC address instead of MD5 since MD5 may be
+    disabled.
+  * Added fix for USB initialization that caused USB to fail when powering
+    up approximately 0.1% of the time due to corrupted USB data being sent by
+    OCTEON.
+  * Speed up device tree parsing
+  * Minor changes made in EMMC booting due to cache changes in CN70XX.
+  * Added AGL (octrgmii0) support for CN70XX.
+  * Added QSGMII support for CN70XX.
+  * Added support for Vitesse VCS8574 for both SGMII and QSGMII modes.
+  * Added DLM support.
+  * Added device tree alias trimming support.
+  * Changed gd to use new U-Boot definition.
+  * Enable page mode where available to speed up NOR flash.
+  * Speed up simulator bootloader.
+  * Some cleanup of board_octeon.c.
+  * Added support for Micrel 1G PHY and generic 1G PHY support.
+  * I2C uses low-level driver to support transfers larger than 8 bytes.
+  * Fixed ODT1 wiring for quad-ranked dimms.
+  * Disable DMA for compact flash when bootloader is loaded above 64GB.
+  * Initial support for XHCI (USB 3.0) has been added.  This support is very
+    preliminary and there are known issues.  For now ignore errors complaining
+    that ports cannot be reset.  There are also some situations where a
+    combination of USB 2.0 and USB 3.0 devices will not be properly
+    recognized.
+
+  Executive:
+
+  * Fixed the padding for higig to include the header size.
+  * Fixed QLM settings for nic68_4 NIC card.
+  * Updated packet I/O shutdown function to free PKO queues.
+  * Re-wrote ILK calender initialization code.
+  * Fixed typo in parsing ipv4 tag tuple from config language.
+  * Fixed command queue base ptr to store 40 bit address to support 64GB -
+    128 GB of memory
+  * Apply the workaround for Errata AGL-16930.
+  * Fixed number of FIFOs to use for RX buffer for RXAUI interface.
+  * Fixed interface mapping when using more PKO queues per interface.
+  * Fixed FCS stripping for NPI interface.
+  * Clear any SSO errors when loading applications through SGMII interface.
+
+  Toolchain:
+  * binutils has been upgraded to 2.23.2.
+  * GDB has been upgraded to 7.6.
+  * Octeon 3 support has been added.
+  * Address sanitizer support has been added (-fsanitizer=address)
+  * Undefined sanitizer support has been added (-fsanitizer=undefined)
+  * Profiling has been fixed with threads (Need to use -fprofile-gen-atomic=3 option)
+
+Release 3.0.0
+
+  Known Issues fixed (Please refer to the specific OCTEON silicon’s known issues
+  document for details):
+  * CMB hang [Impacts: cn68xx pass1.x, pass2.0 and pass2.1 OCTEON models].
+  * QLM issue at 6.25 Gbaud [Impacts: cn68xx pass2.0 OCTEON model].
+
+  General Changes:
+
+  * Made some enhancements to error handling interrupts.
+  * Enhanced simple-executive to generate a core file for an invalid memory access.
+  * Added oct-remote-coredump utility to dump a core file.
+  * Added otrace utility for simple-executive applications.
+  * Updated dwarfdump, viewzilla and perfzilla to work with GCC-4.7 compiler.
+  * Updated APIs to support cn66xx pass1.2 features.
+  * Fixed oct-remote-pow to show correct information for cn68xx Octeon model.
+  * Added Interlaken LA mode support.
+  * Support for oprofile has been dropped and recommend using perf.
+  * Added scheduling in traffic-gen to assign tasks dynamically to cores.
+
+  Bootloader Changes:
+
+  * Updated bootloader to U-Boot 2012.04.01 version.
+  * Added eMMC boot support for cn6100 and cn7100 Octeon models.
+  * Added lot of enhancements to eMMC support.
+  * Fixed various bugs in DDR3 initialization code.
+  * Fixed numerous issues with FAT filesystem.
+  * Added fatwrite support.
+  * Implemented new PHY infrastructure.  NOTE: PHY APIs have changed.
+  * Added more helper functions to simplify board files.
+  * Speed up USB support.
+  * More reliance on flat device tree.
+  * New generic PHY initialization support using device tree.
+  * Vitesse 10G PHY support.
+  * mdio command 10G PHY support.
+  * Changes to GPIO code to use U-Boot GPIO functions.
+  * Added gpio command.
+  * cvmx_twsi functions changed to use U-Boot i2c functions.
+  * New i2c support using low-level driver for larger transaction support.
+  * Removed CONFIG_FLASH_USES_ALE define, no longer used.
+  * Added sff6100, snic10e and snic10e_61 boards.
+  * Enhanced nic68_4 support for revision 3 and SGMII support.
+  * Added support for nic10e_66 revision 3.
+  * Various device tree fixes.
+  * Enhanced compact flash support to use DMA.
+  * Enhanced ethernet driver for better integration with new PHY infrastructure
+    and device tree.
+  * Increased maximum size for eMMC stage 2 bootloader from 248 to 504K.
+  * Cleaned up board files using more common functions and new PHY
+    infrastructure.
+  * Updated Cortina PHY driver.
+  * Added 64-bit memory commands md64, mm64, mw64.
+  * Added unlzma command to decompress lzma and xz images.
+  * Added bunzip command to decompress bzip2 images.
+  * Added tftpsrv and tftpput commands.
+  * Fixed reserved memory area support for boards with low DRAM.
+  * Added multi-bit NAND ECC support.
+  * U-Boot now copies itself into L2 cache from NOR flash if the L2 cache is
+    large enough to speed up the boot process.
+  * Added bootflag for board_init_f() to indicate if booting out of flash, DRAM
+    or L2 cache.
+  * Merged in Authentik boot support.
+  * Increased critical temperatures for NIC cards.
+  * Added back NetOurBootCommand environment variable as DHCP option 224.
+  * Serial port is now initialized earlier to aid debugging.
+  * Changed some reserved memory to use named blocks instead.
+  * Added support for old Asus NAC38 and Movidis WSX16 units.
+  * Added support for multiple CF cards for EBB6600 revision 2 boards.
+  * Added more board hooks during the bootup process.
+  * Several files were moved out of arch/mips/cpu/octeon into the drivers tree.
+
+  Executive Changes:
+
+  * A new method has been implemented for providing config for a Simple
+    Executive application. See the "Config language to configure system"
+    section of the documentation for details.
+  * It is now possible to use Simple Executive library as a stand alone
+    library.
+  * Any application code which relies on defines from "executive-config.h",
+    should include "executive-config.h" in its source code explicitly.
+  * The location of the Build output has changed as simple executive gets
+    compiled as library. See Documentation for details.
+  * The cvmx_pko_get_base_queue_per_core() has been removed and the support
+    for ENABLE_LOCKLESS_PKO in passthrough is dropped.
+
+  Toolchain changes:
+
+  * Support for uclibc has been removed.
+  * GCC has been upgraded to 4.7.0.
+  * binutils has been upgraded to 2.22.
+  * GDB has been upgraded to 7.4.
+  * Glibc has been upgraded to 2.16.
+  * Newlib has been updated to 1.19.0.
+  * The linux headers which are used for Linux user land is sync'd with the
+    version of Linux which is included in the SDK.
+  * For Linux user programs, -fasynchronous-unwind-tables is turned on by default.
+  * The __sync_* functions should no longer be used and replaced with the
+    equivalent __atomic_* function which allow better control of placing the syncw.
+  * The __atomic_* functions will use the Octeon+/Octeon2 atomic instructions
+    when targeting Octeon2.
+  * The regex POSIX functions are now supported in simple-exec.
+
+Release 2.3.0
+
+  Known Issues fixed (Please refer to the specific OCTEON silicon’s known issues
+  document for details):
+  * Outstanding Prefetch to L1 Affects Load Order [Impacts: All cn6xxx OCTEON models]
+
+  General Changes:
+
+  * Added support for 61XX OCTEON model.
+  * Enhancements to traffic-gen example program to work better for
+    XAUI/DXAUI interfaces.
+  * Various enhancements to oct-top utility.
+  * Various enhancements to oct-remote-profile and oct-remote-tra utilities.
+  * Added event based profiling support to oct-remote-profile.
+  * Fixed hw-ddr2 diagnostics to work on ebb6800 model.
+  * The oct-pci-boot command does not work if board's DDR Clock is set to
+    667 MHz.
+
+  Bootloader Changes:
+
+  * Added support for EBB6100.
+  * MMC support in EBB6100 only works with Transcend card that have x8 lanes.
+  * Added bootloader support for NIC68_4 and NIC10e_66 boards.
+  * Updated read-leveling code in the bootloader for CN6xxx models.
+  * Added NAND boot support for EBB6800.
+
+  Executive Changes:
+
+  * Fix to support PCIe gen2 devices on EBB6800.
+  * Added QLM JTAG initialization code and fixed the code to work on all
+    OCTEON models.
+  * Added new APIs to support bit-select extractor feature in cn61xx.
+  * Various bug fixes to device tree.
+  * In the PowerThrottle API
+        - Added cvmx_power_throttle_get_register() to retrieve the
+          PowerThrottle register of a core.
+        - Added cvmx_power_throttle_bmp() to take a bitmap-base coremask
+          parameter.
+        - Modified cvmx_power_throttle_get_field() to take the
+          PowerThrottle register value as an extra parameter.
+        - The PowerThrottle example optionally takes two parameters
+          ``tgt_ppid'' and ``tgt_pct'', a core id and its target
+          power-level (in percentage) to throttle the core.
+  * cvmx_pko_get_base_queue_pkoid() and cvmx_pko_get_num_queues_pkoid()
+    are made o68-only to improve performance.
+  * In cvmx-coremask.h, introduced bitmap-based coremask.
+  * Changed the second parameter cvmx_zip_queue_initialize() takes to be
+    coremask of ZIP cores to use instead of ZIP core number.
+  * Various bug fixes to interrupt handler to work correctly on EBB6800.
+
+  Toolchain Changes:
+
+  * Fixed macro expansion on saad instruction in assembler.
+  * Simple executive gdb does not change focus on next/step command.
+  * Simple executive debugger stub no longer supplies the wrong reply
+    when a program exists.
+  * Updated the backtrace code in glibc to match the upstream code.
+
+Release 2.2.0
+
+  General Changes:
+
+  * Added support for 66XX OCTEON model.
+  * Added a new utility called oct-top to display routines using up most CPU
+    time.
+  * Added --dwell and --core_mask options to oct-profile.
+  * Fixed column alignment issues and no. of columns displayed in oct-profile.
+  * oct-remote-memory extended to specify a count of the elements to be read.
+  * octeo-ethernet driver has fixes for a deadlock observed under heavy network
+    load and tasklist_lock activity at the same time.
+  * Fix permission checks in sysmips(MIPS_CAVIUM_XKPHYS_WRITE).This
+    prevents non-root users from mapping XKHPYS.
+  * The shmem example has been removed.
+  * Limited support for sending packets to PKO ports for PCIe on the simulator.
+  * Fixed some bugs in trace buffer code for OCTEON II models.
+  * Fixed pci_read_csr() for OCTEON II models, it was reading values twice.
+  * Fixed various issues with error interrupts for CN68XX.
+
+  Bootloader Changes:
+
+  * Added support for EBB6600.
+  * Added support for BBGW Reference board.
+  * Added device tree support.
+  * Added optional octbootbus command.
+  * Enhanced qlm command to support all lanes.
+  * Added NAND debugging support.
+  * Removed DHCP random time.
+  * Split boot bus initialization to early and late initialization.
+  * Disabled DFM initialization for boards without DFM support.
+  * Changed default flash partitioning on several boards.
+  * Added support for 16-bit PSRAM.
+  * Made PCIe DMA remapping optional to allow access to memory outside of U-Boot.
+  * Added hook for when environment variables are changed.
+  * Added I2C mux support for EBB6600 and EBB6800.
+  * Fixed eraseenv command.
+  * Early EBB6600 boards may require a MCU firmware update in order to reliably
+    boot over PCI due to multi-master issues with the TWSI bus.
+  * Updated U-Boot porting guide.
+  * Added GENERIC_NAND_STAGE2 for NAND booting.  Note: currently this only works
+    with the EBB6300 board.
+
+  Executive changes:
+
+  * When the cvmx_bootinfo_t data structure version is greater than or equal to
+    (major=1,minor=3) the SE app looks for flat device tree address in
+    cvmx_bootinfo_t
+  * When device tree is present SE uses it to get the PHY and USB clock
+    information.
+  * SE doesn't use the MDIO multiplexing info from the device tree. Based on
+    the board type it switches the mux. Currently 66xx EVB is the only board
+    type that uses MDIO multiplexing.
+
+Release 2.1.0
+
+  Special Notes and Known Issues:
+
+  * Running oct-remote-profile while a Linux kernel built with
+    CONFIG_I2C is booting may cause failures. The users can either
+    build a kernel without I2C support or wait till the kernel has
+    booted to start the profiler.
+
+  * Although the SDK contains some code for Simple Executive CPU
+    hotplug, this feature is not supported.
+
+  * On CN63XX pass 1.X and 2.X parts, if QLM1 is in PCIe target mode,
+    the user must export the environment variable OCTEON_PCIE_QLM to 1
+    on the host before using any oct-remote-* utilities.
+
+  * This release includes a u-boot porting guide.
+
+  General changes:
+
+  * Added support for CN68XX and CN63XX Pass 2.x OCTEON models.
+  * Added simulator for CN68XX.
+  * Added --samples and --core_mask options to oct-remote-profile utility.
+  * The linux-filter example has been modified. It now interacts with the
+    octeon-pow-ethernet Linux driver instead of octeon-ethernet.
+  * The interrupt numbering has changed in order to support additional
+    interrupt sources on the CN68XX.  Code using symbolic names (like
+    CVMX_IRQ_WORKQ0) will continue to work. Any code that uses hard
+    coded irq numbers is no longer supported.
+  * The ipd_port is no longer identical to the PKO internal port for CN68XX.
+    One immediate consequence is that arrays indexed by ipd_port might
+    need to be modified (See HRM 9.7.1 on WORD2[PORT] for details).
+    New output functions are implemented using the PKO internal port as a
+    parameter for efficiency.
+  * Added -t option to show trace buffer information for a combination of trace
+    buffer units available in CN68XX.
+  * Updated oct-remote-profile to show L2C statistics for all available TAD and
+    also to show bus information.
+  * Updated traffic-gen to support CN68XX. Refer to its README.txt for more details.
+
+  Executive changes:
+
+  * Added support for INTERLAKEN interface.
+  * Added wrapper functions for accessing Work Queue Entry fields.
+  * Added a new config option, CVMX_HELPER_CFG_OPT_USE_DWB, for controlling the
+    default Don't Write Back settings.
+  * Added limited support (query only) for pkind and bpid for CN68XX.
+  * Lockless PKO via ENABLE_LOCKLESS_PKO in passthrough is not supported in CN68XX.
+    ``Lockless'' refers to the way queues are allocated and used and should be
+    decided by the application.
+  * cvmx_pko_config_port() returns CVMX_PKO_SUCCESS and does nothing for CN68XX.
+  * Added macros for assigning PKO queues to more GMX interfaces for CN68XX.
+  * Added new ZIP APIs for initializing the interface and submitting work based
+    on Zip Queue, new in CN68XX.
+  * Fixed various bugs to improve SRIO support in CN63XX.
+  * Added workaround for SerDes CDR reset Erratum.
+  * Added SRIO link partner reset sequence, its disabled by default.
+  * Fixed bug to show correct value for some SLI CSRs.
+  * Removed deprecated functions.
+  * Added reporting of dcache and icache parity errors, new in CN6XXX.
+  * Fixed all code instances doing core shifts to use ULL (e.g. '1ull << core')
+    to accommodate 32 CPUs on CN68XX.
+  * Added an experimental configuration tool to statically allocate
+    resources including pknds, bpids, pko_ports, and pko queues.
+  * cvmx_l2c_get_tag() has been deprecated and does not work with the CN68XX.  Instead
+    use cvmx_l2c_get_tag_v2() and cvmx_l2c_address_to_tad().
+  * Added new APIs to setup all 4 trace buffer units on CN68XX.
+  * Fixed code to free buffers from all FPA pools before disabling FPA.
+  * To build SE applications to run on CN63XX Pass1.x, export OCTEON_FIX_CN63XXP1=1
+    before building the application.
+  * Various bug fixes to debug stub.
+  * Updated viewzilla, perfzilla utilities to support 32 cores.
+
+  Bootloader changes:
+
+  * Bootloader upgraded to version 2011.03.
+  * Added support for ebb6800.
+  * Added support for Embedded Planet EP6300C.
+  * Added support for NIC10e.
+  * Added support for NIC4e.
+  * Added support for NIC2e.
+  * Added octreginfo command.
+  * Added support for Intel E1000 network adapter.
+  * Added support for OCTEON II USB EHCI.
+  * Some commands have changed and new commands have been added.
+  * Command line editing has been enabled.
+  * Environment variable editing has been enabled.
+  * OCTEON code has been removed from U-Boot common code to make porting
+    easier.
+  * Board-specific code has been moved into board/octeon/common and
+    board/octeon/board_name.
+  * OCTEON specific code has been moved to arch/mips/cpu/octeon.
+  * OCTEON specific commands have been moved to arch/mips/cpu/octeon/commands.
+  * SDK symlinks have been moved to arch/mips/cpu/octeon/cvmx.
+  * OCTEON include files have been moved to arch/mips/include/asm/arch-octeon.
+  * board.c has been renamed board_octeon.c.  board.c is not used..
+  * Bootloaders for nac38 and bbgw_reg are not supported yet.
+  * Bootloader support for ebb5600, ebh5201, ebt5200, ebt5600, ebh5601 has been
+    removed from SDK.
+  * Enhancements to improve DDR3 support on CN6XXX.
+  * Enhancements to LMC init code.
+  * DFM updates to support multiple ranks on CN6XXX.
+  * Fixed DDR3 Read/Write levelling issues.
+  * Added optional DMA remapping support for PCIe devices without 64-bit
+    addressing support.  This is disabled by default and only works for CN6XXX.
+  * Fixed 4GB DIMM support for all CN6XXX boards.
+  * Added SATA support (currently only SIL3132 and related chips are supported).
+  * Added new_board.sh script to assist adding new boards to U-Boot.
+  * PCI and PCIe configuration are no longer board specific.
+  * Added FIT image support.
+
+  Toolchain changes
+  * Improved scheduling of __builtin_prefetch.
+  * Improved usage of the ins and dins instructions.
+  * Fixed the standard C++ headers so they include the correct headers sometimes
+  * Fixed the Linux gdb's watchpoint support.
+  * Fixed the use of .set noat with gp referenced stores
+  * Improved code generation of bitfield references.
+  * Improved code generation of 32bit unaligned loads
+  * Improved code generation of 16bit unaligned loads
+  * Fixed the Linux native toolchain's PCH support
+  * Improved code generation of arguments whos size is less than 32bits
+  * Improved usage of the badd instruction
+  * Improved usage of the bbit set of instructions
+  * Improved usage of the sll instruction
+  * Improved code generation of widdening 32bit multiplication
+  * Improved code generation of structure returns who size is less than 64bits
+  * Improved code generation with __builtin_popcount.
+  * Fixed glibc's handling of default page size besides 4k.
+  * Improved code generation of shifts
+  * Removed usage of k0 inside glibc for binaries built for Octeon 2.
+  * Fixed a wrong code bug dealing loops
+  * Add support to gdb to be able to debug 32 cores for CN68XX.
+  * Fixed some issues with backtrace while debugging the Linux kernel using gdb.
+  * Improve code generation of the __builtin_bswap* functions.
+  * Improved performance of some of the string functions in the simple exec environment
+  * Fixed potential deadlock in sem_*wait and sem_post inside glibc
+  * Improved code generation of if statements with multiple conditions
+  * Improved code generation for multiple add inside a loop
+  * Fixed a wrong code sometimes showing up with a comparison.
+  * Improved code generation of condition moves
+  * Improved use of profiling data for some loops
+  * Added new multilib mfix_cn63xxp1 for simple executive toolchain to use the
+    correct newlib library on CN63XX Pass1.x models.
+  * Added -mfix-cn63xxp1 option to replace bad prefetches with 'pref 28' as a
+    workaround to an errata in CN63XX Pass1.x models.
+
+Release 2.0.0
+
+   Special Notes:
+
+   * Some EBB6300 boards were shipped by Cavium with 400MHz DDR3 frequency. This
+     is not a supported frequency for the DIMMs and SDK 2.0 bootloader may
+     fail to boot or fail to load programs if used with this frequency. Users are
+     advised to update to a supported frequency. The 'tlv set ddrclock' bootloader
+     command can be used to do this.
+
+   General changes:
+   * Added support for CN63XX Octeon model.
+   * Added simulator for CN63XX processor.
+   * Updated oct-remote utilities to work on CN6XXX processors.
+   * CN56XX Pass1 is no longer supported.
+   * Support for CN3xxx Octeon models has been deprecated.
+   * Updated build system to compile applications with different ISA based on
+     the Octeon model used.
+   * Added oct-remote-qlm utility to control QLM jtag chains.
+   * Fixed various issues noticed with oct-remote-ddr-tune utility
+   * Improved efficiency of the PCI console (oct-remote-console) by caching data.
+   * Added GDB remote protocol to oct-remote utilities.
+   * Added infrastructure to oct-remote to support better profiling.
+   * Updated Mentor Graphics debug stub to edtm 2.4c release.
+   * Added support for ebh5610, ebt5810 and Landbird NIC 10g boards.
+   * Viewzilla has been updated to work with the new OCTEON II processor pipeline
+     model.
+   * For running the linux-filter example it is now required to build the Linux kernel
+     with CONFIG_OCTEON_ETHERNET_LOCKED.
+
+   Executive changes:
+   * Updated the build system such that when an OCTEON II model (CN6XXX) is selected,
+     the OCTEON II ISA is used. Applications compiled for OCTEON II ISA will not run
+     on OCTEON Plus or earlier models. Although applications built for OCTEON
+     Plus ISA will run on OCTEON II.
+   * CSR definitions are split into individual files based on category.
+   * Removed the following unused files: cvmx-mio.h, cvmx-asx.h, cvmx-ciu.h, cvmx-cvmmem.h,
+     cvmx-iob.h, and cvmx-lmc.h.
+   * The API cvmx_get_cycle() is deprecated. Use cvmx_clock_get_count(CVMX_CLOCK_CORE)
+     to get cycle counter.
+   * The API cvmx_get_cycle_global() is deprecated. Use cvmx_clock_get_count(CVMX_CLOCK_SCLK)
+     instead.
+   * Use cvmx_clock_get_rate() with appropriate clock type to get the clock rate
+     instead of using cvmx_sysinfo_get()->cpu_clock_hz.
+   * Error handling APIs have been changed.
+   * Added a new file cvmx-boot-info.h. It defines data structures shared amongst the
+     Bootloader, Linux kernel and Linux user space. Moved from the Bootloader.
+   * Added debug agent support APIs to debug applications on the simulator
+     and over serial port, PCI and inter-core.
+   * Updated management port interface to set the link status of the interface
+     by reading the PHY.
+   * Fixed a bug where unchanged bits in RNM_CTL_STATUS would be zeroed.
+   * Added a new file cvmx-sim-magic.h, which defines APIs to get certain parameters (core
+     clock rate etc) from the simulator.
+   * Updated USB host APIs for host and device mode from USB-EXTENDER.
+   * Added cvmx-ixf28201.{c,h} to initialize SFP+ ports on ebt5810 board.
+   * Enable interrupts for packet interfaces (like SGMII, XAUI, RGMII, SPI) only
+     if the interface is enabled.
+   * Added new function to shutdown packet I/O properly.
+   * Fixed a problem with lost buffers in fpa pools.
+   * Removed the define for CVMX_HELPER_ENABLE_BACK_PRESSURE. It controlled the global
+     enable for per-port backpressure, which is now always enabled by default.
+   * Various bug fixes to USB interface in host mode.
+   * Added SRIO interfaces for CN63XX.
+   * Enabled CN63XX hardware blocks.
+   * Updated CSRs for CN63XX.
+   * Added initialization and enabling of RGMII MIX interface to the
+     management port for CN63XX.
+   * Added an API for the power-throttle feature in CN63XX.
+   * Updated PKT_INSTR_HEADER with new bits added in CN63XX.
+   * Updated trace buffer events with CN63XX events.
+   * Updated Core performance counters with CN63XX core performance counters.
+   * Updated L2 performance counters with CN63XX L2 performance counters.
+   * Updated APIs for cache operation to use new CN63XX instructions.
+   * Updated atomic functions to use new CN63XX instructions.
+   * Updated to support OCTEON II physical address layout.
+   * Added new APIs for SE hotplug functionality.
+   * Added new APIs for OCTEON II L2C memory protection (virtid) feature.
+
+   Bootloader changes:
+   * Added support for loading multiple linux kernels built with
+     CONFIG_MAPPED_KERNEL.
+   * Added support for CN63XX chip and CN-EBB6300 board.
+   * Updated the number of TLB entries for CN63XX.
+   * Lot of bug fixes and enhancements to NAND boot.
+   * Fixed LMC1 DCLK Offsetting Sequence, effects ebh56xx and ebh52xx.
+   * Removed some deprecated bootloaders: kpb, cn3004_evb_hs5, cn3020_evb_hs5,
+     nb5, ns0216, ebh3000, hikari.
+   * Removed all *_failsafe*.bin bootloaders. The normal bootloader works as
+     failsafe depending on where the image is burned.
+   * Removed all *_pciboot*.bin bootloaders, use the normal bootloader to boot
+     with oct-remote utilities. The bootloader provides the correct prompt.
+   * Enable buffered writes for NOR flash.  This makes writes much faster.
+   * Both failsafe and normal bootloaders now have an embedded header in the image.
+     This information is used to relocate the bootloader.
+     NOTE: The failsafe bootloader is incompatible with normal bootloaders
+           from older releases.
+   * Added a new command 'bootloaderupdate' to update the image onto flash.
+   * Added a new command 'bootloadervalid' to validate a bootloader image.
+   * Enabled USB by default in both failsafe and normal bootloader on all the
+     available boards.
+   * Modified failsafe bootloader to dump registers in case of TRAP.
+   * Set uboot_flash_size to the size of the new bootloader image rounded to
+     the next 0x10000 bytes when updating bootloader from previous release.
+
+   Toolchain changes:
+   * Added new flags -march=octeon2 and -mtune=octeon2 to generate code and to
+     tune for OCTEON II.
+   * New OCTEON II instructions were added to the assembler and the
+     disassembler.
+   * The compiler generates the new indexed load instructions when compiling
+     for OCTEON II.
+   * New pipeline description was added for OCTEON II.
+   * Both the Linux and Simple-exec toolchains provide OCTEON II-tuned
+     libraries along with the default Octeon libraries.  When linking
+     statically GCC will use the OCTEON II libraries if -march=octeon2 is
+     passed when linking the executable.  On Linux the run-time processor is
+     detected and the appropriate set of shared libraries are used by the
+     dynamic linker.  For uClibc no OCTEON II version of the libraries are
+     provided.
+   * The TLS acceleration in GCC is now controlled by a command-line
+     flag, -mtls-accel.  The flag is off by default for OCTEON II.  It is on
+     for earlier Octeons.
+   * The EXTS instruction is generated now when sign-extending a 64-bit value
+     after truncating it either into char or short.
+   * A bug has been fixed which prevented the compiler to use the Octeon
+     pipeline description.
+   * Backported a bug fix from mainline contributed by Cavium that was causing
+     wrong code to be generated when performing arithmetic on bit-field types
+     whose size is wider than 32 bits.
+   * The default value for the variable spawn-sim has been inverted to 0.  The
+     simulator is no longer spawned by default upon the target octeon
+     tcp:<...> command.  You can set this variable to 1 in order to revert
+     back to the old behavior and spawn the simulator from GDB.
+   * A bug in GDB has been fixed with watchpoint.  The bug occurs when the
+     address being watch exceeded the 32-bit address range.
+   * The unsupported attach command in the simple-exec GDB's octeon target has
+     been fixed to produce an error message rather than crash GDB.
+
+   Fixes for 63XX Pass 1 Known Issues:
+
+   [Refer to the document titled "63XX Pass 1 Know Issues"]
+
+   * Section 2.1.1.1 (CKE Initialization Delay): SDK code in bootloader sets
+     LMC0_REST_CTL[DDR3RST] to one and LMC0_TIMING_PARAMS0[TCKEON] to zero per
+     the system requirements. No customer action is required when using the
+     Cavium SDK bootloader.
+
+   * Section 2.1.2.1 (L2C+LMC Internal Address Space): The CSR declarations in
+     SDK does not refer to BIG_RD/BIG_WR registers. Also renamed HOLE_WR to
+     HOLEWR and HOLE_RD to HOLERD.
+
+   * Section 2.1.3.1 (sRIO BAR1 Size): The CSR definition for
+     SRIOMAINTi_M2S_BAR1_START1[BARSIZE] in the SDK has been modified to refer to
+     the correct BARSIZE field as mentioned in this document.
+
+   * Section 2.1.3.2 (sRIO Soft Packet FIFO Overwrite): The CSR definition for
+     SRIOMAINTi_IR_SP_RX_CTRL[OVERWRT] field in SDK has been modified to refer
+     to the correct description as mentioned in this document.
+
+   * Section 2.2.3.1 (I-Cache Prefetch): SDK code sets CvmCtl[IPREF] in the
+     bootloader, i.e. the suggested workaround for this issue is included. No
+     customer action is required when using the Cavium SDK bootloader.
+
+   * Section 2.2.3.6 (Prefetch Instructions in ERL=1 Exception Handlers): All SDK
+     code has been fixed to not use PREF instructions while ERL=1. This condition
+     only occurred in the bootloader, so customers using the Cavium SDK bootloader
+     should not see this issue.
+
+   * Section 2.2.3.8 (D-cache Fill Prefetches): The SDK toolchain will replace
+     all PREF instructions identified in this section with a PREF 28 instruction.
+     Any code built using Cavium SDK toolchain will not see the effects of this
+     issue.
+
+   * Section 2.2.8.1 (FPA Allocate when Internal Pool Low): The FPA buffer
+     allocation routines in the SDK Simple Executive library have been fixed to
+     work around this issue. All application code using standard Cavium SDK APIs
+     for FPA buffer allocations will not see the effects of this issue.
+
+   * Section 2.2.11.1 (Default De-emphasis Setting): The Cavium SDK Simple
+     Executive helper routines for SGMII, XAUI, PCIe and SRIO interfaces have
+     been updated to program the correct/suggested QLM settings. Application code
+     using Cavium SDK's helper routines to initialize these interfaces should not
+     see the effects of this issue.
+
+
+Release 1.9.0
+
+    General changes:
+    * All oct-pci-* utilities have been enhanced and renamed as oct-remote-*.
+      These utilities now work over both PCI and EJTAG interfaces.
+    * Added a new utility (oct-remote-ddr-tune) to support ddr tuning over PCI
+      and EJTAG.
+    * Added a new utility (oct-remote-core) to read CPU core state (GPRs, TLBs and
+      COP0 registers).
+    * Fixed printing of usage information for oct-remote-console.
+    * Added "--wait=n" parameter to the oct-remote-reset utility, so that waiting
+      for bootloader to boot can be disabled (0 value) or made longer.
+    * Add support to oct-remote-boot to read environment from a file and pass it to
+      a properly configured RAM based bootloader.
+    * Following enhancements and bug fixes were made to the traffic-gen example program:
+      - Use the L2 size and end calculations to simplify VLAN processing.
+      - Use the pre L2 calculation to simplify higig processing.
+      - Added a new packet type for 802.3 pause packets.
+      - Allow Higig encapsulated ARP packets.
+      - Fixed a number of hard coded packet locations that broke with Higig.
+      - Fixed creation of validation crc.
+      - Added CBFC pause frame packet generation.
+      - Added error counters for all WQE receive error codes.
+      - Improved handling of shrinking number of rows on display.
+      - Added a new command ("backpressure") to control if a port respects
+        backpressure.
+      - Fixed a buffer leak when bridging.
+      - Fixed a bug in traffic-gen where it configured packet buffers larger than
+        allowed by IPD.
+      - Added ability to validate packets received by traffic-gen.
+      - Added ability to unhide a row when it contains nonzero values. This is used on
+        all error counters to have them automatically display when an error occurs.
+      - Added clause45 MDIO support with mii45 command.
+      - Added encoding of MDIO bus in bit 7 of device address.
+      - Allow the statistics gatherer thread to process work. This allows us to
+        work better on lower core count parts.
+      - scan.sizes can now take min/max packet sizes, size increment, and packets sent
+        per size arguments.
+      - Use existing tx rate setting for scan.sizes, instead of hard coded rate.
+      - Fix bug where scan.sizes can get stuck while transmitting.
+      - Override the SE default behavior of buffering all packet buffers
+        to DRAM instead of L2. Put all packets in L2.
+      - Use 64 bit counters for scan.sizes so large packet counts can be used.
+      - Add support for changing the pause frame settings of the PHY using phy.speed
+        command as different boards have different defaults.
+
+    Executive changes:
+    * USB: Performance improvements to USB APIs.
+    * USB: Fix bug where the multi packet count was used to set the number of
+      retries for split transactions
+    * USB: Improve handling of split transaction timing on the SOF counter
+      wraparound.
+    * USB:  Fix bug where control traffic with data payloads larger than a single packet
+      would fail.
+    * SPI: Change SPI initialization to always run BIST and check the results.
+    * SPI: Fixed a bug where data and control were sampled on the same clock edge.
+    * SPI: Require 100 transitions of the TX and RX clock before we consider them
+      valid.
+    * SPI: Require 500 training successes before continuing. This will always be
+      greater than the required 34 + 16 * MAXDIST.
+    * SPI: Add display of STX*_INT_REG errors to the RSL decode.
+    * SPI: Fixed problems with SPI4000 link negotiation.
+    * Fixed the definition of CSR register PIP_PRT_TAG for CN58XX.
+    * cvmx_user_app_init() API for Linux now calls sysmips() to enable XKPHYS
+      access for the calling process. It prints an error message if the process
+      does not have the right privileges.
+    * Added display of STX*_INT_REG errors to the RSL decode.
+    * Enabled reporting of XAUI extended errors in PCSXX_INT_REG.
+    * Added a new helper routine cvmx_helper_configure_loopback() for setting loopback
+      mode independent of the type of the interface.
+    * Fixed CVMX_RDHWRX() macro for o32 ABI.
+    * Added a function cvmx_pcie_wait_for_pending() for waiting for pending PCIe
+      read/writes to be posted.
+    * Modified to use physical instead of virtual address for loading Linux images.
+    * Split cvmx.h into multiple files and reorganized the functions to provide a
+      access API that can be implemented natively, over PCI, or other transports
+      in the future.
+    * The config defines CVMX_PKO_USE_FAU_FOR_OUTPUT_QUEUES and
+      CVMX_ENABLE_PKO_LOCKLESS_OPERATION have been removed.
+    * Fixed cvmx_mgmt_port_get_link() to read the port link status correctly.
+    * Change the default L2 arbitration mode for all chips to give IOB higher priority.
+
+    Bootloader changes:
+    * Added NAND boot support.
+    * Added support for USB devices. A new command called "usb" is added for
+      scanning the USB bus and also loading data from a USB block device.
+    * Fixed a bug in memcpy64() routine which could cause a hang.
+    * Fixed the "go" and "bootelf" commands to do a network and usb shutdown before
+      jumping to the target address.
+    * Fixed CFG_HZ to be timer ticks instead of CPU frequency.
+    * Fixed parsing of commands to allow escaped semicolons to make it to the
+      application as part of arguments.
+    * Allow dram size to be set via an environment variable(dram_size_mbytes) for
+      RAM based bootloaders.
+    * Added a 'generic' board type. This is used for the generic RAM based u-boot
+      that runs on most boards (with limited peripheral support due to lack of
+      specific board knowledge.)
+    * Made modifications to the bootloader for low power consumption. Early in the
+      bootloader startup, all cores are taken out of reset and put in a wait loop.
+    * The bootloader running on a simulator now detects the core frequency correctly.
+    * Fix the heap start and end addresses stored in sysinfo for bootloader running
+      on the simulator.
+
+    Toolchain changes:
+    * GCC has been upgraded to 4.3.3.  The changes to support Octeon were backported
+      from mainline/FSF GCC which already has support for Octeon.
+    * Binutils has been upgraded to 2.19.  This version of binutils already supports
+      Octeon out of the box.
+    * GDB has been upgraded to 6.8.
+    * Glibc has been upgraded to 2.9.
+    * uClibc has been upgraded to 0.9.30.
+    * Newlib has been upgraded to 1.16.0.
+    * MIPS non-PIC executable support has been backported into the toolchain. On Linux
+      with n32 ABI, the toolchain generates non-PIC code unless -fpic or -fPIC is used.
+      non-PIC code is more efficient and we measure 5-6% performance improvement in our
+      benchmarking.
+    * Now you have to use -fpic or -fPIC when building shared libraries for Linux N32.
+      Mainline GCC defaults to -mno-shared starting GCC 4.3.
+    * Now you need to compile with -rdynamic for N32 if you use backtrace_symbols.
+      This is necessary so that the dynamic symbol table is generated.
+    * The Cavium-specific GCC options -mstatic and -mrelax-pic-calls have been removed in
+      favor of the new non-PIC executable support.
+    * SYNCIO and SYNCIOALL opcodes were removed from the assembler.  These were experimental
+      Octeon-specific instructions that are not supported by any Octeon processors.
+    * The preprocessor macro _OCTEON_ is no longer defined if you change the architecture with
+      -march from octeon during compilation.  This is to be compatible with the mainline/FSF
+      version of GCC.
+    * The options -mocteon-error-unsupported -mno-octeon-unsupported were removed from the
+      assembler. The linux assembler by default now signals an error when encountering
+      floating-point instructions.  You can disable the error with the assembler directive
+      .set hard_float or with the -Wa,-mhard-float GCC option (or -mhard-float when using the
+      assembler directly).
+    * The simple-exec header file octeon-app-init.h is now under libc headers and not under
+      the GCC headers.  Both of these locations are searched by GCC by default so this change
+      should be transparent to most users.
+    * In simple-exec, with the newlib version, the output to stderr is pushed out more
+      aggressively.  This could result in the output to be broken up into several write calls
+      causing the console banner to appear in between them.  You can recover the old behavior
+      by making stderr line-buffered with setlinebuf(stderr).
+    * Added hardware watchpoint support into the Linux debugger.
+
+Release 1.8.1
+    General changes:
+    * Requires Python version >= 2.0 on the development host.
+    * Support for CN56xx pass2 and 52XX pass2 chips.
+      * Extensive CSR updates.
+      * New model constants.
+    * Updated all 32-bit simulators to support trace files larger than 2GB
+      (limitation doesn't apply to 64-bit versions).
+    * Use of the OCTEON_IS_MODEL() macro in preprocessor directives is not supported,
+      the substitute macro is named CVMX_COMPILED_FOR().  OCTEON_IS_MODEL() is supported
+      in all other cases.
+    * Added a new utility called oct-pci-save for saving a contiguous region of DRAM to a file.
+
+    Executive changes:
+    * PCIe: Added 56xx/52xx pass2 code to detect if PCIe clock is missing
+    * PCIe: Disabled store merging on target setups
+    * PCIe: Updated model checks to use new 1_X syntax
+    * PCIe/PCI: Enable setup of the packet engine ports on chips they are supported on.
+    * PCIe: Change Octeon's primary bus number from zero to one for compatibility with
+      IDT switches
+    * USB: Now detects clock type, and handles non 48 MHz reference clocks and crystals.
+    * USB: Fix to allow both split and non-split transactions to properly count the bytes
+      transferred.
+    * USB: Miscellaneous fixes for Isochronous split and non-split transactions.
+    * USB: Removed requirement that max packet size be a power of 2.
+    * USB: Implemented mechanisms to reduce the number of interrupts to be handled.
+    * USB: Implement a static priority scheme between pipes by using lists for each type
+      of transaction.
+    * Added support for Jumbo packets to management ports.
+    * Re-negotiate the link when we get an RX error on management ports.
+    * Fixed resource leak when starting Simple Exec applications multiple times
+    * Fixed recognition of fuses that caused incorrect processor IDs on select CN3XXX.
+    * Fixed the code to use correct number of POW entries for CN52XX.
+    * Consolidated all TWSI functionality into cvmx-twsi.c.
+    * Compact Flash: Added support for DMA mode. Setup code is now shared with bootloader
+      and provided in cvmx-compactflash.[ch].
+    * Corrected oct-packet-io port mask
+    * cvmx_pko_config_port() now returns additional error codes.
+    * cvmx_fpa_shutdown_pool() is enhanced to do better accounting of FPA buffers held by
+      IPD.
+    * cvmx_pcie_ep_initialize() is enhanced to fail if the chip is not en EP (endpoint) mode.
+    * Added support for using the same FPA buffer for work queue entries (WQEs) and packet
+      data. This feature has been added in CN56XX pass2 and CN52XX pass2 chips and is now
+      supported by the SDK. This feature is controlled by the PD_CTL_STATUS[NO_WPTR] bit.
+      Look at the updated passthrough example (sdk/examples/passthrough/passthrough.c) for
+      an illustration of how to use this feature.
+
+    Bootloader changes:
+    * Sets LMC_PLL_CTL[FASTEN_N] according to specs
+    * BBGW / Triple-play platform: Fixed Flash configuration to access entire 16 MBytes.
+    * BBGW / Triple-play platform: Fixed configuration of on-board switch.
+    * Added experimental TrueIDE mode.
+    * Added basic PCIe support in bootloader.
+    * Allow pci console to be enabled after boot.
+    * Minor cleanup pertaining to not setting deprecated fields of the octeon_boot_descriptor_t
+      structure.
+
+    Toolchain changes:
+    * A bug has been fixed in merge-gcda.  Due to this bug merge-gcda would
+      incorrectly process the command-line options and report an error even in
+      correct cases.
+    * A bug has been fixed in readelf.  Due to this bug readelf would print an
+      incorrect error message "Error: DW_FORM_data8 is unsupported when sizeof
+      (unsigned long) != 8".
+    * Several issues has been resolved with regard to using tools (e.g.,
+      addr2line and gdb) with applications (or kernel) built with -msym32.
+    * The backtrace function is glibc now uses DWARF unwind information to walk
+      the stack frames which allows backtrace to work with optmized code.
+    * Added some symbolic constants for the getaddrinfo in uClibc.
+    * New built-in __builtin_block_prob can be used to provide the compiler with
+      the information of how likely a basic block is.  __builtin_expect is still
+      superior in providing similar information.
+    * GDB can interrupt simple-exec applications as they spin in the default
+      exception handler.
+    * A bug has been fixed in GDB which caused the cross debugger to crash when
+      attempting to connect to a non-existing serial port.
+    * Fixed a bug in Octeon unaligned instructions which had a wrong range in the
+      assembler. Unaligned macros were also miscompiled.
+
+Release 1.8.0
+
+    General changes:
+    * Added support for OCTEON XL EXPRESS 4GE card.
+    * Added support for the XAUI interface.
+    * Added a new "board type" option to oct-pci-boot command.
+
+    Executive changes:
+    * New support for automatic link recovery when a PCIe link goes down.
+    * A new interface, cvmx_pcie_ep_initialize(), is added to setup PCIe in target
+      mode.
+    * A new interface cvmx_dma_engine_transfer() is added to simplify building
+      of DMA engine commands.
+    * A new interface cvmx_dma_engine_get_num() is added for users to determine the
+      number of DMA engines.
+    * Consolidated different versions of byte swap functions from different files
+      into a single new file cvmx-swap.h.
+    * Added a new interface, cvmx_mgmt_port_set_multicast_list() to handle
+      multicast packets and filtering of the packets in PROMISCOUS mode.
+    * Abstracted CF code into cvmx-compact-flash.
+    * Improved MII link initialization code.
+    * New board-specific method of changing PHY settings.
+    * New RSL interrupt decoder.
+    * Preliminary support for HiGig / HiGig2.
+    * Optimization of PKO internal memory use based on number of queues configured.
+    * Change of printf format specifier for 64 bit values.
+    * Uart 1 settings read from the bootloader.
+
+    Bootloader changes:
+    * Added a new md5 hash command.
+    * Reduced the size of the bootloader by not linking unused interfaces.
+    * Added workaround for Broadcom switch IEEE compliance failure.
+    * Added support for enabling the SFP modules on etch 4 nicpro2 boards.
+    * Initialization of management ports is now done early so that the structures
+      that are shared with the OS are properly set up even if the ports are not all
+      used.
+    * Added support of EBH5601, EBH5201 eval boards and Nicpro2, Landbird cards.
+    * A few additional steps are needed to boot the Linux kernel from the current SDK
+      1.8.0 release, using bootloaders from SDK releases 1.5 and 1.6. Bootloaders from
+      SDK 1.7.x releases should not have any problem. The new link address of the Linux
+      kernel conflicts with a memory region used by SDK 1.5 and 1.6 bootloaders for
+      loading an image file. To get around this problem, following steps need to be taken:
+
+      SDK 1.5 Bootloaders:
+
+      # namedfree __tmp_reserved_bootloader
+      # fatload ide0 0 0x21000000 vmlinux.64
+      # bootoctlinux 0x21000000
+
+      [ Note: 0xC000000 can be used instead of 0x21000000 on low memory systems ]
+
+      SDK 1.6 Bootloaders:
+
+      # run nuke_env
+      # setenv octeon_reserved_mem_load_base auto
+      # setenv octeon_reserved_mem_load_size auto
+      # saveenv
+
+      Reset the board and use the usual method for booting the kernel.
+
+    Toolchain changes:
+    * Merged fxstatat Mips specific system call from mainline.
+    * Added SYNCW to pthread_spin_unlock() to improve performance.
+    * Added remap_file_pages syscall to uClibc. Merged from mainline.
+    * The Linux compiler and linker were improved to turn PIC calls which
+      are indirect jumps in general into direct jumps when possible. This
+      reduces the cost of function calls on Linux significantly. The
+      optimization can be disabled with -mno-relax-pic-calls compiler option.
+    * A glibc malloc bug has been fixed which caused malloc in some cases
+      to return 0 when using htlbremap (Huge-TLB remapping library).
+
+Release 1.7.3
+
+    General changes:
+    * Hardware support for CN52XX chip.
+      * Additional UART port
+      * Second MII / management port (mgmt1)
+      * Second USB controller
+      * PCIe support
+    * Updated simulators for all chips.
+    * License for large portions of SDK has been changed to modified BSD.
+      It remains GPL-compatible.
+    * Preliminary support for CN5000-REF-HS5 board
+      (Triple Play Broadband Gateway Reference Platform).
+
+    Bootloader changes:
+    * Support faster memory configuration on NICPro2
+    * More flexible support of different chip revisions.
+    * Added env_addr and env_size environment variables to describe Flash
+      layout. This allows all board macros to be identical.
+    * Support loading Linux at any address (DDR0, DDR1 and DDR2).
+
+    Executive changes:
+    * Added callbacks that allow customers to perform IPD and PKO setup
+      per port without changing Executive helper functions.
+    * Moved reading of PHYs into board-specific function.
+    * USB: Introduced new USB APIs to provide abstraction over USB DWC OTG
+      controller.
+    * CIU: Reworked interrupt handling to support CN52XX.
+    * TRA: Improved trace buffer support.
+    * L2C: Cleaned macros CVMX_L2_ASSOC, CVMX_L2_SETS, CVMX_L2_SET_BITS
+      and added aliases to the functions that provide this information.
+      Users of macros above should switch to the respective functions.
+    * L2C: cvmx_l2c_get_set_bits() is now public.
+    * L2C: Cleaned up partition setting/getting - use number of cores in chip to
+      determine which registers to access, rather than chip model.
+    * L2C: Renamed cvmx_get_l2c_tag to cvmx_l2c_get_tag to match naming
+      convention, added compatibility wrapper.
+    * PCIe: Enabled write-merging for higher performance.
+    * RGMII: Fixed autonegotiation problem on 3010/3100 boards and
+      improved negotiation time by triggering on first packet sent.
+    * PKO: Fixed issue with PKO 3-word command endianess mismatch.
+    * Added support for PCIMG configuration of serial links.
+    * Mgmt port: Fixed setting of MAC address and added proper multicast support.
+
+    Toolchain changes:
+    * Native toolchain contained some include files from host machine
+      that it was built on.  This is fixed now.
+    * An internal compiler error was fixed whereby the compiler was
+      reporting a floating-point exception.
+    * Fixed -mbranch-likely option not to generate illegal bbit1l
+      instruction.
+    * Fixed backtrace in threads not to fail with "Previous frame
+      identical to this frame".
+    * Fixed a mainline linker bug whereby linking simple-exec-on-linux
+      applications could fail with "not enough GOT space for local GOT
+      entries" message.
+    * Backported the fix from mainline to fix an internal compiler error
+      in the induction variable optimization pass.
+    * Added optimization for store-conditional-code instruction to avoid
+      unnecessary extension of the result.
+    * Backported a fix from mainline for a miscompilation in
+      constant-folding.
+    * Fixed the posix_fadvise, posix_fadvise64 and sendfile64 functions
+      in glibc to correctly invoke the corresponding system calls.
+    * Backported a fix from mainline for an internal compiler error in
+      cgraph_decide_inlining_incrementally.
+    * Backported a fix from mainline for a miscompilation where necessary
+      truncation operations could be removed.
+    * Fixed occasional missed optimization in the post-reload load
+      optimization pass.
+    * Fixed the GDB command add-symbol-file to correctly display 64-bit
+      addresses.
+
+Release 1.7.2
+
+    General changes:
+    * Initial support for NB5 board.
+    * oct-pci-boot: Fixed to allow builds on all Octeon models, including CN56XX.
+
+    Bootloader changes:
+    * Fixed networking support for NAC38 board.
+
+    Executive changes:
+    * Performance optimizations for command queues (cvmx-cmd-queue).
+    * Added config define CVMX_PKO_USE_FAU_FOR_OUTPUT_QUEUES to switch between
+      PKO using new command queues and the original FAU tagswitch code.
+      Command queues are used by default.
+    * PKO: Fixed problems with queues above 128.
+      - The setup of queues was incorrect on all CN5XXX models except CN58XX for
+        queues 128-255.
+      - PKO shutdown didn't cleanup queues 128-255 properly.
+    * SGMII: Avoid resetting the SGMII link if already down unless we are in
+      PHY mode. This avoids waiting 10ms for every link that is down.
+    * GPIO: Extended cvmx_gpio_* functions to support maximum number of pins.
+
+    Toolchain changes:
+    * Fixed rare segmentation fault in malloc.
+    * Fixed potential for infinite loop when using dlsym() with RTLD_NEXT.
+
+Release 1.7.1
+
+    General changes:
+    * oct-pci-boot now enables index aliasing.
+
+    Bootloader changes:
+    * Fixed burn_app macros to use env variable for source address so they will
+      work with SDK 1.7 auto placement of reserved blocks.
+
+Release 1.7.0
+
+    General changes:
+    * Hardware support for CN56XX, CN57XX, CN50XX, and CN5000F chips.
+    * Added initial support for the Octeon XL NICPro2 board.
+    * Command line python scripts: Rewrote dwarf debug info loader to be much
+      faster and use far less memory, improved usability with the Linux kernel.
+    * PCI GDB: Translate properly kseg0 and kseg1 uncached memory locations.
+    * New "ejtag" directory containing useful scripts for EJTAG probes. These
+      scripts decode Octeon CSRs into human readable bitfields.
+
+    Executive changes:
+    * Add support for CN57XX, CN56XX, and CN50XX.
+    * Add new env-setup options "--checks" and "--nochecks" to enable and
+      disable extra sanity checks in the CVMX files. Checks have been added
+      on various parameters, POW state consistency, CSR address range checking,
+      and CSR/chip matching.  The default is no checking, but IT IS
+      STRONLY RECOMMENDED THAT CODE BE COMPILED AND TESTED WITH THE
+      CHECKS ENABLED.
+    * The simple executive files are now dual licensed - either the Cavium
+      proprietary license or the GPL may be chosen.
+    * The gpl-executive directory has been removed and deprecated.  A link is provided for
+      compatibility, and this link will be removed in the next release.
+    * The target/include/open-license directory has been removed and is deprecated.
+      A compatibility link is provided, and this link will be removed in the next release.
+    * Fix endian swap macros to properly handle their multiple ASM statements
+      by wrapping them in a do/while(0) loop.
+    * Mark cvmx_get_proc_id() as a pure function to improve optimization.
+    * Add interrupt disable/restore functions.
+    * Disable interrupts when reading L2C tag data. Implement core of L2C tag
+      data read in ASM to ensure no extra loads occur during debug mode.
+    * Add -g for debugging on assembly files
+    * Clean up lots of include file handling to make CVMX code more portable.
+      Most all system includes are handled by cvmx-platform.h.
+    * Create a helper based common way to handle auto negotiation and board
+      specific network based tweaks.
+    * Remove deprecated sysinfo fields: chip type/version, spi_clock_hz.
+    * cvmx-cmd-queue now provides a unified method of building Octeon command
+      queues. All hardware units using command queues now use this code. This
+      include PKO. See the documentation for cvmx-pko.h and cvmx-cmd-queue.h
+      for more information.
+    * CN56XX: Added PCIe initialize code.
+    * CSR: cvmx-csr-db* has new features for supporting getting CSR lists and
+      decoding CSRs. These can make debugging CSR setting much easier.
+    * CSR: Rename CVMX_SMI_* to CVMX_SMIX_* so all chips use the same names. Add
+      typedefs and address defines for backwards compatibility.
+    * CSR: Rename the TWSI CSRs for all chips to be CVMX_MIO_TWSX_* instead of
+      CVMX_MIO_TWS_*. This provides better compatibility between older Octeon
+      chips and CN56XX along with future chips. Defines and typedefs were
+      added to maintain backwards compatibility.
+    * CSR: Rename LMC_* to LMCX_* for all memory controller CSRs. Also consolidate
+      WODT typedefs. Add compatibility macros and typedefs.
+    * PKO: Shutdown now also performs a PKO reset.
+    * PKO: PKO now has a 3 word command submit function.
+    * PKO: Add CN56XX PKO rate limiting functions.
+    * PKO: Change PKO locking flag to an enumeration. Support no locking, atomic
+      tags locking, and command queue locking. The enumeration value for atomic
+      tags is 1 to maintain maximum backwards compatibility.
+    * POW: Modify POW function cvmx_pow_tag_sw_wait() to print a warning when a tag
+      switch takes long enough that we might get a DID timeout.
+    * cvmx-interrupt incorrectly reported the $SP register in crash dumps.
+    * cvmx-helper-util.c: Fix cosmetic bug where dynamic short packets might
+      show the wrong FPA pool.
+    * Add support for the new RAID and DMA units in CN57XX and CN56XX.
+    * Add cvmx-mgmt-port for controlling the CN57XX and CN56XX 10/100
+      management port.
+    * Add cvmx-mdio for functions related to SMI/MDIO access to PHYs.
+    * cvmx-pci.h: Remove outdated NPI structures. Refer customers to the Octeon
+      PCI NIC driver.
+
+    Bootloader changes:
+    * Important: when updating to this bootloader, you _must_ make sure
+      you erase your enviroment and start with the default provided in
+      the new bootloader. Use the 'run nuke_env' command to erase
+      the environment.  (Newer bootloaders do this automatically on
+      upgrade, but older ones will not.)
+    * Make auto placement and size of bootloader reserved memory blocks
+      the default.  Please refer the the 'memory map' section of the
+      bootloader documentation page for more information.
+    * The XI (execution inhibit) bit is set for simple executive applications'
+      stack, heap, data, and cvmx-shared TLB mappings.  This will cause a TLB
+      exception to be generated if any instructions are attempted to be executed
+      from those memory areas.
+    * Print out chip/board information to PCI console when booted in PCI
+      console mode. This information is printed out the serial port before
+      the PCI console is setup.
+    * Reduce size of failsafe bootloaders so that the fit in the flash
+      allocated.
+	* Properly conditionalize PCI console support, and remove from failsafe
+	  images.
+	* Conditionalize gunzip support and revmoe from failsafe images.
+	* Remove unused code in cmd_bootm.c from all images
+      This results in about a 20K byte reduction in failsafe image size.
+    * Set aside board type enumeration range for customer internal use.
+    * U-boot now depends on CVMX files for many hardware tasks.
+    * cn3020_evb_hs5 board type is deprecated.  All CN30XX, CN50XX,
+      and CN5000F parts are supported on the cn3010_evb_hs5 board.
+
+    Toolchain changes:
+    * Support for GCC 3.4.5 has been deprecated.
+    * The linux toolchain (mips64-octeon-linux-gnu) contains only the header
+      files that are expected to be used for Linux user space applications.
+      The header files used for building the kernel are removed.
+    * The BFD format used by the simple-exec toolchain has been changed for
+      EABI (the default ABI in the Simple Executive).  Earlier SDKs used
+      elf32-bigmips and we now use elf32-tradbigmips.  This change should have
+      little user-visible effect.  However, in case you use a custom linker
+      script, the OUTPUT_FORMAT section of your linker script would need
+      updating.  Refer to the built-in linker script for an example
+      (mipsisa64-octeon-elf-ld --verbose).
+    * Simple-exec backtrace support no longer requires compiling with
+      -fexceptions.  See the documentation for more information.
+    * New compiler switch -mno-madd was added to disable generation of the
+      MADD and MSUB instructions.  These instructions are not pipelined so
+      given enough independent multiply-and-add operations using
+      Octeon-specific three-operand MUL and ADDU can result in better
+      performance.
+    * GNU binutils was upgrade to version 2.17.
+    * A new variant of gdbserver is provided that works when debugging uClibc
+      applications.  For more information refer to the documentation.
+    * memcmp was optimized to use Octeon unaligned load instructions in the
+      unaligned case.
+    * Simple-exec's GDB was extended to unwind through the first exception
+      frame.  This way one can investigate the code that caused the exception.
+
+Release 1.6.0
+
+
+    General changes:
+    * Licenses for large portions of the SDK have been updated.  The
+      license texts are in the licenses directory and all affected files
+      indicate which license applies to them.
+
+    Executive changes:
+    * Added support for CN58XX hardware.
+    * Improved support for CN56XX simulation.  CVMX helper reorganization
+      to better support the new interfaces on the CN56XX.
+    * GPL version of simple executive now included in SDK.
+    * Deprecated board name compatibility macros have been removed (as
+      indicated in SDK 1.5.0 release notes.)
+    * Lockless PKO output supported on CN58XX with 1 queue per core per
+      port.
+    * cvmx_atomic* now support CN58XX Store Atomic Add (SAA/SAAD)
+      instructions.
+    * Default exception handler includes a backtrace.
+
+    Toolchain changes (in the GCC 4.1.x-based toolchain, also for more information
+      refer to the "GCC 4.1 Upgrade Guide" in the SDK documentation):
+    * GCC was upgraded to 4.1.2.
+    * Profile-feedback optimization is now supported on simple executive too.  A new
+      utility (merge-gcda) is provided to merge profile data across different cores or
+      different training sessions.
+    * New optimization pass in GCC to merge constant bit-field stores.
+    * Logical operations with bitmask constants are now optimized into bit-extraction
+      and bit-insertion.
+    * Value-range propagation pass was extended to handle bit-wise OR operation.
+    * Average 3-5% preformance improvement across simple-exec applications.
+    * New API is provided to print backtrace from simple-exec programs.
+    * Linux toolchain supports mudflap, a pointer use checking tool.
+    * GCC Linux option -mno-shared was backported from mainline GCC.  New option
+      -mstatic improves the effectiveness of -mno-shared for static linking.
+    * Watchpoints and performance counters are now local to each core.
+    * GDB now uses DWARF-2 unwinder for more accurate backtraces.
+    * Number of bugs have been fixed in the GDB for the simple executive.
+    * Backported the objdump option --extract-symbol from mainline binutils.
+
+    Bootloader changes:
+    * Added environment variables to configure the location/size of the two reserved memory
+      regions created by the bootloader.  The address 0x210000000 should no longer be used
+      for loading large images.  The u-boot environment variables octeon_reserved_mem_load_base and
+      octeon_reserved_mem_load_size should be set to 'auto'.  This will allocate a larger reserved
+      block for loading images at an address and size based on the memory size of the board.
+      Please refer to the bootloader documentation page for more information.
+      This auto placement of the load reserved memory block will be the default behavior for SDK 1.7.0.
+      IMPORTANT:  If the location of the reserved block for application loading is moved, then the
+      environment on that board must erased (with the nuke_env macro) and the default environment
+      compiled into the new bootloader must be saved with the 'saveenv' command.  If this is not done
+      then macro commands, including the bootloader_flash_update command, will not function properly.
+    * The 'bootloader_flash_update' command now also erases the environment.
+    * Added support for CN58XX chips and EBT5800 board
+    * Enabled automatic fan speed control for Asus NAC38 boards.
+    * Bootloader temporary and Linux reserved blocks are now controlled by
+      environment variables. (Falls back to deprecated compile time constants
+      in this release.)
+    * u-boot is now built against the GPL version of the executive.  This replaces
+      the portions of the executive that were copied into u-boot.
+    * U-boot now supports PCI console when Octeon is a PCI target.
+    * Fix memcpy alignment that can cause traps when gunzipping from flash. (Bug #1177)
+    * Watchdog timers are now disabled on boot.
+    * All Octeon model checks are now runtime.  If boards support multiple Octeon models,
+      only a single bootloader image is used to support both configurations.
+    * Fix TFTP block size negotiation. (Bug #1113)
+    * Fix DHCP option processing bug (Bug #1063)
+    * Fix gunzip output buffer size handling. (Exact output buffer size now supported.)
+
+
+Release 1.5.0-p1
+
+	* Enabled L2C ECC error correction.
+
+Release 1.5.0
+
+    General changes:
+        * Dropped support for CN38XX pass 1
+        * Add simulation support for CN58XX and CN56XX
+	* Consolidated env-setup* scripts.  There is now
+	  1 script for setting up the environment required
+	  by the SDK: env-setup.  It takes the OCTEON_MODEL as an
+	  argument and can enable runtime model checking with the
+	  --runtime-model option.  The previous env-setup.bash and env-setup.csh
+	  scripts have been removed.  Please refer to README.txt for more information.
+	* Due to RPM limitations RPM-upgrade from earlier SDK versions is not supported.
+	  Before installing the SDK RPM you need to remove the earlier version with rpm -e
+	  first.
+
+    Executive changes:
+        * Added support for runtime model checking that allows a binary
+	  to run on all supported Octeon models (both simulation and on hardware.)
+	  To enable this, run the source the env-setup script with the --runtime-model
+	  option.  The runtime model detection is the preferred method, and will be the
+ 	  default in the next SDK release.  The OCTEON_MODEL environment
+	  variable is still required to be set, and still selects which simulator
+	  will be used.  If runtime detection is not enabled, there is no change
+	  in behavior from previous releases.  Compile time detection is still the default
+	  since this matches previous behavior, however future releases will default
+	  to runtime model detection.
+	* Removed the OCTEON_MATCH_MODEL macro and added OCTEON_IS_MODEL()
+	  macro/function to differentiate between different
+	  Octeon models and revisions.  IMPORTANT: If you have written code that uses
+	  OCTEON_MATCH_MODEL or uses the OCTEON_CNXXXX defines in octeon-model.h you will
+	  need to adjust your code to use OCTEON_IS_MODEL.  This change was necessary to properly
+	  support the growing number of Octeon models.
+	* The cvmx-csr* files have been reorganized to support the runtime model
+          detection.
+	* Board type names ending in _TYPE are deprecated, and compatibility macros
+	  will be removed from the 1.6.0 release.  Please update any programs using
+	  the old names to the current names defined in cvmx-app-init.h.
+	* The name of the Asus motherboard has been change from the NAO38 to the NAC38.
+	* Printfs in the executive can be disabled by defining CVMX_CONFIG_ENABLE_DEBUG_PRINTS
+	  to 0 in the programs executive-config.h file.
+
+
+
+    Toolchain changes:
+        * Two complete toolchains are provided as part of this SDK.  One is based on
+          GCC 3.4.5 and the other on GCC 4.1.1.  After installation the default is
+          GCC 4.1.1.  For more information, refer to the "GCC 4.1 Upgrade Guide" in
+          the SDK documentation.
+	* When the instruction set was switched with the .set assembly directive to
+	  an architecture that does not support MIPS32r2 and MIPS64r2, the
+	  assembler used to still accept MIPS32r2 and MIPS64r2 instructions.  This
+	  is fixed in both toolchains now.
+	* The CVMX_SHARED macro is now implemented as a new GCC attribute rather
+	  than a named section attribute.  This way uninitialized data does not
+	  take up space in the executable image.
+
+    Bootloader changes:
+    	* Added IDE and SATA disk support for the ASUS NAC38 board.
+	* Improved TFTP boot speed by increasing packet size.
+	* SPI per-port backpressure workaround added
+	* CN3005 support added
+	* Increased application size now supported
+	* RGMII ports now disabled after TFTP boot
+
+Release 1.4.0
+
+    General changes:
+        * Add support for CN3010 and CN301-EVB-HS5 evaluation board.
+
+    Executive changes:
+        * The 18 and 36 bit llm read/write functions have been renamed
+	  wide and narrow.  The following functions are deprecated and
+	  are planned to be removed from the next SDK release:
+	  cvmx_llm_write36, cvmx_llm_read36, cvmx_llm_write18,
+	  cvmx_llm_read18.  The functions cvmx_llm_*_narrow,
+	  cvmx_llm_*_wide have replaced them and support the narrow
+	  and wide widths on both the CN38XX and CN31XX.
+	* Code that sets CVMX_HELPER_ENABLE_IPD to 0 must now use
+	  cvmx_helper_ipd_and_packet_input_enable() instead of
+	  cvmx_ipd_enable().  The RGMII and SPI interface enables must
+	  be done after the IPD enable.
+	* NULL pointer protection now enabled - previous release had
+	  support but bug prevented it from being enabled.
+	* Improved time() and gettimeofday() support: time keeping now
+	  properly scaled based on CPU clock.
+	* Fixed bug in cvmx-malloc arena handling that allowed arenas
+	  with invalid sizes to be created.
+    U-boot changes:
+    	* Added 'console_uart' environment variable for controlling
+	  the uart used for the console by u-boot, simple executive
+	  applications, and Linux.
+	* Better core cycle counter synchronization at boot time on
+	  CN38XX pass 2 and CN31XX chips.
+	* Improved network hardware reset that supports all boards.
+	* Added support for Asus NAO38 motherboard.
+
+
+
+
+Release 1.3.1
+
+    Executive changes:
+    	* Save hi and lo registers on exceptions
+	* Add 'speed' field for CN31XX zip engine
+	* Fix use after free error in cvmx_helper_free_packet_data()
+	* Add SYNCWS to cvmx_fpa_free() to ensure that writes to memory
+	  complete before buffer is freed.  Add cvmx_fpa_free_nosync()
+	  function which does not perform the sync.
+	* Add SYNCWS to cvmx_helper_fix_ipd_packet_chain() to ensure
+	  that writes to memory are visible before potential free of packet.
+	* Fix octeon_phy_mem_named_block_find() for n64 Linux
+
+
+    Toolchain changes:
+    	* non-simple executive applications now install default exception
+	  handlers so that 'TRAP' is not displayed on the LED display
+	  on normal exit.
+
+    U-boot changes:
+	* Add support for 533 Mhz DDR on ebh3100 evaluation board.
+	* Fix TLV write checksum error
+	* Added link status change polling for RGMII interfaces
+	* Added support for Hikari board
+
+Release 1.3.0
+    Executive changes:
+        * OCTEON_REVISION renamed OCTEON_MODEL
+        * Support for CN31XX and EBH3100 board
+	* low latency memory support for multiple boards. cvmx_llm_initialize_desc()
+	  takes an (optional) argument, and its returns the number of bytes of llm
+	  available. The existing cvmx_llm_initialize() is still provided as a
+	  compatibility wrapper.
+	* L2 cache locking and partitioning support.
+	* Added NULL pointer detection by leaving low 1Mbyte of DRAM unmapped
+	  for simple executive applications.  Can be disabled use of
+	  CVMX_CONFIG_NULL_POINTER_PROTECT #define in executive-config.h
+	* Now 1-1 map all installed memory for simple executive applications.
+	* fixed DRAM size reporting bug, now interprets value from bootloader
+	  as Mbytes (rather than bytes.)  Note that using 1.2.0 applications on a
+	  1.3.0 bootloader will cause the memory size to be reported to the application
+	  incorrectly.  New applications will run properly on old bootloaders.
+	* Added example code to write flash memory.
+	* Use SYNCWS instructions on pass2 where possible.  (Requires bootloader
+	  from 1.3.0 to be effective.)
+	* Programs compiled for pass2 no longer run on pass 1 silicon.
+
+    Toolchain changes:
+	* The compiler can optimize away unnecessary truncations (SLL X,0,0).
+	* The compiler now generates CINS, CINS32 instructions.
+	* POP and DPOP instructions are generated for the popcount built-ins.
+	* Added newlib info pages.
+	* Upgraded compiler to gcc-3.4.5 release.
+
+    U-boot changes:
+    	* Code cleanup and reorganization to better support multiple boards.
+    	* Support for new boards: EBH3100 and Thunder NIC.  16 bit compactflash
+	  interface used on EBH3100
+	* Improved DRAM autoconfiguration.
+	* added MII commands for communicating with Phys and switches
+	* Fixed bug where some larger simple executive programs would
+	  not run multicore
+	* Fixed bootoctelf to support multiple cores.  Exception base now
+	  set to 0 to make more compatible with existing programs.
+	* added 'disable_networking' and 'disable_spi4000' environment variables
+	  so that networking or just the spi4000 support can be disabled in u-boot.
+	* eeprom tuples updated - new clock descriptor for EBH3100 board, chip type/version
+	  fields in board descriptor deprecated.
+	* u-boot environment is now passed to application in named memory block.
+	* fixed DRAM size reporting bug, now passes Mbytes instead of bytes to application
+	* Marks stack/heap and local data TLB entries for simple executive applications
+	  for use with SYNCWS instructions.
+	* gunzip support added.
+
+    Build changes:
+        * OCTEON_REVISION changed to OCTEON_MODEL.
+
+Release 1.2.0
+
+    New Features:
+	* PCI utilities in host/pci directory.  These support PCI boot,
+	  CSR and memory access, and giving bootloader commands over PCI.
+	* Added new example traffic-gen. See the readme in examples/traffic-gen.
+	* Support Octeon Pass 2:
+		* Add warning if SW and HW mismatch.
+		* Add support for static priority PKO queues.
+		* Change 36 bit write swapping to only swap for pass 1 silicon.
+		* Disable PKI-12 and half duplex workaround for non Pass 1 chips.
+		* Add support for custom packet headers.
+		* Add signature string for pass 1/2 compilation.
+		* Add cvmx_pip_tag_mask_* functions.
+	* Support debugging CVMX apps over uart 0.
+	* Viewzilla - Add location and delta for marked location.
+
+    Bootloader changes:
+	* Added support for DHCP and TFTP.  NOTE: This will only work
+	  properly on pass2 silicon.  On pass 1 silicon, the bootloader
+	  networking will work properly, but the packet IO blocks cannot
+	  be reset so later programs that use packet IO or the FPA will not
+	  function properly.
+	* Added bootoctelf for booting vxworks images.
+	* Simple exec. private memory (stack, heap, data segment) now
+	  marked for use with new SYNC variants in pass 2.
+	* Added octeon_ebt3000_pci_config configuration for supporting
+	  PCI boot of Octeon.
+	* Auto DRAM config based on SPD eeprom.  64 Bit memory now
+	  detected and supported.
+	* Cleaned up includes to only include open license portions
+	  of the simple executive.
+
+    Executive changes:
+	* Improved C++ support.
+	* The EBT3000 LED write functions ebt3000_write_str() and ebt3000_write_char()
+	  have been moved to the ebt3000 specific files cvmx-ebt3000.[ch].
+	* cvmx-sysinfo.h is no longer included by cvmx.h, so applications will
+	  need to include this explicitly.
+	* Improve interrupt initialization for all cores
+	* Cleanup cvmx-bootmem. Divide it into a proprietary part and a open
+	  license part.
+	* Create include directory target/include/open-license. All files in this
+	  directory can be modified and redistributed freely.
+	* Add O32 version of cvmx_get_cycle().
+	* Add enumeration of interrupt numbers.
+	* Added checks if PIP, IDP, FPA, or PKO	are enabled twice.
+	* Bug fixes in the TIM support routines.
+	* Skip LLM config in the simulator.
+	* Added mf/mt COP0 CVMCTL macros.
+	* Fix arguments to cvmx_pip_config_crc.
+	* Many documentation updates.
+
+    Build changes:
+    	* Added ASSEMBLE variable in addition to COMPILE variable to
+	  allow different options for assembly files.  Currently the
+	  ASSEMBLE variable has the same value as COMPILE.
+
+Release 1.1.0
+
+    Build changes:
+    	* Removed TARGET_SIM define - there are no longer any compile
+	  differences between building for the simulator or hardware.
+	* Added OCTEON_TARGET to build for n32 and EABI ABIs.
+
+    API changes:
+	* Added hardware random number generator support in cvmx-rng.h.
+	* Added reader/writer lock implementation in cvxm-rwlock.h.
+	* Added cvmx_pow_tag_sw_full() function, must be used from
+	  tag switches away from a NULL tag.
+	* Added functions for allocating named bootmem blocks.  See
+	  the executive documentation and bootloader documentation
+	  for details.
+	* added compare_and_store() operations to cvmx-atomic.h
+	* added  cvmx_bootmem_available_mem() function to return the amount
+	  of available memory.
+	* removed the function cvmx_get_num_cores(), which returned the count
+	  of physical cores from the FUSE register.  This functionality can
+	  be achieved with the code cvmx_dpop(cvmx_read_csr(CVMX_CIU_FUSE)).
+	  Typically applications are more interested in the number of cores
+	  running the application, which is provided by the coremask in the
+	  cvmx_sysinfo_t structure.
+
+    Executive changes:
+	* All options must now be set in executive-config.h.  Unset options
+	  will result in a build failure rather than a default being used.
+	  See the new executive-config.h.template.  All applications must
+	  be updated in order to use SDK 1.1.0.
+	* More config options now in executive-config.h such as input tag
+	  type, input fields for tag computation, input skip mode.
+	* Fix bugs cvmx-atomic.h - 64 bit operations now use 64 bit adds; change
+	  to 'unsigned' adds to prevent overflow traps.
+	* Backpressure (pause frames) are now disabled by default when
+	  using the cvmx_helper functions.
+
+
+
+    Example changes:
+	* Added message queue example
+	* Added mailbox example showing how to use mailbox interrupts for
+	  inter-core communication.
+	* Check for and drop packets with receive errors in example programs.
+	* Updated to use OCTEON_TARGET to build for n32 and EABI ABIs.
+
+
+    Bootloader changes:
+	* Moved stack/heap virtual address to just below 0x20000000 to
+	  support n32 ABI.  The bootloader must be updated on EBT3000 boards
+	  in order to support n32 simple executive applications.
+    	* Added commands for allocating and freeing named bootmem blocks.
+	* Memory in the 1meg - 16meg range is now reserved with a named
+	  bootmem block and returned to the bootmem allocator for use
+	  by the application when the application starts.
+	* Memory for the Linux kernel (up to 32 megabytes) is now reserved
+	  so that simple executive applications can be loaded before the
+	  kernel.  This memory is freed for application use if Linux is
+	  not loaded.
+	* Fixed checking of POW_BIST register - previously some BIST
+	  failures were ignored.
+	* Fixed simulation bug with 2 gigabytes or more of memory.
+	* Fixed 400 Mhz DDR2 support for rev 2.1 and rev 3 EBT3000 boards.
+
+
+    Toolchain changes:
+	* Updated compiler to gcc-3.4.4 and ddd (the GUI debugger) to 3.3.11.
+	* Added libraries to build 32-bit Simple Exec applications, using
+	n32 ABI.
+	* Added Linux native toolchain (both n32/n64 ABI) to build Linux
+	User Space applications.
+	* Includes Linux cross debugger (mips64-octeon-linux-gnu-gdb) to debug
+	Linux user space applications using gdbserver.
+	* Includes gprof - to profile Linux user space applications to find
+	where does it spend its time.
+
+
+Release 1.0.0
+
+	* Fixed BIST error checking code in bootloader and executive.
+	  Now only BIST failures are reported, previous versions reported
+	  repair information.
+	* LLM configuration at 500 Mhz fixed.
+
+
+    Content changes:
+    	* DFA example removed from base SDK, now part of DFA package
+	* Added file cvmx-lmc.h for lmc register defines.
+	* Added file cvmx-app-init.h, defines structure which
+	  bootloader uses to pass board information to application with.
+	* Split executive-config.h into two files -
+	  executive-config.h and d cvmx-resources.config.
+	  executive-config.h is per application, and the
+	  cvmx-resources.config defines the resources used
+	  by the executive.
+	* HTML documentation main page is now table of contents.
+
+
+    Bootloader changes:
+	* added numcores option to bootoct and bootoctlinux commands
+	  to boot a specified number of cores from the working coremask
+	* added mode to erase command to erase based on size, rather
+	  than start/end.
+	* Move passing of board/setup parameters from the boot_info_block_t
+	  structure defined in octeon-app-init.h (in toolchain) to
+	  cvmx_bootinfo_t structure defined in the simple executive.
+	* bootoctlinux now always takes an ELF address argument, there
+	  is no longer a default.
+	* bootoct now returns to prompt on ELF parsing error.
+
+    API changes:
+	* removed wqe argument from cvmx_pow_tag_sw_nocheck(),
+	  cvmx_pow_tag_sw(), cvmx_pow_tag_sw_desched_nocheck(),
+	  cvmx_pow_tag_sw_desched() functions.  If a work queue entry
+	  is associated with a tag switch, it is up to the application
+	  to update the tag field in the WQE if required.
+	* Changed cvmx_pko_initialize() to cvmx_pko_initialize_global(),
+	  and added cvmx_pko_initialize_local().  The global version does
+	  chip wide initialization, and should only be run once on one
+	  core.  The local version does core local initialization, and
+	  should be run once on each core.  The local initialization
+	  function replaces the following code that previously did the
+	  local initialization explicitly:
+          cvmx_fpa_async_alloc(CVMX_SCR_OQ_BUF_PRE_ALLOC, CVMX_FPA_OUTPUT_BUFFER_POOL);
+	  CVMX_SYNCIOBDMA;
+	* The packet output function cvmx_pko_send_packet2() has been
+	  changed to cvmx_pko_send_packet_finish().  Also, the function
+	  cvmx_pko_send_packet_prepare() has been added.  This function
+	  must be called before the _finish() function is called.  The
+	  _prepare function replaces the following code in existing
+	  applications:
+	  cvmx_pow_tag_sw(work, work->ipprt, CVMX_POW_TAG_TYPE_ATOMIC);
+	* Some tag values are now reserved for use by the simple
+	  executive.  See cvmx-pow.h for details.
+	* all examples have been updated to reflect these changes.
+	* LLM address type changed to structure, as address includes
+	  replication value.
+
+
+Prerelease 0.9.1
+        * enhanced bootloader, supports eeprom setting and autodetect of
+	  some ebt3000 board configurations.  provide backup bootloader
+	  in case of failed bootloader update.
+	* enhanced compiler code generation for Octeon.
+	* added static libraries to Linux toolchain for n32 (was only n64).
+	* added shared libraries support to Linux toolchain (n32/n64).
+	* added C++ libraries to Linux toolchain.
+	* improved simple executive interrupt & exception handling.
+	* added native Linux user space debugger (gdb).
+	* Linux toolchain has been renamed from mips64-octeon-linux-* to
+	  mips64-octeon-linux-gnu-*.
+
+Prerelease 0.8.5
+        * initial support for ebt3000 evaluation boards (hardware).
+        * updated simple executive to work on ebt3000 board (bringup).
+        * enhanced simple exec debugger to support performance counters,
+          hardware watchpoint, and multicore hardware breakpoints.
+        * added support for RGMII and SPI4.2 interfaces on ebt3000 board.
+	* updated DFA example with compiled-in graph and multicore support.
+	* updated simple exec to build with g++ cleanly.
+
+Prerelease 0.8.0
+	* new cvmx-config tool for automatic integration and generation of
+	  system-wide resource requirements.
+	* libcvmx.a now requires cvmx-config.h (generated by cvmx-config tool)
+	  to build.
+	* debugger stub moved into bootloader from simple executive.
+	* moved basic application initialization to toolchain from simple
+	  executive.
+	* added vz-cut utility for copying a range of cycles from a
+	  viewzilla output file into a new file.
+	* examples updated for new build system.
+
+Prerelease 0.07
+	* simulator now simulates PCI, ZIP blocks.
+	* updated bootloader to support:
+		- multiple application images, refer to application-args
+		  example.
+		- booting linux multicore.
+	* updated compiler to gcc-3.4.3 release, binutils to binutils-2.15
+	  release and debugger to gdb-6.3 release.
+	* the compiler is configured to generate gp_rel code for variables
+	  whose size is less than 8.
+	* added hardware breakpoints in debugger.
+	* the toolchain supports tools for both elf and linux targets.
+	* the linux target tools support compilation of user space
+	  programs.
+	* viewzilla visualization tool enhancements - improved performance
+	  and source display
+
+Prerelease 0.06
+	* Same as prerelease 0.05 with some bug fixes.
+	  - L1 Icache in simulation is no longer disables.
+	  - changed interrupt handler stub to handle interrupts and exceptions
+	    properly.
+	  - added some changes to handle IOB access.
+
+Prerelease 0.05
+	* OCTANE_ROOT to OCTEON_ROOT change.
+	* added uart interrupt and crypto examples.
+	* added CSR information for IOB, FPA, IPD, PIP, CIU,
+	  LLM, ASX, GMX, and DFA.
+	* toolchain name changed to mipsisa64-octeon-elf-*. Now the toolchain
+	  generates DWARF-2 debugging information and EABI ABI code.
+	* support C++ run time library.
+	* added lot of new features to debugger
+	  	free up core 0 for program use
+	  	allow debugging in either perf or noperf mode
+	  	support up to 16 cores.
+	* the toolchain contains ddd, the GUI debugger.
+	* new bootloader, u-boot is used for booting of operating system on
+	  the simulator in place of elf-loader.
+	* new bootloader, debugger are part of simple executive.
+	* added enhancements in the simulator to perform more cycle accurate
+	  results and generates assertion messages with more details.
+	* simulator now waits for UART connection if a port is supplied.
+	* use of oct-sim script to invoke simulator is now required, as it
+	  sets up environment for u-boot.
+
+Prerelease 0.04
+	* updated passthrough example
+	* updated pipeline sample
+	* toolchain updated to include gdb debugger
+	* added debugger example
+	* changed SDK directory structure
+	* removed examples other than hello, pipeline, passthrough
+		from the base SDK release.  These are now packaged
+		separately.
+	* removed genpt utility program
+	* added boot_reset to elf-loader directory to support booting of
+		operating systems on the simulator
+
+Prerelease 0.03
+	* Updated firewall example
+	* added switch-perf benchmark
+	* added tcp code
+
+Prerelease 0.02
+	* Updated toolchain, no longer uses cvmpp_gcc wrapper script.  Now
+	       	mips64-cvmpp-elf- is the cross compile prefix (compiler
+		is mips64-cvmpp-elf-gcc), and all necessary options for
+		Octeon are the default.  All example Makefiles have been
+		updated.
+	* The packet output setup has changed since the previous release.
+		All the examples have been updated.
+	* A pipelined processing example has been added.
+
+Prerelease 0.01
+	Initial release

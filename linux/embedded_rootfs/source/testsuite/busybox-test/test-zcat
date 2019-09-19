@@ -1,0 +1,9 @@
+#!/bin/sh
+source ./functions.sh
+
+assert echo created to test zcat > $0.log
+assert gzip -c $0.log > $0.gz
+assert zcat $0.gz | grep -q "`cat $0.log`"
+require [ $? = 0 ]
+assert zcat $0.gz | grep -q "zcats"
+require [ $? = 1 ]

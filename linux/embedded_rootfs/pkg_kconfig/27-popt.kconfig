@@ -1,0 +1,14 @@
+config CONFIG_popt
+	bool "libpopt"
+	requires CONFIG_octeon-libraries-64 || CONFIG_octeon2-libraries-64
+	default y
+	help
+		From the popt homepage:
+		The popt library exists essentially for parsing command line
+		options. Some specific advantages of popt are no global
+		variables (allowing multiple passes in parsing argv), parsing
+		an arbitrary array of argv-style elements (allowing parsing of
+		command-line- strings from any source), a standard method of
+		option aliasing, ability to exec external option filters, and
+		automatica generation of help and usage messages.
+

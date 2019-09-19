@@ -1,0 +1,52 @@
+The fix consists in adding an automake conditional variable
+HAVE_DOCBOOKTOMAN, which is defined when docbook-to-man has been
+found. This variable is used in the Makefile.am to enable or disable
+the construction of the manpages.
+
+Signed-off-by: Thomas Petazzoni <thomas.petazzoni@xxxxxxxxxxxxxxxxxx>
+---
+ Makefile.am  |    7 ++++++-
+ configure.ac |    7 +++----
+ 2 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 6f83c12..9438350 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -39,7 +39,12 @@ modindex_LDADD = $(LDADD) libmodtools.a
+ MAN5 = modprobe.conf.5 modules.dep.5 depmod.conf.5 modprobe.d.5
+ MAN8 = depmod.8 insmod.8 lsmod.8 rmmod.8 modprobe.8 modinfo.8
+ SGML = $(addprefix doc/,  $(MAN5:%.5=%.sgml) $(MAN8:%.8=%.sgml))
+-dist_man_MANS = $(MAN5) $(MAN8)
++
++if HAVE_DOCBOOKTOMAN
++MANPAGES  = $(MAN5) $(MAN8)
++endif
++dist_man_MANS = $(MANPAGES)
++
+ # If they haven't overridden mandir, fix it (never /man!)
+ mandir =$(shell if [ @mandir@ = $(prefix)/man ]; then if [ $(prefix) = / ]; then echo /usr/share/man; else echo $(prefix)/share/man; fi; else echo @mandir@; fi)
+ 
+diff --git a/configure.ac b/configure.ac
+index 163148e..ab16c96 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -29,13 +29,12 @@ fi])
+ AC_PROG_CC
+ AC_PROG_RANLIB
+ 
+-AC_CHECK_PROGS(DOCBOOKTOMAN, docbook-to-man docbook2man, [no],)
+-if test x"$DOCBOOKTOMAN" = xno
++AC_CHECK_PROGS(DOCBOOKTOMAN, docbook-to-man docbook2man)
++if test x"$DOCBOOKTOMAN" = x
+ then
+ 	AC_MSG_WARN([docbook2man not found])
+-	# fail with a meaningfull error if $DOCBOOKTOMAN called by the makefile
+-	DOCBOOKTOMAN=docbook2man
+ fi
++AM_CONDITIONAL([HAVE_DOCBOOKTOMAN], [test "x$DOCBOOKTOMAN" != "x"])
+  
+ # Delay adding the zlib_flags until after AC_PROG_CC, so we can distinguish
+ # between a broken cc and a working cc but missing libz.a.
+-- 
+1.7.0.4

@@ -1,0 +1,15 @@
+config CONFIG_tcpdump
+	bool "tcpdump"
+	select CONFIG_libpcap
+	default y
+	help
+		From the tcpdump man page:
+		Tcpdump  prints  out  the  headers of packets on a network
+		interface that match the boolean expression.  It can  also
+		be  run  with  the  -w  flag,  which causes it to save the
+		packet data to a file for later analysis, and/or with  the
+		-b  flag, which causes it to read from a saved packet file
+		rather than to read packets from a network interface.   In
+		all cases, only packets that match expression will be pro­
+		cessed by tcpdump.
+	

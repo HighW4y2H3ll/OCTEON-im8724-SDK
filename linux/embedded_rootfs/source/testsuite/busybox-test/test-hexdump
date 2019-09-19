@@ -1,0 +1,13 @@
+#!/bin/sh
+source ./functions.sh
+echo WELCOME TO WORLD > $0.log
+assert hexdump -b $0.log > /dev/null
+hexdump -c $0.log | grep -q "W   E   L   C   O   M   E       T   O       W   O   R   L   D"
+require_good
+hexdump -c -s 3 $0.log | grep -q "W   E"
+require [ $? -eq 1 ]
+hexdump -n 4 -c $0.log | grep -q "T   O"
+require [ $? -eq 1 ]
+hexdump -n 4 -c $0.log | grep -q "W   E   L   C"
+require_good
+assert hexdump -C $0.log | grep -q "00000010  0a"

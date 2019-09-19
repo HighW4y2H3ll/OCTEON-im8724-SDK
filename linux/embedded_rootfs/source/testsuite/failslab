@@ -1,0 +1,40 @@
+#!/bin/sh
+
+FAILTYPE=failslab
+module=$1
+
+if [ -z $module ]
+then
+	echo "Usage: $0 <modulename>"
+	exit 1
+fi
+
+if [ ! -d /sys/kernel/debug/$FAILTYPE ]
+then
+	echo 'debugfs is not mounted, do: mount -t debugfs none /sys/kernel/debug'
+	exit 1
+fi
+
+if [ ! -d /sys/module/$module/sections ]
+then
+	echo "Module $module is not loaded"
+	exit 1
+fi
+
+cat /sys/module/$module/sections/.text > /sys/kernel/debug/$FAILTYPE/require-start
+cat /sys/module/$module/sections/.data > /sys/kernel/debug/$FAILTYPE/require-end
+
+echo N > /sys/kernel/debug/$FAILTYPE/task-filter
+echo 10 > /sys/kernel/debug/$FAILTYPE/probability
+echo 100 > /sys/kernel/debug/$FAILTYPE/interval
+echo -1 > /sys/kernel/debug/$FAILTYPE/times
+echo 0 > /sys/kernel/debug/$FAILTYPE/space
+echo 2 > /sys/kernel/debug/$FAILTYPE/verbose
+echo 1 > /sys/kernel/debug/$FAILTYPE/ignore-gfp-wait
+echo 1 > /sys/kernel/debug/$FAILTYPE/ignore-gfp-highmem
+echo 10 > /sys/kernel/debug/$FAILTYPE/stacktrace-depth
+
+trap "echo 0 > /sys/kernel/debug/$FAILTYPE/probability" SIGINT SIGTERM EXIT
+
+echo "Injecting errors into the module $module... (interrupt to stop)"
+sleep 1000000

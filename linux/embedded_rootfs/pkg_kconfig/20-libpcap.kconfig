@@ -1,0 +1,10 @@
+config CONFIG_libpcap
+	bool "libpcap"
+	default y
+	help
+		From the libpcap homepage:
+		libpcap is a system-independent interface for user-level packet
+		capture. libpcap provides a portable framework for low-level
+		network monitoring. Applications include network statistics
+		collection, security monitoring, network debugging, etc.
+

@@ -1,0 +1,12 @@
+config CONFIG_hdparm
+	bool "hdparm"
+	default y
+	help
+		hdparm  provides  a command line interface to various kernel
+		interfaces supported by the Linux SATA/PATA/SAS "libata"
+		subsystem and the older IDE driver subsystem. Many newer
+		(2008 and later) USB drive enclosures now also support "SAT"
+		(SCSI-ATA Command Translation) and therefore may also work
+		with hdparm. Eg. recent WD "Passport" models and recent
+		NexStar-3 enclosures. Some options may work correctly only
+                with the latest kernels.

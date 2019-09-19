@@ -1,0 +1,13 @@
+#!/bin/sh
+
+source ./functions.sh
+
+mii-tool --help > $0.log 2>&1
+assert grep -q -F "usage: mii-tool [-VvRrwl] [-A media,... | -F media] [interface ...]" $0.log
+assert grep -q -F "media: 100baseT4, 100baseTx-FD, 100baseTx-HD, 10baseT-FD, 10baseT-HD," $0.log
+
+assert ifconfig >>$0.log
+require grep -q "eth0" $0.log
+assert mii-tool eth0 > $0.log 2>&1
+assert grep -q "eth0: negotiated 10" $0.log
+

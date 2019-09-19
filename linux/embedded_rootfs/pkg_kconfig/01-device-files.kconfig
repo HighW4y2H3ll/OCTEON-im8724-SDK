@@ -1,0 +1,6 @@
+config CONFIG_device-files
+	bool "device-files"
+	default y
+	help
+		Create the /dev directory structure. This is highly recommended.
+

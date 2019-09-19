@@ -1,0 +1,56 @@
+#!/bin/sh
+
+if [ "$1" == "" ]
+then
+    tests=`find . -name "test-*" -perm +100 | sort`
+else
+    tests=$*
+fi
+
+passed_tests=
+skipped_tests=
+unimplemented_tests=
+failed_tests=
+
+for test in ${tests}
+do
+    ${test}
+    case $? in
+    0)
+        echo "Pass: ${test}"
+        passed_tests="${passed_tests} ${test}"
+        ;;
+    254)
+        echo "SKIP: ${test}"
+        skipped_tests="${skipped_tests} ${test}"
+        ;;
+    253)
+        echo "Unimplemented: ${test}"
+        unimplemented_tests="${unimplemented_tests} ${test}"
+        ;;
+    *)
+        echo "FAIL: ${test}"
+        failed_tests="${failed_tests} ${test}"
+        ;;
+    esac
+done
+
+echo
+if [ "${skipped_tests}" != "" ]
+then
+    echo "Skipped tests: ${skipped_tests}" | fold -s -w 80
+fi
+
+if [ "${unimplemented_tests}" != "" ]
+then
+    echo "Unimplemented tests: ${unimplemented_tests}" | fold -s -w 80
+fi
+
+if [ "${failed_tests}" != "" ]
+then
+    echo "FAILED tests: ${failed_tests}" | fold -s -w 80
+else
+    echo "All tests passed"
+fi
+
+	

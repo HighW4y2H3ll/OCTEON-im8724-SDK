@@ -1,0 +1,763 @@
+/dts-v1/;
+/*
+ * Cavium Inc. Swordfish board
+ */
+/ {
+	model = "cavium,swordfish";
+	compatible = "cavium,swordfish";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&ciu2>;
+
+	soc@0 {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu2: interrupt-controller@1070100000000 {
+			compatible = "cavium,octeon-6880-ciu2";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Controller register (0 or 7)
+			 * 2) Bit within the register (0..63)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10701 0x00000000 0x0 0x4000000>;
+		};
+
+		gpio: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-3860-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <7 0>, <7 1>, <7 2>, <7 3>,
+				     <7 4>, <7 5>, <7 6>, <7 7>,
+				     <7 8>, <7 9>, <7 10>, <7 11>,
+				     <7 12>, <7 13>, <7 14>, <7 15>;
+		};
+
+		smi0: mdio@1180000003800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003800 0x0 0x40>;
+
+			mphy0: ethernet-phy-nexus@0 {
+				reg = <0>;
+				/* The Vitesse VSC8490 is a dual-PHY where
+				 * some of the configuration is common across
+				 * both of the PHY devices such as reset and
+				 * the base MDIO address.
+				 */
+				compatible = "vitesse,vsc8490-nexus", "ethernet-phy-nexus";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				ranges;
+
+				/* hardware reset signal */
+				reset = <&gpio 15 0>;
+
+				/* 1588 GPIO pin */
+				clk_1588 = <&gpio 5>;
+
+				rxaui-mode = "dune";
+
+				phy0: ethernet-phy@0 {	/* Bottom */
+					cavium,qlm-trim = "0,rxaui";
+					reg = <0x00>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					vitesse,phy-mode = "rxaui";
+
+					/* Where the MOD_ABS signal is routed.
+					 * In this case it is one of the Octeon
+					 * GPIO pins and not to the PHY.
+					 */
+					mod_abs-parent = <&gpio>;
+					mod_abs = <4 0>;
+					/* tx disable Vitesse GPIO pin */
+					tx-enable-gpio = <4>;
+					/* tx fault Vitesse GPIO pin */
+					tx_fault = <11>;
+					/* IEEE 1588 load/save enable GPIO */
+					ieee1588-load-save-ts-enable = <1>;
+
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+
+					/* SFP EEPROM */
+					sfp-eeprom = <&sfp0>;
+
+					/* The register init code for the VSC8490 is
+					* a bit different than other Vitesse PHYs.
+					* The first field is a delay in milliseconds
+					* to wait before writing the values.
+					* Presumably one would normally poll a register
+					* until the operation is complete but instead
+					* we were just given a delay value.
+					*
+					* The second field is an offset added to the
+					* PHY address.  For example, when initializing
+					* the second PHY device in the dual PHY it is
+					* sometimes necessary to write to registers to
+					* the base PHY address so this field will
+					* likely be 0 or -1.
+					*
+					* We can't write a proper initialization
+					* function because Vitesse will not release
+					* any register documentation.
+					*
+					* The fields are: <delay offset dev register value>
+					*/
+					vitesse,reg-init =
+						/include/ "vsc8490_rxaui_0_init.dts"
+						;
+				};
+				phy1: ethernet-phy@1 {
+					cavium,qlm-trim = "0,rxaui";
+					reg = <0x01>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					vitesse,phy-mode = "rxaui";
+
+					mod_abs-parent = <&gpio>;
+					mod_abs = <7 0>;
+					/* TX disable Vitesse GPIO */
+					tx-enable-gpio = <10>;
+					/* TX fault Vitesse GPIO */
+					tx_fault = <12>;
+
+					/* IEEE 1588 load/save enable GPIO */
+					ieee1588-load-save-ts-enable = <1>;
+
+					rxaui-mode = "dune";
+
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+
+					/* SFP EEPROM */
+					sfp-eeprom = <&sfp1>;
+
+					/* The register init code for the VSC8490 is
+					 * a bit different than other Vitesse PHYs.
+					 * The first field is a delay in milliseconds
+					 * to wait before writing the values.
+					 * Presumably one would normally poll a register
+					 * until the operation is complete but instead
+					 * we were just given a delay value.
+					 *
+					 * The second field is an offset added to the
+					 * PHY address.  For example, when initializing
+					 * the second PHY device in the dual PHY it is
+					 * sometimes necessary to write to registers to
+					 * the base PHY address so this field will
+					 * likely be 0 or -1.
+					 *
+					 * We can't write a proper initialization
+					 * function because Vitesse will not release
+					 * any register documentation.
+					 *
+					 * The fields are: <delay offset dev register value>
+					 */
+					vitesse,reg-init =
+						/include/ "vsc8490_rxaui_1_init.dts"
+						;
+				};
+				phy10: ethernet-phy@10 {
+					cavium,qlm-trim = "0,sgmii";
+					reg = <0x00>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					mod_abs-parent = <&gpio>;
+					mod_abs = <4 0>;
+					tx_fault = <11>;
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+					/* tx disable Vitesse GPIO pin */
+					tx-enable-gpio = <4>;
+					sfp-eeprom = <&sfp0>;
+					vitesse,reg-init =
+						/include/ "vsc8490_sgmii_0_init.dts"
+						;
+					vitesse,phy-mode = "sgmii";
+				};
+				phy11: ethernet-phy@11 {
+					cavium,qlm-trim = "0,sgmii";
+					reg = <0x01>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					mod_abs-parent = <&gpio>;
+					mod_abs = <7 0>;
+					tx_fault = <12>;
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+					/* tx disable Vitesse GPIO pin */
+					tx-enable-gpio = <10>;
+					sfp-eeprom = <&sfp1>;
+					vitesse,reg-init =
+						/include/ "vsc8490_sgmii_1_init.dts"
+						;
+					vitesse,phy-mode = "sgmii";
+				};
+			};
+			mphy2: ethernet-phy-nexus@2 {
+				cavium,qlm-trim = "4,xaui", "3,xaui", "4,sgmii", "3,sgmii";
+				reg = <2>;
+				/* The Vitesse VSC8490 is a dual-PHY where
+				 * some of the configuration is common across
+				 * both of the PHY devices such as reset and
+				 * the base MDIO address.
+				 */
+				compatible = "vitesse,vsc8490-nexus", "ethernet-phy-nexus";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				ranges;
+
+				/* hardware reset signal */
+				reset = <&gpio 15 0>;
+
+				/* 1588 GPIO pin */
+				clk_1588 = <&gpio 6>;
+
+				phy2: ethernet-phy@0 {
+					cavium,qlm-trim = "4,xaui";
+					/* offset from nexus */
+					reg = <0x00>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					vitesse,phy-mode = "xaui";
+
+					/* Where the MOD_ABS signal is routed.
+					 * In this case it is one of the Octeon
+					 * GPIO pins and not to the PHY.
+					 */
+					mod_abs-parent = <&gpio>;
+					mod_abs = <13 0>;
+
+					/* tx disable Vitesse GPIO pin */
+					tx-enable-gpio = <4>;
+					/* tx fault Vitesse GPIO pin */
+					tx_fault = <11>;
+					/* IEEE 1588 load/save enable GPIO */
+					ieee1588-load-save-ts-enable = <1>;
+
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+
+					/* SFP EEPROM */
+					sfp-eeprom = <&sfp2>;
+
+					/* The register init code for the VSC8490 is
+					 * a bit different than other Vitesse PHYs.
+					 * The first field is a delay in milliseconds
+					 * to wait before writing the values.
+					 * Presumably one would normally poll a register
+					 * until the operation is complete but instead
+					 * we were just given a delay value.
+					 *
+					 * The second field is an offset added to the
+					 * PHY address.  For example, when initializing
+					 * the second PHY device in the dual PHY it is
+					 * sometimes necessary to write to registers to
+					 * the base PHY address so this field will
+					 * likely be 0 or -1.
+					 *
+					 * We can't write a proper initialization
+					 * function because Vitesse will not release
+					 * any register documentation.
+					 *
+					 * The fields are: <delay offset dev register value>
+					 */
+					vitesse,reg-init =
+						/include/ "vsc8490_xaui_0_init.dts"
+						;
+
+				};
+				phy3: ethernet-phy@1 {
+					cavium,qlm-trim = "3,xaui";
+					/* Offset from nexus */
+					reg = <0x01>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					vitesse,phy-mode = "xaui";
+
+					mod_abs-parent = <&gpio>;
+					mod_abs = <14 0>;
+
+					/* TX disable Vitesse GPIO */
+					tx-enable-gpio = <10>;
+					/* TX fault Vitesse GPIO */
+					tx_fault = <12>;
+
+					/* IEEE 1588 load/save enable GPIO */
+					ieee1588-load-save-ts-enable = <1>;
+
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+
+					/* SFP EEPROM */
+					sfp-eeprom = <&sfp3>;
+
+					/* The register init code for the VSC8490 is
+					 * a bit different than other Vitesse PHYs.
+					 * The first field is a delay in milliseconds
+					 * to wait before writing the values.
+					 * Presumably one would normally poll a register
+					 * until the operation is complete but instead
+					 * we were just given a delay value.
+					 *
+					 * The second field is an offset added to the
+					 * PHY address.  For example, when initializing
+					 * the second PHY device in the dual PHY it is
+					 * sometimes necessary to write to registers to
+					 * the base PHY address so this field will
+					 * likely be 0 or -1.
+					 *
+					 * We can't write a proper initialization
+					 * function because Vitesse will not release
+					 * any register documentation.
+					 *
+					 * The fields are: <delay offset dev register value>
+					 */
+					vitesse,reg-init =
+						/include/ "vsc8490_xaui_1_init.dts"
+						;
+				};
+				phy12: ethernet-phy@12 {
+					cavium,qlm-trim = "4,sgmii";
+					reg = <0x00>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					reset = <&gpio 15>;
+					mod_abs-parent = <&gpio>;
+					mod_abs = <13 0>;
+					tx_fault = <11>;
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+					/* tx disable Vitesse GPIO pin */
+					tx-enable-gpio = <4>;
+					sfp-eeprom = <&sfp2>;
+					vitesse,reg-init =
+						/include/ "vsc8490_sgmii_0_init.dts"
+						;
+					vitesse,phy-mode = "sgmii";
+				};
+				phy13: ethernet-phy@13 {
+					cavium,qlm-trim = "3,sgmii";
+					reg = <0x01>;
+					compatible = "vitesse,vsc8490", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <2 8>; /* Pin 2, active low */
+					mod_abs-parent = <&gpio>;
+					mod_abs = <14 0>;
+					tx_fault = <12>;
+					wis-inta-gpio = <8>;
+					wis-intb-gpio = <6>;
+					/* tx disable Vitesse GPIO pin */
+					tx-enable-gpio = <10>;
+					sfp-eeprom = <&sfp3>;
+					vitesse,reg-init =
+						/include/ "vsc8490_sgmii_1_init.dts"
+						;
+					vitesse,phy-mode = "sgmii";
+				};
+			};
+		};
+
+		pip: pip@11800a0000000 {
+			compatible = "cavium,octeon-3860-pip";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0xa0000000 0x0 0x2000>;
+
+			interface@M {
+				cavium,qlm-trim = "0,rxaui";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy0>;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <4 0>;
+					cavium,sfp-slot-eeprom = <&sfp0>;
+					cavium,sfp-slot-asic = <&sfp0alerts>;
+				};
+			};
+			interface@N {
+				cavium,qlm-trim = "0,rxaui";
+				compatible = "cavium,octeon-3860-pip";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy1>;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <7 0>;
+					cavium,sfp-slot-eeprom = <&sfp1>;
+					cavium,sfp-slot-asic = <&sfp1alerts>;
+				};
+			};
+			interface@O {
+				cavium,qlm-trim = "3,xaui";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy2>;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <13 0>;
+					cavium,sfp-slot-eeprom = <&sfp2>;
+					cavium,sfp-slot-asic = <&sfp2alerts>;
+				};
+			};
+			interface@P {
+				cavium,qlm-trim = "4,xaui";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <4>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy3>;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <14 0>;
+					cavium,sfp-slot-eeprom = <&sfp3>;
+					cavium,sfp-slot-asic = <&sfp3alerts>;
+				};
+			};
+
+			interface@S {
+				cavium,qlm-trim = "0,sgmii";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy10>;
+					cavium,disable-autonegotiation;
+					cavium,sgmii-mac-1000x-mode;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <4 0>;
+					cavium,sfp-slot-eeprom = <&sfp0>;
+					cavium,sfp-slot-asic = <&sfp0alerts>;
+				};
+				ethernet@2 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x2>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy11>;
+					cavium,disable-autonegotiation;
+					cavium,sgmii-mac-1000x-mode;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <7 0>;
+					cavium,sfp-slot-eeprom = <&sfp1>;
+					cavium,sfp-slot-asic = <&sfp1alerts>;
+				};
+			};
+			interface@U {
+				cavium,qlm-trim = "3,sgmii";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy12>;
+					cavium,disable-autonegotiation;
+					cavium,sgmii-mac-1000x-mode;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <13 0>;
+					cavium,sfp-slot-eeprom = <&sfp2>;
+					cavium,sfp-slot-asic = <&sfp2alerts>;
+				};
+			};
+			interface@V {
+				cavium,qlm-trim = "4,sgmii";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <4>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy13>;
+					cavium,disable-autonegotiation;
+					cavium,sgmii-mac-1000x-mode;
+					cavium,mod_abs_parent = <&gpio>;
+					cavium,mod_abs = <14 0>;
+					cavium,sfp-slot-eeprom = <&sfp3>;
+					cavium,sfp-slot-asic = <&sfp3alerts>;
+				};
+			};
+		};
+
+		twsi0: i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			interrupts = <3 32>;
+			clock-frequency = <100000>;
+
+			tmp@4a {
+				compatible = "nxp,sa56004";
+				reg = <0x4a>;
+			};
+			tmp@4f {
+				compatible = "national,lm75";
+				reg = <0x4f>;
+			};
+			tlv-eeprom@56 {
+				compatible = "atmel,24c256";
+				reg = <0x56>;
+				pagesize = <64>;
+			};
+			mux@74 {
+				cavium,mux-trim = "1,goodmux";
+				compatible = "nxp,pca9548";
+				reg = <0x74>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				i2c@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+					sfp0: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					sfp0alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>;
+					sfp1: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					sfp1alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>;
+					sfp2: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					sfp2alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@3 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>;
+					sfp3: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					sfp3alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+			};
+		};
+
+		twsi1: i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			interrupts = <3 33>;
+			clock-frequency = <100000>;
+
+			power@21 {
+				compatible = "mpc,mp2953a";
+				reg = <0x21>;
+			};
+		};
+
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <3 36>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0x0 0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0x10000 0x40000000  0>,
+				 <5 0  0x10000 0x50000000  0>,
+				 <6 0  0x10000 0x60000000  0>,
+				 <7 0  0x10000 0x70000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <75>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,page-mode = <1>;
+				cavium,pages     = <8>;
+				cavium,bus-width = <8>;
+			};
+
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x800000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				partition@0 {
+					label = "bootloader";
+					reg = <0x0 0x180000>;
+					read-only;
+				};
+				partition@180000 {
+					label = "storage";
+					reg = <0x180000 0x660000>;
+				};
+				partition@0x7e0000 {
+					label = "environment";
+					reg = <0x7e0000 0x20000>;
+					read-only;
+				};
+			};
+		};
+
+		dma0: dma-engine@1180000000100 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000100 0x0 0x8>;
+			interrupts = <3 18>;
+		};
+		dma1: dma-engine@1180000000108 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000108 0x0 0x8>;
+			interrupts = <3 18>;
+		};
+
+		nand-flash-interface@1070001000000 {
+			compatible = "cavium,octeon-5230-nand";
+			reg = <0x10700 0x01000000 0x0 0x100>,
+				<0x11800 0x00000168 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0 63>;
+
+			flash@1 {
+				compatible = "nand-flash";
+				reg = <1>;
+				nand-ecc-mode = "soft";
+				nand-bus-width = <8>;
+			};
+		};
+
+		uctl: uctl@118006f000000 {
+			compatible = "cavium,octeon-6335-uctl";
+			reg = <0x11800 0x6f000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* 12MHz, 24MHz and 48MHz allowed */
+			refclk-frequency = <12000000>;
+			/* Either "crystal" or "external" */
+			refclk-type = "crystal";
+
+			ehci@16f0000000000 {
+				compatible = "cavium,octeon-6335-ehci","usb-ehci";
+				reg = <0x16f00 0x00000000 0x0 0x100>;
+				interrupts = <3 44>;
+				big-endian-regs;
+			};
+			ohci@16f0000000400 {
+				compatible = "cavium,octeon-6335-ohci","usb-ohci";
+				reg = <0x16f00 0x00000400 0x0 0x100>;
+				interrupts = <3 44>;
+				big-endian-regs;
+			};
+		};
+	};
+
+	aliases {
+		pip = &pip;
+		smi0 = &smi0;
+		twsi0 = &twsi0;
+		twsi1 = &twsi1;
+		uart0 = &uart0;
+		flash0 = &flash0;
+	};
+ };

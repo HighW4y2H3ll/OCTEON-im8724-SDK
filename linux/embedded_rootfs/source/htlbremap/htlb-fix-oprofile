@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# When using htlbremap the application map now points to the file in
+# htlbfs.  This script fixes the oprofile session to point to the real
+# app.
+
+set -x
+
+session=/var/lib/oprofile/samples/$1
+mount=$2
+new=$3
+
+cd $session/\{root\}
+old=./$mount/`cd ./$mount; ls`
+
+mkdir -p ./$new
+mv "$old"/* ./$new
+
+cd ./$new/\{dep\}/\{root\}
+mkdir -p ./$new
+mv "$old"/* ./$new

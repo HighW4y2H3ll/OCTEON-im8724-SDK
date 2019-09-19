@@ -1,0 +1,11 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert ifconfig lo down
+assert nameif lo2 0:0:0:0:0:0
+assert ifconfig lo2 up
+assert ifconfig lo2 down
+assert nameif lo 0:0:0:0:0:0
+assert ifconfig lo up
+

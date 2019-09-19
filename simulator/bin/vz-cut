@@ -1,0 +1,310 @@
+#!/usr/bin/perl
+
+# Copyright (c) 2005-2009, Cavium Inc.. All rights reserved.
+#  
+# This Software is the property of Cavium Inc..  The Software and all 
+# accompanying documentation are copyrighted.  The Software made available 
+# here constitutes the proprietary information of Cavium Inc..  You 
+# agree to take reasonable steps to prevent the disclosure, unauthorized use 
+# or unauthorized distribution of the Software.  You shall use this Software 
+# solely with Cavium hardware.  
+#  
+# Except as expressly permitted in a separate Software License Agreement 
+# between You and Cavium Inc., you shall not modify, decompile, 
+# disassemble, extract, or otherwise reverse engineer this Software.  You 
+# shall not make any copy of the Software or its accompanying documentation, 
+# except for copying incident to the ordinary and intended use of the 
+# Software and the Underlying Program and except for the making of a single 
+# archival copy.  
+#  
+# This Software, including technical data, may be subject to U.S.  export 
+# control laws, including the U.S.  Export Administration Act and its 
+# associated regulations, and may be subject to export or import regulations 
+# in other countries.  You warrant that You will comply strictly in all 
+# respects with all such regulations and acknowledge that you have the 
+# responsibility to obtain licenses to export, re-export or import the 
+# Software.  
+#  
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" 
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR 
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT 
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY 
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT 
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES 
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR 
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET 
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT 
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.  
+
+
+use strict;
+
+use Getopt::Long;
+
+
+
+
+my $filename   = 'octeon.vz';
+my $outfilename   = 'octeon-cut.vz';
+my $start = 0;
+my $end = 0;
+my $max = 0;
+my $help = 0;
+my $relative = 0;
+my $result = GetOptions ("start=i" => \$start,
+                     "filename=s"   => \$filename,
+                     "outfilename=s"   => \$outfilename,
+                     "end=i"  => \$end,
+                     "max=i"  => \$max,
+                     "wait-relative"  => \$relative,
+                     "help"  => \$help,
+                     );
+
+
+
+if ($help)
+{
+   usage();
+   exit;
+}
+
+if (!$start && !$end && !$max)
+{
+   print "Error: at least one of start or or max end cycle must be provided\n";
+   usage();
+   exit;
+}
+
+if ($end && ($end < $start))
+{
+   print "Error: end cycle ($end) is less than start ($start).  Did you want --max?\n";
+   usage();
+   exit;
+}
+
+
+# Read header from viewzilla file
+
+my @vz_header_lines;
+my $line;
+open(VZ_FILE, $filename) or die "error: unable to open input file $filename\n";
+
+while ($line = <VZ_FILE>)
+{
+      if (!($line =~ /^cell.*/ ))
+      {
+         push(@vz_header_lines, $line);
+      }
+      else
+      {
+         last;
+      }
+}
+
+my($start_offset, $end_offset, $cur_offset);
+my($start_cycle, $cur_cycle, $end_cycle, $first_cycle, $last_cycle, $abs_cycle_delta);
+
+$start_offset = tell(VZ_FILE);
+
+#find the cycle value of abs_cycle_delta to translate "ns" cycles to core cycles
+if ($relative) {
+    $abs_cycle_delta = 0;
+}
+else {
+    while ($line = <VZ_FILE>)
+    {
+#  " ... 1760118ns(1045) ... PP1:10001660<cvmx_coremask_barrier_sync+248>:12444051@1~SL ..."
+	if ($line =~/ns\((\d+)\).*:(\d+)[@ ]/ )
+	{
+	    $abs_cycle_delta = $2 - $1;
+	    last;
+	}
+    }
+    seek(VZ_FILE, $start_offset, 0);
+}
+$start_cycle = get_cycle($abs_cycle_delta);
+
+seek(VZ_FILE, 0, 2);
+$end_offset = tell(VZ_FILE) - 65536; # fudge end offset to be able to read some lines at end
+if ($end_offset < 0) {
+    $end_offset = 0;
+}
+
+seek(VZ_FILE, $end_offset, 0);
+while ($cur_cycle = get_cycle($abs_cycle_delta)) {
+   $last_cycle = $cur_cycle;
+}
+$end_cycle = $last_cycle;
+$end_offset = tell(VZ_FILE);
+
+
+print "Viewzilla data for cycles $start_cycle to $last_cycle found.\n";
+printf ("Looking for cycles %s to %s%s.\n",$start ? $start : "Start", $end ? $end : "EOF", $max ? ", max $max":"");
+
+#print "Start of vz cell data at offset: $start_offset, end: $end_offset\n";
+
+if ($end && ($end < $start_cycle))
+{
+    print "Error, end cycle requested ($end) is not present in input file\n";
+    close(VZ_FILE);
+    exit;
+}
+
+if (($start > 0))
+{
+   if ($start < $start_cycle || $start > $end_cycle)
+   {
+      print "Error, start cycle requested ($start) is not present in input file\n";
+      close(VZ_FILE);
+      exit;
+   }
+
+   # do binary search for start
+
+   # start/end offset/cycle primed for loop
+
+   while (($end_cycle - $start_cycle > 1000))
+   {
+      # get cycle at start offset, end offset, mid offset
+
+
+      $cur_offset = int (($start_offset + $end_offset)/2);
+      seek(VZ_FILE, $cur_offset, 0);
+      $cur_cycle = get_cycle($abs_cycle_delta);
+
+      if ($start >= $cur_cycle)
+      {
+         $start_offset = $cur_offset;
+         $start_cycle = $cur_cycle;
+      }
+      else
+      {
+         $end_offset = $cur_offset;
+         $end_cycle = $cur_cycle;
+      }
+   }
+
+}
+
+
+# We have found the start cycle we are looking for, now
+# write out new file, looking for end cycle as we write it.
+
+
+open(VZ_OUT, ">$outfilename") or die "ERROR: unable to open output file: $outfilename\n";
+
+print VZ_OUT @vz_header_lines;
+
+seek(VZ_FILE, $start_offset, 0);
+
+# get to the start of a new cell line...
+while ($line = <VZ_FILE>)
+{
+   if ($line =~ /^cell.*/)
+   {
+      last;
+   }
+
+}
+
+if ($line =~/ns\((\d+)\)/ ) {
+    $first_cycle = $1+$abs_cycle_delta;
+}
+print VZ_OUT $line;
+
+
+if ($max) {
+   $end = $first_cycle + $max;
+}
+
+# copy lines until we hit the end cycle
+while ($line = <VZ_FILE>)
+{
+   print VZ_OUT $line;
+
+   if ($end)
+   {
+      # only use $end if non-zero
+      if ($line =~/ns\((\d+)\)/ )
+      {
+         $last_cycle = $1+$abs_cycle_delta;
+         if ($last_cycle > $end + 100)
+         {
+            last;
+         }
+      }
+   }
+
+}
+
+# we have the line of the last cycle, plus some margin, make sure
+# we end with a complete cell
+   # The line didn't end with a closing brace, so get another line
+while ($line = <VZ_FILE>)
+{
+   print VZ_OUT $line;
+   if ($line =~ /.*}$/)
+   {
+      # line ends with closing brace, so stop
+      last;
+   }
+
+
+}
+
+printf ("Extracted viewzilla data for cycles $first_cycle to $last_cycle (%d cycles).\n",$last_cycle-$first_cycle);
+
+close(VZ_FILE);
+close(VZ_OUT);
+
+
+
+#####################################################################
+sub get_cycle($abs_cycle_delta)
+{
+   my($line);
+   my($cycle) = undef;
+
+   while ($line = <VZ_FILE>)
+   {
+      #  "1760118ns(1045)"
+      if ($line =~/ns\((\d+)\)/ )
+      {
+         $cycle = $1+$abs_cycle_delta;
+         return($cycle);
+      }
+   }
+   return(undef);
+
+}
+#####################################################################
+sub usage
+{
+   print "Usage:\n";
+   print "\n";
+   print "vz-cut [--start <start_cycle>] [--end <end_cycle>] [--max <num_cycles>] [--wait-relative] [--filename <input_filename>] [--outfilename <output_filename>] [--help]\n";
+   print "\n";
+   print "\n";
+   print "This program cuts out a specified cycle range from a viewzilla output\n";
+   print "  file (<input_filename>) and outputs the cut to a file (<output_filename>).\n";
+   print "  The cycle range extracted will be from some cycles before <start_cycle> to\n";
+   print "  some cycles after <end_cycle>.\n";
+   print "\n";
+   print "Either --start <start_cycle> or --end <end_cycle> may be omitted (or\n";
+   print "  both if --max <max_cycles> is used), with the start or end defaulting\n";
+   print "  to the start or end of the file respectively.\n";
+   print "\n";
+   print "The --max <num_cycles> limits the total cycles to approximately <num_cycles>,\n";
+   print "  and has precedence over --end <end_cycle>.\n";
+   print "\n";
+   print "If --wait-relative is specified, the cycles are based from the first\n";
+   print "  execution of the function or cycle specified in \"-wait=\" condition\n";
+   print "  being met from the simulator command line, rather than from the start of\n";
+   print "  simulation.  (--wait-relative is compatible with vz-cut utilities found in\n";
+   print "  SDK versions before 1.8.1, but differs from the cycles in other tools\n";
+   print "  so its use id discouraged unless backwards-compatibility is required.)\n";
+   print "\n";
+   print "The default <input_filename> is \"octeon.vz\", and the default\n";
+   print "  <output_filename> is \"octeon-cut.vz\".\n";
+   print "\n";
+}

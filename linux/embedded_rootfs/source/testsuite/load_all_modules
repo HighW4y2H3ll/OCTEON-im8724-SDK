@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Load all modules. Modprobe will make sure dependencies are met
+find /lib/modules/ -name *.ko | sed "s:/.*/::g" | sed "s:\.ko::g" | xargs -n1 modprobe
+

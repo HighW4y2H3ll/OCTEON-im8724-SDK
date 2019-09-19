@@ -1,0 +1,161 @@
+// $Id: list.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// List operations
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "std.vsl"
+
+// Version
+list_version() = "$Id: list.vsl 14384 2006-04-11 21:46:04Z cchavva $";
+
+// Here's one for LISP-addicted people
+nil = [];
+
+// Testers
+isatom([]) = false;
+isatom([_ : _]) = false;
+isatom(_) = true;
+islist(x) = not isatom(x);
+
+// Head and tail
+// car([1, 2, 3]) = 1, cdr([1, 2, 3]) = [2, 3]
+car([head : _]) = head;	// Lisp-Notation
+cdr([_ : tail]) = tail;
+head(...) = car(...);
+tail(...) = cdr(...);
+
+// Append element at end
+// append([1, 2, 3], 4) = [1, 2, 3, 4]
+append(list, elem) = list :: [elem];
+
+// Check if element is in list
+// member(1, [1, 2, 3]) = true
+member(_, []) = false;
+member(elem, [head : tail]) = 
+	(elem = head) or member(elem, tail);
+
+// Prefixes and suffixes
+// prefix([1], [1, 2]) = true, suffix([3], [1, 2]) = false.
+prefix([], _) = true;
+prefix(_, []) = false;
+prefix([h1 : t1], [h2 : t2]) =
+	(h1 = h2) and prefix(t1, t2);
+
+suffix([], _) = true;
+suffix(_, []) = false;
+suffix(list, [h2 : t2]) = 
+	(list = [h2 : t2]) or suffix(list, t2);
+
+// Subsets
+// sublist([2, 2], [1, 2, 2, 3]) = true
+sublist(_, []) = false;
+sublist(list, [h2 : l2]) =
+	prefix(list, [h2 : l2]) or sublist(list, l2);
+
+// Length
+// length([1, 2, 3]) = 3
+length([]) = 0;
+length([_ : tail]) = 1 + length(tail);
+
+// Indexed element
+// elem([4, 5, 6], 0) = 4
+elem([head : _], 0) = head;
+elem([_ : tail], index) = elem(tail, index - 1);
+
+// Find element in list
+// pos(4, [1, 2, 4]) = 2
+pos(elem, [head : tail]) = 
+	if head = elem then 0 else 1 + pos(elem, tail) fi;
+
+// Return last element
+// last([4, 5, 6]) = 6
+last([head]) = head;
+last([_ : tail]) = last(tail);
+
+// Reverse
+// reverse([3, 4, 5]) = [5, 4, 3]
+reverse([]) = [];
+reverse([head : tail]) = append(reverse(tail), head);
+
+// Delete all matching elements
+// delete([4, 5, 5, 6], 5) = [4, 6]
+delete([], _) = [];
+delete([head : tail], elem) = 
+	if elem = head 
+	then delete(tail, elem)          // remove head
+	else [head : delete(tail, elem)]
+	fi;
+
+// Delete the first matching element
+// select([4, 5, 5, 6], 5) = [4, 5, 6]
+select([], _) = [];
+select([head : tail], elem) = 
+	if elem = head 
+	then tail                       // remove head
+	else [head : select(tail, elem)]
+	fi;
+
+// Flatten list
+// flat([[3, 4], [[5], [6]]]) = [3, 4, 5, 6]
+flat([]) = [];
+flat([head : tail]) = flat(head) :: flat(tail);
+flat(x) = [x];
+
+
+// Sort (according to box size)
+// sort([7, 4, 9]) = [4, 7, 9]
+
+// Quicksort method
+sort([]);
+sort([x]);
+sort([head : tail]);
+
+_sort_prepend1(elem, [list1, list2]) = [[elem : list1], list2];
+_sort_prepend2(elem, [list1, list2]) = [list1, [elem : list2]];
+_sort_cons3([list1, list2], check) = list1 :: [check] :: list2;
+_sort_sort2([list1, list2]) = [sort(list1), sort(list2)];
+
+// Split according to CHECK into two partial lists
+_sort_split([], _) = [[], []];
+_sort_split([head : tail], check) =
+	if (head <= check)
+	then _sort_prepend1(head, _sort_split(tail, check))
+	else _sort_prepend2(head, _sort_split(tail, check))
+	fi;
+
+// The sort itself
+_sort(list, check) = _sort_cons3(_sort_sort2(_sort_split(list, check)), check);
+sort([]) = [];
+sort([x]) = [x];
+sort([head : tail]) = _sort(tail, head);
+
+// Turn list into character string (separated by `,')
+// list([4, 5, 6]) = "[4, 5, 6]"
+_list([head]) = head;
+_list([head : tail]) = head & ", " & _list(tail);
+_list(atom) = atom;
+list([]) = "[]";
+list(l) = "[" & _list(l) & "]";

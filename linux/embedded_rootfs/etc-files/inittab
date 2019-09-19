@@ -1,0 +1,2 @@
+::sysinit:/sbin/rc boot
+::respawn:-/bin/cav_sh /bin/sh

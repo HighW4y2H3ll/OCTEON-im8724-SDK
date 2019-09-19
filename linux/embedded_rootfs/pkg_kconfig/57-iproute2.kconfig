@@ -1,0 +1,30 @@
+config CONFIG_iproute2
+	bool "iproute2"
+	default y
+	requires CFG_ENABLE_IPV6
+	help
+		From the iproute homepage:	
+		Iproute2 is a collection of utilites for controlling TCP / IP
+		networking and Traffic Control in Linux. It is currently
+		maintained by Stephen Hemminger <shemminger@osdl.org>. The
+		original author, Alexey Kuznetsov, is well known for the QoS
+		implementation in the Linux kernel.
+
+		Most network configuration manuals still refer to ifconfig as
+		the primary network configuration tool, but that's wrong,
+		because ifconfig is known to behave inadequately in modern
+		network environments. Its usage should be deprecated, but most
+		Linux distributions still include it. Moreover, most network
+		configuration systems make use of ifconfig and thus provide a
+		limited feature set. /etc/net project aims to support most
+		modern network technologies, it doesnt't use ifconfig and
+		allows a system administrator to make use of all iproute2
+		features, including traffic control.
+
+		Iproute2 is usually shipped in a package called iproute or
+		iproute2 and consists of several tools, of which the most
+		important are ip and tc. ip controls IPv4 and IPv6
+		configuration and tc stands for traffic control. Both tools
+		print detailed usage messages and are accompanied by a set of
+		manpages. There is a lot of iproute2 information on the net.
+

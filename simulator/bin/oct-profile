@@ -1,0 +1,185 @@
+#!/usr/bin/python
+# Copyright (c) 2003-2005, Cavium Inc.. All rights reserved.
+#
+# This Software is the property of Cavium Inc..  The Software and all
+# accompanying documentation are copyrighted.  The Software made available
+# here constitutes the proprietary information of Cavium Inc..  You
+# agree to take reasonable steps to prevent the disclosure, unauthorized use
+# or unauthorized distribution of the Software.  You shall use this Software
+# solely with Cavium hardware.
+#
+# Except as expressly permitted in a separate Software License Agreement
+# between You and Cavium Inc., you shall not modify, decompile,
+# disassemble, extract, or otherwise reverse engineer this Software.  You
+# shall not make any copy of the Software or its accompanying documentation,
+# except for copying incident to the ordinary and intended use of the
+# Software and the Underlying Program and except for the making of a single
+# archival copy.
+#
+# This Software, including technical data, may be subject to U.S.  export
+# control laws, including the U.S.  Export Administration Act and its
+# associated regulations, and may be subject to export or import regulations
+# in other countries.  You warrant that You will comply strictly in all
+# respects with all such regulations and acknowledge that you have the
+# responsibility to obtain licenses to export, re-export or import the
+# Software.
+#
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.
+#
+# File version info: $Id: oct-profile 167282 2017-10-20 18:31:13Z cchavva $
+
+import sys
+import os
+import gc
+from gdbstub import fromHex
+from gdbstub import toHex
+from debuglib import DebugInfo
+from debuglib import DebugLineInfo
+from debuglib import DebugObjectInfo
+from debuglib import getSdkVersion
+
+KEEP_TYPES = ["DW_TAG_inlined_subroutine", "DW_TAG_subprogram", "DW_TAG_lexical_block", "DW_TAG_compile_unit"]
+
+class ProfileEntry:
+    def __init__(self, name):
+        self.name = name
+        self.count = [0 for core in xrange(48)]
+        self.children = {}
+
+class Profiler:
+    #
+    # Initialize global data structures
+    #
+    def __init__(self, filename, show_line=0, show_address=0, arguments=""):
+        self.show_line=show_line
+        self.show_address=show_address
+        self.arguments = arguments
+        self.dbg = DebugInfo()
+        print "Reading line number information"
+        self.dbg.read(filename)
+        print "Reading debug information"
+        self.dbg.readObjectInfo(filename)
+        gc.collect()
+        self.profile_data = ProfileEntry(filename)
+
+    #
+    # Recursively format the debugging information for display
+    #
+    def get_scope_info(self, address, node):
+        result = []
+        if node.object_type in ["DW_TAG_inlined_subroutine", "DW_TAG_subprogram"]:
+            result.append(node.get("DW_AT_name"))
+        for c in node.children():
+            if c.containsPC(address):
+                result.extend(self.get_scope_info(address, c))
+                break
+            elif c.object_type in ["DW_TAG_lexical_block", "DW_TAG_compile_unit"]:
+                r = self.get_scope_info(address, c)
+                if r:
+                    result.extend(r)
+                    break
+        return result
+
+    #
+    # Add a profile entry
+    #
+    def addProfileEntry(self, address, counts):
+        if address:
+            scope_info = self.get_scope_info(address, self.dbg.objectInfo)
+        else:
+            scope_info = []
+        if not scope_info:
+            scope_info.append("[Unknown]")
+        if self.show_line:
+            line_info = self.dbg.getDebugLineInfo(address)
+            if line_info:
+                scope_info.append(line_info.sourcefile + ":" + str(line_info.row))
+        if self.show_address:
+            scope_info.append("0x" + toHex(address, 16))
+        entry = self.profile_data
+        for s in scope_info:
+            if not s in entry.children:
+                entry.children[s] = ProfileEntry(s)
+            entry = entry.children[s]
+            for c in xrange(len(counts)):
+                entry.count[c] += counts[c]
+
+    def display(self, entry, indent=""):
+        if indent:
+            core = 0
+            line = "".ljust(7)
+            for c in entry.count:
+                if core < len(counts):
+                    line += "%5d " % c
+                    core += 1  
+            line += indent + entry.name
+            print line
+        keys = entry.children.keys()
+        keys.sort()
+        for c in keys:
+            self.display(entry.children[c], indent + "  ")
+
+    #
+    # Begin profiling
+    #
+    def profile(self):
+        global counts
+        infile = os.popen("oct-pci-profile" + self.arguments, "r", 0)
+        while infile:
+            line = infile.readline()
+            if not line:
+                break
+            line = line.strip()
+            if line == "":
+                self.display(self.profile_data)
+                self.profile_data.children = {}
+                print
+            elif line.startswith("0x"):
+                address = fromHex(line[2:18])
+                parts = line.split()
+                counts = [int(x) for x in parts[1:]]
+                self.addProfileEntry(address, counts)
+            else:
+                print line
+
+#
+# Main entry point
+#
+if len(sys.argv) < 2 or ("--help" in sys.argv):
+    print
+    print "Usage: oct-profile [--line] [--address] <elf>"
+    print "    <elf>                    Mips ELF files to load debugging information from."
+    print "    [--line]                 Show line number information."
+    print "    [--address]              Show exact PC addresses."
+    print "    [--perf1=<Core counter>] Setup Core performance counter 1"
+    print "    [--perf2=<Core counter>] Setup Core performance counter 2"
+    print "    [--perf3=<Core counter>] Setup Core performance counter 3 (Available from CN7XXX onwards)"
+    print "    [--perf4=<Core counter>] Setup Core performance counter 4 (Available from CN7XXX onwards)"
+    print "    [--l2perf1=<L2 counter>] Setup L2 performance counter 1"
+    print "    [--l2perf2=<L2 counter>] Setup L2 performance counter 2"
+    print "    [--l2perf3=<L2 counter>] Setup L2 performance counter 3"
+    print "    [--l2perf4=<L2 counter>] Setup L2 performance counter 4"
+    print "    [--dwell=<seconds>]      Number of seconds between printing"
+    print "    [--core_mask=<mask>]     Mask which specifies the cores to sample"
+    print
+    print "Version: " + getSdkVersion()
+    print
+    sys.exit(-1)
+
+arguments = ""
+for arg in sys.argv:
+    if arg.startswith("--perf") or arg.startswith("--l2perf") or arg.startswith("--dwell") or arg.startswith("--core_mask"):
+        arguments += " " + arg
+
+p = Profiler(sys.argv[-1], ("--line" in sys.argv), ("--address" in sys.argv), arguments)
+p.profile()
+

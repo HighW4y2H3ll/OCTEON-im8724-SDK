@@ -1,0 +1,30 @@
+#!/bin/sh
+
+source ./functions.sh
+
+require test -f /usr/bin/lockstat-test
+
+LD_PRELOAD=liblockstat.so lockstat-test > $0.log
+
+x=`grep "thread running:" $0.log | head -1 | awk '{print $3}'`
+y=`grep "thread running:" $0.log | head -2 | awk '{print $3}'|tail -1`
+
+assert grep -q "thread running: $x" $0.log
+assert grep -q "thread running: $y" $0.log
+assert grep -q "main waiting" $0.log
+assert grep -q "thread signaling [1|2] ($x)" $0.log
+assert grep -q "thread signaling [1|2] ($y)" $0.log
+assert grep -q "main signaled [1|2]" $0.log
+assert grep -q "main waiting for second" $0.log
+assert grep -q "thread signaling on second [1|2] ($x)" $0.log
+assert grep -q "thread signaling on second [1|2] ($y)" $0.log
+assert grep -q "main signaled for second [1|2]" $0.log
+assert grep -q "lockstat: Total cycles: [0-9]*" $0.log
+assert grep -q "lockstat: Spinlock statistics:" $0.log
+assert grep -q "lockstat: *per-thread:" $0.log
+assert grep -q "lockstat: *0x[0-9a-zA-Z]* acquire" $0.log
+assert grep -q "lockstat: Mutex statistics:" $0.log
+assert grep -q "lockstat: Condition variable statistics:" $0.log
+assert grep -q "lockstat: *0x[0-9a-zA-Z]* wait" $0.log
+
+

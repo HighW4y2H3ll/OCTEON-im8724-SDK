@@ -1,0 +1,19 @@
+# This is a wrapper script around a perl program that actually does all
+# the work.  This script is shell neutral, in that it will run on
+# bash, csh, sh, and ksh shells.  As a result of this, there are severe
+# constraints on what can be done directly.
+
+# Check to see if the shell we are running uses 'setenv' or 'export' to 
+# set variables.  If the shell uses setenv, then the variable is set with
+# the value 2, otherwise stderr is redirected to /dev/null
+setenv __OCTEON_SHELL_TEST__ 2>/dev/null
+
+# Invoke the env-setup.pl script, which processes the arguments and constructs the correct
+# environment changes for the shell that it was called from.
+eval `./env-setup.pl  "$1" "$2" "$3" "$4" "$5" "$6" "$7"`
+
+# Clean up test variable so that it is not left around to confuse subshells
+unsetenv __OCTEON_SHELL_TEST__  2> /dev/null
+
+# Return success (otherwise we return an error in bash)
+echo -n ""

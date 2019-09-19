@@ -1,0 +1,7 @@
+config CONFIG_nvme-cli
+	bool "nvme-cli"
+	select CONFIG_libuuid
+	default n
+	help
+		This enables the NVMe CLI command.
+

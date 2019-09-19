@@ -1,0 +1,2 @@
+#!/bin/sh
+OCTEON_REMOTE_PROTOCOL=linux oct-remote-profile "$@"

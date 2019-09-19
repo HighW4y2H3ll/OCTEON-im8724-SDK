@@ -1,0 +1,15 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$cvmx-app-init_8c.html" title="Main entry point for all simple executive based programs." alt="" coords="113,237,241,267"/>
+<area shape="rect" id="node5" href="$cvmx-core_8c.html" title="Module to support operations on core such as TLB config, etc." alt="" coords="140,83,247,112"/>
+<area shape="rect" id="node7" href="$cvmx-debug_8c.html" title="cvmx&#45;debug.c" alt="" coords="23,160,140,189"/>
+<area shape="rect" id="node9" href="$cvmx-debug_8h.html" title="Interface to debug exception handler." alt="" coords="321,83,439,112"/>
+<area shape="rect" id="node26" href="$cvmx-log_8c.html" title="cvmx&#45;log supplies a fast log buffer implementation." alt="" coords="937,160,1033,189"/>
+<area shape="rect" id="node28" href="$cvmx-log_8h.html" title="cvmx&#45;log supplies a fast log buffer implementation." alt="" coords="513,83,609,112"/>
+<area shape="rect" id="node31" href="$cvmx-tlb_8c.html" title="cvmx&#45;tlb supplies per core TLB access functions for simple executive applications..." alt="" coords="633,83,727,112"/>
+<area shape="rect" id="node11" href="$cvmx-app-hotplug_8c.html" title="Provides APIs for applications to register for hotplug." alt="" coords="215,160,372,189"/>
+<area shape="rect" id="node14" href="$cvmx-coredump_8h.html" title="Coredump interface and definitions." alt="" coords="396,160,540,189"/>
+<area shape="rect" id="node21" href="$cvmx-debug-remote_8c.html" title="cvmx&#45;debug&#45;remote.c" alt="" coords="564,160,737,189"/>
+<area shape="rect" id="node23" href="$cvmx-debug-uart_8c.html" title="cvmx&#45;debug&#45;uart.c" alt="" coords="761,160,913,189"/>
+<area shape="rect" id="node17" href="$cvmx-coredump_8c.html" title="Main Coredump Interface." alt="" coords="331,237,475,267"/>
+<area shape="rect" id="node19" href="$cvmx-interrupt_8c.html" title="Interface to the Mips interrupts." alt="" coords="499,237,635,267"/>
+</map>

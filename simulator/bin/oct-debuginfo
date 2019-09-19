@@ -1,0 +1,114 @@
+#!/usr/bin/python
+# Copyright (c) 2003-2005, Cavium Inc.. All rights reserved.
+#
+# This Software is the property of Cavium Inc..  The Software and all
+# accompanying documentation are copyrighted.  The Software made available
+# here constitutes the proprietary information of Cavium Inc..  You
+# agree to take reasonable steps to prevent the disclosure, unauthorized use
+# or unauthorized distribution of the Software.  You shall use this Software
+# solely with Cavium hardware.
+#
+# Except as expressly permitted in a separate Software License Agreement
+# between You and Cavium Inc., you shall not modify, decompile,
+# disassemble, extract, or otherwise reverse engineer this Software.  You
+# shall not make any copy of the Software or its accompanying documentation,
+# except for copying incident to the ordinary and intended use of the
+# Software and the Underlying Program and except for the making of a single
+# archival copy.
+#
+# This Software, including technical data, may be subject to U.S.  export
+# control laws, including the U.S.  Export Administration Act and its
+# associated regulations, and may be subject to export or import regulations
+# in other countries.  You warrant that You will comply strictly in all
+# respects with all such regulations and acknowledge that you have the
+# responsibility to obtain licenses to export, re-export or import the
+# Software.
+#
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.
+#
+# File version info: $Id: oct-debuginfo 69916 2012-02-14 14:47:03Z bprakash $
+
+import sys
+from gdbstub import fromHex
+from gdbstub import toHex
+from debuglib import DebugInfo
+from debuglib import DebugLineInfo
+from debuglib import DebugObjectInfo
+from debuglib import getSdkVersion
+
+
+#
+# Recursively format the debugging information for display
+#
+def displayDebugNode(node, address, indent=""):
+    result = ""
+    if node.object_type in ["DW_TAG_inlined_subroutine", "DW_TAG_subprogram"]:
+        result += indent + node.get("DW_AT_name") + "():\n"
+        result += (indent + "  PC range").ljust(40) + " = " + node.get("DW_AT_low_pc") + " - " + node.get("DW_AT_high_pc") + "\n"
+        if node.get("DW_AT_frame_base", ""):
+            result += (indent + "  Frame ptr").ljust(40) + " = " + node.get("DW_AT_frame_base") + "\n"
+        for c in node.children():
+            if c.object_type in ["DW_TAG_variable", "DW_TAG_formal_parameter"]:
+                if c.get("DW_AT_location", ""):
+                    result += (indent + "  " + c.get("DW_AT_name")).ljust(40) + " = " + c.get("DW_AT_location") + "\n"
+    for c in node.children():
+        if c.containsPC(address):
+            result += displayDebugNode(c, address, indent)
+    return result
+
+if len(sys.argv) < 3 or ("--help" in sys.argv):
+    print
+    print "Usage: oct-debuginfo <elf> <address>"
+    print "    <elf>        Mips ELF files to load debugging information from."
+    print "    <address>    PC address in hex to get information about. '0x' is optional."
+    print
+    print "Version: " + getSdkVersion()
+    print
+    sys.exit(-1)
+
+print
+filename = sys.argv[1]
+dbg = DebugInfo()
+print "Reading line information"
+dbg.read(filename)
+
+for arg in sys.argv[2:]:
+    if arg.startswith("0x"):
+        address = fromHex(arg[2:])
+    else:
+        address = fromHex(arg)
+    line_info = dbg.getDebugLineInfo(address);
+    if line_info:
+        print "    vi +" + str(line_info.row), line_info.sourcefile
+    else:
+        print "    Unable to find line number information for address 0x" + toHex(address, 16)
+
+print "Reading dwarf information"
+dbg.readObjectInfo(filename)
+
+for arg in sys.argv[2:]:
+    if arg.startswith("0x"):
+        address = fromHex(arg[2:])
+    else:
+        address = fromHex(arg)
+    if dbg.objectInfo:
+        print "Function Scope Information:"
+        for c in dbg.objectInfo.children():
+            result = ""
+            if c.get("DW_AT_low_pc", ""):
+                if c.containsPC(address):
+                    result = displayDebugNode(c, address, "    ")
+            else:
+                result = displayDebugNode(c, address, "    ")
+            if result:
+                print result
+

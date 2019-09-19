@@ -1,0 +1,37 @@
+#!/bin/sh
+
+source ./functions.sh
+
+require test -f /lib/modules/*/intercept-example.ko
+
+assert depmod -a
+assert modprobe intercept-example
+lsmod | grep -q "intercept_example"
+assert_good
+assert rmmod intercept-example
+lsmod | grep -q "intercept_example"
+assert_bad
+
+require test -f /lib/modules/*/drivers/net/ethernet/octeon/octeon-ethernet.ko
+
+modinfo octeon-ethernet | grep -q -F "filename:"
+assert_good
+modinfo octeon-ethernet | grep -q -F "license:        GPL"
+assert_good
+modinfo octeon-ethernet | grep -q -F "author:         Cavium Networks <support@caviumnetworks.com>
+assert_good"
+modinfo octeon-ethernet | grep -q -F "description:    Cavium Networks Octeon ethernet driver."
+assert_good
+modinfo octeon-ethernet | grep -q -F "vermagic:       3.4"
+assert_good
+modinfo octeon-ethernet | grep -q -F "depends:"
+assert_good
+modinfo octeon-ethernet | grep -q -F "parm:           disable_core_queueing:"
+assert_good
+modinfo octeon-ethernet | grep -q -F "parm:           max_rx_cpus:"
+assert_good
+modinfo octeon-ethernet | grep -q -F "parm:           rx_napi_weight:"
+assert_good
+modinfo octeon-ethernet | grep -q -F "parm:           pow_receive_group:"
+assert_good
+

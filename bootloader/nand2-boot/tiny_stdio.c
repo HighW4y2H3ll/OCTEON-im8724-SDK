@@ -1,0 +1,1 @@
+../stage1-common/tiny_stdio.c

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+source ./functions.sh
+
+netstat -an | grep -q "Local Address"
+assert_good
+

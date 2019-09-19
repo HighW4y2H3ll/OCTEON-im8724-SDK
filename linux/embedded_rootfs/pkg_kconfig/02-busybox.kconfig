@@ -1,0 +1,37 @@
+config CONFIG_busybox
+	bool "busybox"
+	default y
+	help
+		From the Busybox homepage:
+		BusyBox combines tiny versions of many common UNIX utilities
+		into a single small executable. It provides replacements for
+		most of the utilities you usually find in GNU fileutils,
+		shellutils, etc. The utilities in BusyBox generally have fewer
+		options than their full-featured GNU cousins; however, the
+		options that are included provide the expected functionality
+		and behave very much like their GNU counterparts. BusyBox
+		provides a fairly complete environment for any small or
+		embedded system.
+
+		BusyBox has been written with size-optimization and limited
+		resources in mind. It is also extremely modular so you can
+		easily include or exclude commands (or features) at compile
+		time. This makes it easy to customize your embedded systems.
+		To create a working system, just add some device nodes in /dev,
+		a few configuration files in /etc, and a Linux kernel.
+
+		BusyBox is maintained by Rob Landley, and licensed under the
+		GNU GENERAL PUBLIC LICENSE version 2 or later.
+
+config CFG_BUSYBOX_TESTSUITE
+	bool "Include the Busybox testsuite"
+	depends CONFIG_busybox
+	default y
+	help
+		Include the Busybox testsuite. This will be placed in
+		/examples/busybox-testsuite. Not all of the busybox
+		tests can run under the busybox environment, so some
+		tests will removed. Run the testsuite by executing
+		"./runtest" in the /examples/busybox-testsuite
+		directory.
+

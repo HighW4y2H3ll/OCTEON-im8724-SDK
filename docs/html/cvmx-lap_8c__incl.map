@@ -1,0 +1,43 @@
+<map id="G" name="G">
+<area shape="rect" id="node7" href="$cvmx_8h.html" title="Main Octeon executive header file (This should be the second header file included..." alt="" coords="1295,315,1364,344"/>
+<area shape="rect" id="node59" href="$cvmx-lapx-defs_8h.html" title="cvmx&#45;lapx&#45;defs.h" alt="" coords="409,547,548,576"/>
+<area shape="rect" id="node85" href="$cvmx-spinlock_8h.html" title="Implementation of spinlocks." alt="" coords="5,83,133,112"/>
+<area shape="rect" id="node88" href="$cvmx-pko3_8h.html" title="cvmx&#45;pko3.h" alt="" coords="469,83,576,112"/>
+<area shape="rect" id="node127" href="$cvmx-lap_8h.html" title="This file contains defines for the LAP interface." alt="" coords="2083,83,2179,112"/>
+<area shape="rect" id="node9" href="$cvmx-platform_8h.html" title="This file is resposible for including all system dependent headers for the cvmx&#45;*..." alt="" coords="1561,469,1695,499"/>
+<area shape="rect" id="node27" href="$cvmx-access_8h.html" title="Function prototypes for accessing memory and CSRs on Octeon." alt="" coords="676,469,799,499"/>
+<area shape="rect" id="node29" href="$cvmx-address_8h.html" title="Typedefs and defines for working with Octeon physical addresses." alt="" coords="1805,392,1933,421"/>
+<area shape="rect" id="node32" href="$cvmx-asm_8h.html" title="This is file defines ASM primitives for the executive." alt="" coords="47,624,151,653"/>
+<area shape="rect" id="node34" href="$cvmx-packet_8h.html" title="Packet buffer defines." alt="" coords="976,392,1099,421"/>
+<area shape="rect" id="node36" href="$cvmx-warn_8h.html" title="Functions for warning users about errors and such." alt="" coords="1672,392,1781,421"/>
+<area shape="rect" id="node38" href="$cvmx-sysinfo_8h.html" title="This module provides system/board information obtained by the bootloader." alt="" coords="709,392,832,421"/>
+<area shape="rect" id="node48" href="$octeon-model_8h.html" title="File defining different Octeon model IDs and macros to compare them." alt="" coords="1123,392,1251,421"/>
+<area shape="rect" id="node50" href="$cvmx-csr_8h.html" title="Configuration and status register (CSR) address and type definitions for Octoen." alt="" coords="856,392,952,421"/>
+<area shape="rect" id="node63" href="$cvmx-utils_8h.html" title="Small utility functions and macros to ease programming of Octeon." alt="" coords="1433,469,1537,499"/>
+<area shape="rect" id="node66" href="$cvmx-clock_8h.html" title="Interface to Core, IO and DDR Clock." alt="" coords="1275,392,1384,421"/>
+<area shape="rect" id="node69" href="$octeon-feature_8h.html" title="File defining checks for different Octeon features." alt="" coords="1408,392,1547,421"/>
+<area shape="rect" id="node71" href="$cvmx-fpa_8h.html" title="Interface to the hardware Free Pool Allocator." alt="" coords="485,392,584,421"/>
+<area shape="rect" id="node11" href="$cvmx-abi_8h.html" title="This file defines macros for use in determining the current calling ABI." alt="" coords="1821,547,1917,576"/>
+<area shape="rect" id="node40" href="$cvmx-app-init_8h.html" title="Header file for simple executive application initialization." alt="" coords="1111,469,1239,499"/>
+<area shape="rect" id="node42" href="$cvmx-coremask_8h.html" title="Module to support operations on bitmap of cores." alt="" coords="1003,547,1144,576"/>
+<area shape="rect" id="node53" href="$cvmx-csr-enums_8h.html" title="Definitions for enumerations used with Octeon CSRs." alt="" coords="1263,469,1409,499"/>
+<area shape="rect" id="node55" href="$cvmx-csr-typedefs_8h.html" title="Configuration and status register (CSR) address and type definitions for Octeon." alt="" coords="823,469,985,499"/>
+<area shape="rect" id="node57" href="$cvmx-fpa-defs_8h.html" title="cvmx&#45;fpa&#45;defs.h" alt="" coords="572,547,705,576"/>
+<area shape="rect" id="node61" href="$cvmx-pko-defs_8h.html" title="cvmx&#45;pko&#45;defs.h" alt="" coords="841,547,975,576"/>
+<area shape="rect" id="node73" href="$cvmx-scratch_8h.html" title="This file provides support for the processor local scratch memory." alt="" coords="257,547,385,576"/>
+<area shape="rect" id="node77" href="$cvmx-fpa1_8h.html" title="Interface to the hardware Free Pool Allocator on Octeon chips." alt="" coords="495,469,601,499"/>
+<area shape="rect" id="node81" href="$cvmx-fpa3_8h.html" title="Interface to the CN78XX Free Pool Allocator, a.k.a." alt="" coords="364,469,471,499"/>
+<area shape="rect" id="node91" href="$cvmx-pko3-queue_8h.html" title="cvmx&#45;pko3&#45;queue.h" alt="" coords="255,160,409,189"/>
+<area shape="rect" id="node93" href="$cvmx-helper_8h.html" title="Helper functions for common, but complicated tasks." alt="" coords="1171,160,1288,189"/>
+<area shape="rect" id="node114" href="$cvmx-ilk_8h.html" title="This file contains defines for the ILK interface." alt="" coords="585,160,676,189"/>
+<area shape="rect" id="node117" href="$cvmx-atomic_8h.html" title="This file provides atomic operations." alt="" coords="71,315,193,344"/>
+<area shape="rect" id="node120" href="$cvmx-pow_8h.html" title="Interface to the hardware Scheduling unit." alt="" coords="775,237,876,267"/>
+<area shape="rect" id="node95" href="$cvmx-wqe_8h.html" title="This header file defines the work queue entry (wqe) data structure." alt="" coords="535,315,639,344"/>
+<area shape="rect" id="node97" href="$cvmx-helper-fpa_8h.html" title="Helper functions for FPA setup." alt="" coords="1244,237,1388,267"/>
+<area shape="rect" id="node99" href="$cvmx-helper-agl_8h.html" title="Functions for AGL (RGMII) initialization, configuration, and monitoring." alt="" coords="1745,237,1887,267"/>
+<area shape="rect" id="node103" href="$cvmx-helper-errata_8h.html" title="Fixes and workaround for Octeon chip errata." alt="" coords="585,237,751,267"/>
+<area shape="rect" id="node106" href="$cvmx-helper-ilk_8h.html" title="Functions for ILK initialization, configuration, and monitoring." alt="" coords="1412,237,1548,267"/>
+<area shape="rect" id="node108" href="$cvmx-helper-loop_8h.html" title="Functions for LOOP initialization, configuration, and monitoring." alt="" coords="1572,237,1721,267"/>
+<area shape="rect" id="node110" href="$cvmx-helper-npi_8h.html" title="Functions for NPI initialization, configuration, and monitoring." alt="" coords="900,237,1041,267"/>
+<area shape="rect" id="node112" href="$cvmx-helper-rgmii_8h.html" title="Functions for RGMII/GMII/MII initialization, configuration, and monitoring." alt="" coords="1065,237,1220,267"/>
+</map>

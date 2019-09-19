@@ -1,0 +1,19 @@
+patch for trace-cmd-v2.3.2 to build in octeon sdk environment.
+
+diff --git a/trace-cmd/Makefile b/trace-cmd/Makefile
+--- a/trace-cmd/Makefile
++++ b/trace-cmd/Makefile
+@@ -270,11 +270,11 @@ do_fpic_compile =					\
+ 
+ do_app_build =						\
+ 	($(print_app_build)				\
+-	$(CC) $^ -rdynamic -o $@ $(LDFLAGS) $(CONFIG_LIBS) $(LIBS))
++	$(CC) $^ -rdynamic $(CFLAGS) -o $@ $(LDFLAGS) $(CONFIG_LIBS) $(LIBS))
+ 
+ do_compile_shared_library =			\
+ 	($(print_shared_lib_compile)		\
+-	$(CC) --shared $^ -o $@)
++	$(CC) --shared $(CFLAGS) $^ -o $@)
+ 
+ do_compile_plugin_obj =				\
+ 	($(print_plugin_obj_compile)		\

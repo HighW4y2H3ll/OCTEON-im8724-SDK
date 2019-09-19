@@ -1,0 +1,13 @@
+#!/bin/sh
+me=`basename $0`
+cmd=`echo -n $me | sed -e s/pci/remote/`
+dir=`dirname $0`
+if [ "x${cmd}" = "xoct-remote-x" ]; then
+  echo Do not invoke oct-pci-x directly
+  exit 1
+fi
+
+if [ -x $dir/$cmd ] ; then
+   cmd=$dir/$cmd
+fi
+OCTEON_REMOTE_PROTOCOL=pci exec $cmd "$@"

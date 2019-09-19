@@ -1,0 +1,6 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert [ `tcpdump -r test-tcpdump.input -e -n -t 2> /dev/null | wc -l` -eq 185 ]
+

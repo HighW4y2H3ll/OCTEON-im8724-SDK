@@ -1,0 +1,10 @@
+#/dev/root	/		ext3	defaults	0 0
+none		/proc		proc	defaults	0 0
+none		/proc/bus/usb	usbfs	rw,nosuid,nodev,noexec 0 0
+none		/dev/shm	tmpfs	defaults	0 0
+none		/dev/pts	devpts	defaults	0 0
+none		/sys		sysfs	defaults	0 0
+none	/sys/kernel/debug	debugfs	defaults	0 0
+/dev/sda1	/mnt		vfat	noauto		0 0
+none		/mnth		hugetlbfs defaults	0 0
+

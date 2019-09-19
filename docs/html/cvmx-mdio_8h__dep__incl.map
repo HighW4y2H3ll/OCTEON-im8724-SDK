@@ -1,0 +1,6 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$cvmx-helper-board_8c.html" title="Helper functions to abstract board specific data about network ports from the rest..." alt="" coords="5,83,165,112"/>
+<area shape="rect" id="node5" href="$cvmx-helper-rgmii_8c.html" title="Functions for RGMII/GMII/MII initialization, configuration, and monitoring." alt="" coords="189,83,344,112"/>
+<area shape="rect" id="node7" href="$cvmx-helper-sgmii_8c.html" title="Functions for SGMII initialization, configuration, and monitoring." alt="" coords="368,83,525,112"/>
+<area shape="rect" id="node9" href="$cvmx-mgmt-port_8c.html" title="Support functions for managing the MII management port." alt="" coords="549,83,701,112"/>
+</map>

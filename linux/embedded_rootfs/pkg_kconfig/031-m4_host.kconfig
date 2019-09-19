@@ -1,0 +1,13 @@
+config CONFIG_m4_host
+	bool "m4_host"
+	default y
+	help
+		Build m4 for host target needed for building other packages.
+
+		From the m4 homepage:
+
+		GNU M4 is an implementation of the traditional Unix macro processor.
+		It is mostly SVR4 compatible although it has some extensions (for example,
+		handling more than 9 positional parameters to macros). GNU M4 also has
+		built-in functions for including files, running shell commands, doing
+		arithmetic, etc. 

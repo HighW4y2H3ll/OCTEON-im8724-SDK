@@ -1,0 +1,187 @@
+/dts-v1/;
+/*
+ * Cavium Generic NAND
+ */
+/ {
+	model = "cavium,generic_nand2";
+	compatible = "cavium,generic_nand2";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&ciu>;
+
+	soc@0 {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu: interrupt-controller@1070000000000 {
+			compatible = "cavium,octeon-3860-ciu";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Controller register (0 or 1)
+			 * 2) Bit within the register (0..63)
+			 */
+			#interrupt-cells = <2>;
+			reg = <0x10700 0x00000000 0x0 0x7000>;
+		};
+
+		gpio: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-3860-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0 16>; /* <0 17> <0 18> <0 19>
+				     <0 20> <0 21> <0 22> <0 23>
+				     <0 24> <0 25> <0 26> <0 27>
+				     <0 28> <0 29> <0 30> <0 31>; */
+		};
+
+		twsi0: i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			interrupts = <0 45>;
+			clock-frequency = <100000>;
+		};
+
+		twsi1: i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			interrupts = <0 59>;
+			clock-frequency = <100000>;
+		};
+
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 34>;
+		};
+
+		uart1: serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 35>;
+		};
+
+		spi@1070000001000 {
+			compatible = "cavium,octeon-3010-spi";
+			reg = <0x10700 0x00001000 0x0 0x100>;
+			interrupts = <0 58>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			eeprom@0 {
+				compatible = "st,m95256", "atmel,at25";
+				reg = <0>;
+				spi-max-frequency = <5000000>;
+				spi-cpha;
+				spi-cpol;
+
+				pagesize = <64>;
+				size = <32768>;
+				address-width = <16>;
+				cavium,qlm-trim = "9,eeprom";
+			};
+		};
+
+		nand-flash-interface@1070001000000 {
+			compatible = "cavium,octeon-5230-nand";
+			reg = <0x10700 0x01000000 0x0 0x100>,
+				<0x11800 0x00000168 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0 63>;
+
+			flash@2 {
+				compatible = "nand-flash";
+				reg = <2>;
+				/* soft_bch is used to support multi-bit ECC */
+				nand-ecc-mode = "hw_syndrome";
+
+				/* Number of bytes of data to perform ECC over */
+				nand-ecc-size = <1024>;
+
+				/* nand-ecc-size and nand-ecc-bytes are
+				 * calculated based on the error management
+				 * requirements of the NAND device.
+				 *
+				 * For example, if a device says it requires
+				 * 12 bits of ECC per 540 bytes then
+				 * nand-ecc-size would be set to 512.
+				 *
+				 * nand-ecc-bytes is calculated based on the
+				 * requirements for the Galios field order.
+				 * There are two variables involved, m and t.
+				 *
+				 * m must be chosen such that:
+				 *	(2^m) - 1 > (nand-ecc-size * 8)
+				 * In the case of 512, m=13 since
+				 * nand-ecc-size * 8 = 2^12.
+				 *
+				 * We need 12 bits of ecc per 512 bytes so t=12.
+				 *
+				 * nand-ecc-bytes = (m*t) / 8 rounded up so
+				 * 19.5 = 20 bytes of ECC per 512 bytes.
+				 *
+				 * For 24 bits of ECC per 1024 bytes of data
+				 * this works out to 42.  For 4 bits of ECC
+				 * per 512 bytes this should be 7.
+				 *
+				 * If nand-ecc-size and nand-ecc-bytes are not
+				 * specified then the default values of 512 and
+				 * 7 will be used respectively, providing 4 bits
+				 * of ecc per 512 bytes of data.
+				 *
+				 * Note that for booting purposes, OCTEON only
+				 * supports 1 bit of ECC per 256 bytes which
+				 * means that NAND devices requiring the
+				 * extended ECC support cannot be used for
+				 * booting purposes.
+				 */
+				nand-ecc-bytes = <42>;
+				/* With of NAND on bus, OCTEON supports both 8
+				 * and 16-bits
+				 */
+				nand-bus-width = <8>;
+			};
+		};
+
+		dma0: dma-engine@1180000000100 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000100 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+		dma1: dma-engine@1180000000108 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000108 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+	};
+
+	aliases {
+		twsi0 = &twsi0;
+		twsi1 = &twsi1;
+		uart0 = &uart0;
+		uart1 = &uart1;
+	};
+ };

@@ -1,0 +1,50 @@
+menu "SDK Examples"
+
+config CONFIG_sdk-examples
+	bool "Include SDK Examples"
+	default y
+	help
+		Include the SDK examples
+
+config CONFIG_intercept-example
+	bool "intercept-example"
+	depends CONFIG_sdk-examples
+	default y
+	help
+		Include intercept-example
+
+config SDK_EXAMPLES_CRYPTO
+	bool "crypto"
+	depends CONFIG_sdk-examples
+	default y
+
+config SDK_EXAMPLES_NAMED_BLOCK
+	bool "named-block"
+	depends CONFIG_sdk-examples
+	default y
+
+config SDK_EXAMPLES_PASSTHROUGH
+	bool "passthrough"
+	depends CONFIG_sdk-examples
+	default y
+
+config SDK_EXAMPLES_PASSTHROUGH_O3
+	bool "passthrough_o3"
+	depends CONFIG_sdk-examples
+	default y
+
+config SDK_EXAMPLES_LINUX_FILTER
+	bool "linux-filter"
+	depends CONFIG_sdk-examples
+	default y
+
+config SDK_EXAMPLES_LOW_LATENCY_MEM
+	bool "low-latency-mem"
+	depends CONFIG_sdk-examples
+	default y
+
+config SDK_EXAMPLES_ZIP
+	bool "zip"
+	depends CONFIG_sdk-examples
+	default y
+endmenu

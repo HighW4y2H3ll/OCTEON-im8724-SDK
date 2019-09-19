@@ -1,0 +1,917 @@
+/dts-v1/;
+/*
+ * Cavium Inc. NIC210NVG board
+ */
+/ {
+	model = "cavium,nic210nvg";
+	compatible = "cavium,nic210nvg";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&ciu>;
+
+	soc@0 {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu: interrupt-controller@1070000000000 {
+			compatible = "cavium,octeon-3860-ciu";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Controller register (0 or 1)
+			 * 2) Bit within the register (0..63)
+			 */
+			#interrupt-cells = <2>;
+			reg = <0x10700 0x00000000 0x0 0x7000>;
+		};
+
+		gpio: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-3860-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0 16>; /* <0 17> <0 18> <0 19>
+				     <0 20> <0 21> <0 22> <0 23>
+				     <0 24> <0 25> <0 26> <0 27>
+				     <0 28> <0 29> <0 30> <0 31>; */
+		};
+
+		smi0: mdio@1180000001800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00001800 0x0 0x40>;
+
+			mphy0: ethernet-phy-nexus@0 {
+				reg = <0>;
+				/* The Vitesse VSC8488 is a dual-PHY where
+				 * some of the configuration is common across
+				 * both of the phy devices such as the reset
+				 * line and the base MDIO address.
+				 */
+				compatible = "vitesse,vsc8488-nexus", "ethernet-phy-nexus";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				ranges;
+
+				/* Hardware reset signal */
+				reset = <&gpio 17 0>;
+
+				phy0: ethernet-phy@0 {
+					/* Absolute address */
+					reg = <0>;
+					compatible = "vitesse,vsc8488", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <13 8>;
+
+					mod_abs-parent = <&gpio>;
+					mod_abs = <15>;
+					tx_fault-parent = <&gpio>;
+					/* TX Fault GPIO line */
+					tx_fault = <6>;
+					/* GPIO that enables output */
+					txon-parent = <&gpio>;
+					txon = <8>;
+					/* INT A GPIO output */
+					inta = <8>;
+
+					/* Optional equalization value to
+					 * program into the PHY XS XAUI Rx
+					 * Equalization control register.
+					 * It is broken up into one nibble for
+					 * each lane with lane 0 using bits
+					 * 12 - 15.
+					 * Use the following table:
+					 *	0x0 - 0dB
+					 *	0x1 - 1.41dB
+					 *	0x2 - 2.24dB
+					 *	0x3 - 2.83dB
+					 *	0x5 - 4.48dB
+					 *	0x6 - 5.39dB
+					 *	0x7 - 6.07dB
+					 *	0x9 - 6.18dB
+					 *	0xA - 7.08dB (default)
+					 *	0xB - 7.79dB
+					 *	0xD - 9.96dB
+					 *	0xE - 10.84dB
+					 *	0xF - 11.55dB
+					 *
+					 * This is board specific and should
+					 * only be defined by the hardware
+					 * vendor.
+					 */
+					vitesse,rx_equalization = <0x0000>;
+					/* Optional transmit pre-emphasis
+					 * control.  This sets the
+					 * PHY XS XAUI TX pre-emphasis control
+					 * register.
+					 *
+					 * It uses bits 13-14 for lane 0,
+					 * 10-11 for lane 1, 7-8 for lane 2
+					 * and 4-5 for lane 3.
+					 *
+					 * Bits 2-3 are the LOS threshold
+					 * setting and bit 1 enables
+					 * the XAUI output high swing mode.
+					 *
+					 * Use the following table for
+					 * pre-emphasis:
+					 * 0b00 - 0dB
+					 * 0b01 - 2.5dB
+					 * 0b10 - 6dB (default)
+					 * 0b11 - 12dB
+					 *
+					 * Use the following table for the LOS
+					 * threshold setting:
+					 *
+					 * 0b00 - 50mV - 175mV (default)
+					 * 0b01 - 60mV - 185mV
+					 * 0b10 - 70mV - 195mV
+					 * 0b11 - 80mV - 205mV
+					 */
+					vitesse,tx_preemphasis = <0x0000>;
+
+					/* TX output driver slew rate control
+					 * is bits 8-11 where 0x0 is the minimum
+					 * and 0xF is the maximum.
+					 * Default is 0xA.
+					 *
+					 * The TX output driver C(-1)
+					 * coefficient is bits 0-4 where
+					 * 0b00000 is the minimum (-4ma) and
+					 * 0b11111 is the maximum (4ma).  The
+					 * default 0x 0b01111.
+					 */
+					vitesse,txout_driver_ctrl1 = <0x0A0F>;
+
+					/* The TX output driver C(0) coefficient
+					 * is bits 8-12 with 0b00000 being the
+					 * minimum (0mA) and 0b11111 being
+					 * the maximum (16mA). The default is
+					 * 0b10011
+					 *
+					 * The C(+1) coefficient is bits 0-5
+					 * with 0b000000 being the minimum
+					 * (-0.25mA) and 0b111111 being the
+					 * maximum (-16mA).  The default is
+					 * 0b000000.
+					 */
+					/*vitesse,txout_driver_ctrl2 = <0x1300>;*/
+
+					/* DC_AGC_LOS_CONFIG1:
+					 *   15: Suppress_Coarse_Adj_on_LOS_Clear
+					 *	0: DC offset correction performed using coarse
+					 *	   resolution mode (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   mode when correction resumes after LOPC/LOS alarms
+					 *	   clear.  This guarantees there will be no big jumps in
+					 *	   the offset at the expense of taking longer to reach
+					 *	   optimal setting.
+					 *   14: Force_DC2_Fine_Adj:
+					 *	Forces the DC offset correction to operate in fine
+					 *	resolution adjustment mode at times when the algorithm.
+					 *	0: DC offset correction makes coarse adjustments when
+					 *	   correction mode is first enabled (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   at all times.  This is slower.
+					 *   13: Force_DC1_Fine_Adj:
+					 *	Forces the DC offset correction to operate in fine
+					 *	resolution adjustment mode at times when the algorithm.
+					 *	0: DC offset correction makes coarse adjustments when
+					 *	   correction mode is first enabled (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   at all times.  This is slower.
+					 *   12: Force_DC0_Fine_Adj:
+					 *	Forces the DC offset correction to operate in fine
+					 *	resolution adjustment mode at times when the algorithm.
+					 *	0: DC offset correction makes coarse adjustments when
+					 *	   correction mode is first enabled (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   at all times.  This is slower.
+					 *   10: Skip_DC2_Adj, 1 = skip DC2 offset correction
+					 *   9:  Skip_DC1_Adj, 1 = skip DC1 offset correction
+					 *   8:  Skip_DC0_Adj, 1 = skip DC0 offset correction
+					 *
+					 *   6-4: DC_Offset_Alarm_Mode (default 1)
+					 *	Selects the alarm condition that will halt the DC offset
+					 *	correction logic when the alarm(s) are set.
+					 *	111: reserved
+					 *	110: reserved
+					 *	101: LOPC and software LOS detection
+					 *	100: LOPC and hardware LOS detection
+					 *	011: Software LOS detection
+					 *	010: Hardware LOS detection
+					 *	001: LOPC
+					 *	000: Never.  DC offset correction will continue to make
+					 *	     fine resolution adjustments to the offsets even
+					 *	     when LOPC and LOS alarms are present.
+					 *
+					 *  3: AGC_Enable
+					 *	Selects when hardware AGC adjustment logic and LOS
+					 *	detection logic is enabled (default 1)
+					 *	0: disabled
+					 *	1: enabled
+					 *  2: AGC_Suspend
+					 *	Suspends the LOS detection logic and AGC logic
+					 *	from making adjustments to the gain.  Bit valid only
+					 *	if AGC_Enable=1
+					 *	0: AGC adjustment enabled (default)
+					 *	1: AGC adjustment suspended
+					 *  1: DC_Offset_Adj_Enable
+					 *	Select when the hardware DC offset correction logic is
+					 *	enabled.
+					 *	0: disable
+					 *	1: enable (default)
+					 *  0: DC_Offset_Adj_Suspend
+					 *	Suspends the DC offset correction logic from making
+					 *	adjustments to all offset settings.  Bit valid only if
+					 *	DC_Offset_Adj_Enable=1
+					 *	0: DC offset correction enabled (default)
+					 *	1: DC offset correction suspended
+					 *
+					 * This setting is only applied for
+					 * passive copper.
+					 */
+					vitesse,copper_dc_agc_los_config1 = <0x000A>;
+
+					/* Disable aggressive track phase during
+					 * firmware convergence if 0, enabled
+					 * otherwise (default).
+					 *
+					 * This setting is only applied for
+					 * passive copper.
+					 */
+					vitesse,copper_agg_track_phase = <0>;
+
+					/* AGC_Config4
+					 *
+					 * 13-8: Ampl_Tolerance
+					 *	This defines the hysterisis
+					 *	built in to the AGC adjustment
+					 *	circuit.  The VGA gain will not
+					 *	be adjusted as long as the
+					 *	measured input amplitude is
+					 *	Inp_Ampl_Target +/- Amnpl_Tolerance.
+					 *	 Default is 4.
+					 * 7-0: Inp_Ampl_Target
+					 *	This is the target amplitude
+					 *	desired to be measured at the
+					 *	peak detector when measuring
+					 *	input amplitude.  The VGA gain
+					 *	is adjusted to achieve this
+					 *	target setting.
+					 *	Default is 0x6E.
+					 *
+					 * This setting is only applied for
+					 * passive copper.
+					 */
+					vitesse,copper_agc_config4 = <0x0496>;
+
+					/* The Vitesse 10G PHY does not
+					 * automatically read the SFP EEPROM
+					 * so the host needs to do it to put
+					 * the PHY in the proper mode for
+					 * copper or optical.
+					 */
+					sfp-eeprom = <&sfp0eeprom>;
+
+					/* LED configuration */
+					/* The LEDs are wired up as follows:
+					 *
+					 * The channel 1 (port 0, bottom port)
+					 * top LED is configured with
+					 * GPIOs 7 and 9 with GPIO 7 configured
+					 * to always be high and GPIO 9
+					 * configured to indicate link.
+					 * Link uses the internal PHY signal
+					 * HW_LOS.
+					 *
+					 * The channel 1 (port 0, bottom port)
+					 * bottom LED is used for RX activity.
+					 * GPIOs 2 and 11 are connected together
+					 * so either TX or RX activity are
+					 * supported.  In order to have the LED
+					 * go dark when there is no link,
+					 * GPIO 2 will pull the signal low.
+					 * GPIO 11 will pull the signal
+					 * low when there is traffic activity.
+					 *
+					 * The channel 0 (port 1, top port)
+					 * top LED is configured with GPIOs 1
+					 * and 3 with GPIO 1 configured to
+					 * always be high and GPIO 3 configured
+					 * to show the link using the internal
+					 * CH0_HW_LOS signal (0x55).
+					 *
+					 * The channel 0 (port 1, top port)
+					 * bottom LED is configured with GPIOs
+					 * 0 and 5 connected together and
+					 * indicates RX activity.  GPIO 0 is
+					 * configured to route the internal
+					 * CH0_HW_LOSN signal (0x54) so that
+					 * the signal is pulled low when there
+					 * is no link and GPIO 5 is configured
+					 * to blink when there is RX activity.
+					 */
+					vitesse,c45-reg-init =
+						/* Invert LOPC error signal */
+						<0x1 0xA201 0 0x0004>;
+					/* Note that the GPIOs are global so
+					 * don't init a second time.
+					 */
+	                        };
+
+				phy1: ethernet-phy@1 {
+					/* Absolute address */
+					reg = <0x1>;
+					compatible = "vitesse,vsc8488", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <13 8>;
+
+					mod_abs-parent = <&gpio>;
+					mod_abs = <14>;
+					/* TX Fault GPIO line */
+					tx_fault-parent = <&gpio>;
+					tx_fault = <5>;
+
+					txon-parent = <&gpio>;
+					/* GPIO that enables output */
+					txon = <9>;
+					/* INT A GPIO output */
+					inta = <6>;
+
+					/* Optional equalization value to
+					 * program into the PHY XS XAUI Rx
+					 * Equalization control register.
+					 * It is broken up into one nibble for
+					 * each lane with lane 0 using bits
+					 * 12 - 15.
+					 * Use the following table:
+					 *	0x0 - 0dB
+					 *	0x1 - 1.41dB
+					 *	0x2 - 2.24dB
+					 *	0x3 - 2.83dB
+					 *	0x5 - 4.48dB
+					 *	0x6 - 5.39dB
+					 *	0x7 - 6.07dB
+					 *	0x9 - 6.18dB
+					 *	0xA - 7.08dB (default)
+					 *	0xB - 7.79dB
+					 *	0xD - 9.96dB
+					 *	0xE - 10.84dB
+					 *	0xF - 11.55dB
+					 *
+					 * This is board specific and should
+					 * only be defined by the hardware
+					 * vendor.
+					 */
+					rx_equalization = <0x0000>;
+					/* Optional transmit pre-emphasis
+					 * control.  This sets the
+					 * PHY XS XAUI TX pre-emphasis control
+					 * register.
+					 *
+					 * It uses bits 13-14 for lane 0,
+					 * 10-11 for lane 1, 7-8 for lane 2
+					 * and 4-5 for lane 3.
+					 *
+					 * Bits 2-3 are the LOS threshold
+					 * setting and bit 1 enables
+					 * the XAUI output high swing mode.
+					 *
+					 * Use the following table for
+					 * pre-emphasis:
+					 * 0b00 - 0dB
+					 * 0b01 - 2.5dB
+					 * 0b10 - 6dB (default)
+					 * 0b11 - 12dB
+					 *
+					 * Use the following table for the LOS
+					 * threshold setting:
+					 *
+					 * 0b00 - 50mV - 175mV (default)
+					 * 0b01 - 60mV - 185mV
+					 * 0b10 - 70mV - 195mV
+					 * 0b11 - 80mV - 205mV
+					 */
+					tx_preemphasis = <0x0000>;
+
+					/* TX output driver slew rate control
+					 * is bits 8-11 where 0x0 is the minimum
+					 * and 0xF is the maximum.
+					 * Default is 0xA.
+					 *
+					 * The TX output driver C(-1)
+					 * coefficient is bits 0-4 where
+					 * 0b00000 is the minimum (-4ma) and
+					 * 0b11111 is the maximum (4ma).  The
+					 * default 0x 0b01111.
+					 */
+					txout_driver_ctrl1 = <0x0A0F>;
+
+					/* The TX output driver C(0) coefficient
+					 * is bits 8-12 with 0b00000 being the
+					 * minimum (0mA) and 0b11111 being
+					 * the maximum (16mA). The default is
+					 * 0b10011
+					 *
+					 * The C(+1) coefficient is bits 0-5
+					 * with 0b000000 being the minimum
+					 * (-0.25mA) and 0b111111 being the
+					 * maximum (-16mA).  The default is
+					 * 0b000000.
+					 */
+					/*txout_driver_ctrl2 = <0x1300>;*/
+
+					/* DC_AGC_LOS_CONFIG1:
+					 *   15: Suppress_Coarse_Adj_on_LOS_Clear
+					 *	0: DC offset correction performed using coarse
+					 *	   resolution mode (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   mode when correction resumes after LOPC/LOS alarms
+					 *	   clear.  This guarantees there will be no big jumps in
+					 *	   the offset at the expense of taking longer to reach
+					 *	   optimal setting.
+					 *   14: Force_DC2_Fine_Adj:
+					 *	Forces the DC offset correction to operate in fine
+					 *	resolution adjustment mode at times when the algorithm.
+					 *	0: DC offset correction makes coarse adjustments when
+					 *	   correction mode is first enabled (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   at all times.  This is slower.
+					 *   13: Force_DC1_Fine_Adj:
+					 *	Forces the DC offset correction to operate in fine
+					 *	resolution adjustment mode at times when the algorithm.
+					 *	0: DC offset correction makes coarse adjustments when
+					 *	   correction mode is first enabled (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   at all times.  This is slower.
+					 *   12: Force_DC0_Fine_Adj:
+					 *	Forces the DC offset correction to operate in fine
+					 *	resolution adjustment mode at times when the algorithm.
+					 *	0: DC offset correction makes coarse adjustments when
+					 *	   correction mode is first enabled (default)
+					 *	1: DC offset correction performed using fine resolution
+					 *	   at all times.  This is slower.
+					 *   10: Skip_DC2_Adj, 1 = skip DC2 offset correction
+					 *   9:  Skip_DC1_Adj, 1 = skip DC1 offset correction
+					 *   8:  Skip_DC0_Adj, 1 = skip DC0 offset correction
+					 *
+					 *   6-4: DC_Offset_Alarm_Mode (default 1)
+					 *	Selects the alarm condition that will halt the DC offset
+					 *	correction logic when the alarm(s) are set.
+					 *	111: reserved
+					 *	110: reserved
+					 *	101: LOPC and software LOS detection
+					 *	100: LOPC and hardware LOS detection
+					 *	011: Software LOS detection
+					 *	010: Hardware LOS detection
+					 *	001: LOPC
+					 *	000: Never.  DC offset correction will continue to make
+					 *	     fine resolution adjustments to the offsets even
+					 *	     when LOPC and LOS alarms are present.
+					 *
+					 *  3: AGC_Enable
+					 *	Selects when hardware AGC adjustment logic and LOS
+					 *	detection logic is enabled (default 1)
+					 *	0: disabled
+					 *	1: enabled
+					 *  2: AGC_Suspend
+					 *	Suspends the LOS detection logic and AGC logic
+					 *	from making adjustments to the gain.  Bit valid only
+					 *	if AGC_Enable=1
+					 *	0: AGC adjustment enabled (default)
+					 *	1: AGC adjustment suspended
+					 *  1: DC_Offset_Adj_Enable
+					 *	Select when the hardware DC offset correction logic is
+					 *	enabled.
+					 *	0: disable
+					 *	1: enable (default)
+					 *  0: DC_Offset_Adj_Suspend
+					 *	Suspends the DC offset correction logic from making
+					 *	adjustments to all offset settings.  Bit valid only if
+					 *	DC_Offset_Adj_Enable=1
+					 *	0: DC offset correction enabled (default)
+					 *	1: DC offset correction suspended
+					 *
+					 * This setting is only applied for
+					 * passive copper.
+					 */
+					vitesse,copper_dc_agc_los_config1 = <0x000A>;
+
+					/* Disable aggressive track phase during
+					 * firmware convergence if 0, enabled
+					 * otherwise (default).
+					 *
+					 * This setting is only applied for
+					 * passive copper.
+					 */
+					vitesse,copper_agg_track_phase = <0>;
+
+					/* AGC_Config4
+					 *
+					 * 13-8: Ampl_Tolerance
+					 *	This defines the hysterisis
+					 *	built in to the AGC adjustment
+					 *	circuit.  The VGA gain will not
+					 *	be adjusted as long as the
+					 *	measured input amplitude is
+					 *	Inp_Ampl_Target +/- Amnpl_Tolerance.
+					 *	 Default is 4.
+					 * 7-0: Inp_Ampl_Target
+					 *	This is the target amplitude
+					 *	desired to be measured at the
+					 *	peak detector when measuring
+					 *	input amplitude.  The VGA gain
+					 *	is adjusted to achieve this
+					 *	target setting.
+					 *	Default is 0x6E.
+					 *
+					 * This setting is only applied for
+					 * passive copper.
+					 */
+					vitesse,copper_agc_config4 = <0x0496>;
+
+					/* The Vitesse 10G PHY does not
+					 * automatically read the SFP EEPROM
+					 * so the host needs to do it to put
+					 * the PHY in the proper mode for
+					 * copper or optical.
+					 */
+					sfp-eeprom = <&sfp1eeprom>;
+
+					/* LED configuration */
+					/* The LEDs are wired up as follows:
+					 *
+					 * The channel 1 (port 0, bottom port)
+					 * top LED is configured with
+					 * GPIOs 7 and 9 with GPIO 7 configured
+					 * to always be high and GPIO 9
+					 * configured to indicate link.
+					 * Link uses the internal PHY signal
+					 * HW_LOS.
+					 *
+					 * The channel 1 (port 0, bottom port)
+					 * bottom LED is used for RX activity.
+					 * GPIOs 2 and 11 are connected together
+					 * so either TX or RX activity are
+					 * supported.  In order to have the LED
+					 * go dark when there is no link,
+					 * GPIO 2 will pull the signal low.
+					 * GPIO 11 will pull the signal
+					 * low when there is traffic activity.
+					 *
+					 * The channel 0 (port 1, top port)
+					 * top LED is configured with GPIOs 1
+					 * and 3 with GPIO 1 configured to
+					 * always be high and GPIO 3 configured
+					 * to show the link using the internal
+					 * CH0_HW_LOS signal (0x55).
+					 *
+					 * The channel 0 (port 1, top port)
+					 * bottom LED is configured with GPIOs
+					 * 0 and 5 connected together and
+					 * indicates RX activity.  GPIO 0 is
+					 * configured to route the internal
+					 * CH0_HW_LOSN signal (0x54) so that
+					 * the signal is pulled low when there
+					 * is no link and GPIO 5 is configured
+					 * to blink when there is RX activity.
+					 */
+					vitesse,c45-reg-init =
+						/* Invert LOPC error signal */
+						<0x1 0xA201 0 0x0004>,
+						/* Ch 1 GPIO_0 Rx data activity */
+						<0x1e 0x100 0 0x0003>,
+						/* Ch 0 GPIO_0 CH0_LOPC */
+						<0x1e 0x101 0 0x003c>,
+						/* Ch 1 GPIO_1 output high */
+						<0x1e 0x102 0 0x1000>,
+						/* Ch 0 GPIO_2 Rx data activity
+						 * Use this GPIO to go dark when
+						 * there is no link, use CH1_LOPC.
+						 */
+						<0x1e 0x104 0 0x0003>,
+						<0x1e 0x105 0 0x003d>,
+
+						/* Ch 0 GPIO_3 rx link, internal signal */
+						<0x1e 0x106 0 0x0003>,
+						/* Ch 0 GPIO_3 Internal ch0_pcs_rx_status */
+						<0x1e 0x107 0 0x006c>,
+
+						/* Ch 1 GPIO_5 Rx data active */
+						<0x1e 0x10a 0 0x0001>,
+
+						/* Channel 0 GPIO_7 output high */
+						<0x1e 0x126 0 0x1000>,
+						/* GPIO_9 Rx link, internal signal */
+						<0x1e 0x12a 0 0x0003>,
+						/* Ch 1 GPIO_9 internal PCS status */
+						<0x1e 0x12b 0 0x006d>,
+						/* Ch 0 GPIO_11 Rx data */
+						<0x1e 0x12e 0 0x0009>;
+	                        };
+			};
+		};
+		pip: pip@11800a0000000 {
+			compatible = "cavium,octeon-3860-pip";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0xa0000000 0x0 0x2000>;
+
+			interface@0 {
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy0>;
+					sfp-slot = <&sfp0>;
+				};
+			};
+			interface@1 {
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy1>;
+					sfp-slot = <&sfp1>;
+				};
+			};
+		};
+
+		twsi0: i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			interrupts = <0 45>;
+			clock-frequency = <100000>;
+
+			tmp@4a {
+				compatible = "nxp,sa56004";
+				reg = <0x4a>;
+				interrupt-parent = <&gpio>;
+				interrupts = <1 8>; /* therm event */
+			};
+			tmp@4f {
+				compatible = "maxim,lm75";
+				reg = <0x4f>;
+				interrupt-parent = <&gpio>;
+				interrupts = <4 8>;	/* Ambient temp alert */
+			};
+			sfp0eeprom: eeprom@50 {
+				compatible = "atmel,24c01";
+				reg = <0x50>;
+			};
+			sfp0diag: eeprom@51 {
+				compatible = "atmel,24c01";
+				reg = <0x51>;
+			};
+
+			tlv-eeprom@53 {
+				compatible = "atmel,24c256";
+				reg = <0x53>;
+				pagesize = <64>;
+			};
+		};
+
+		twsi1: i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			interrupts = <0 59>;
+			clock-frequency = <100000>;
+
+			sfp1eeprom: eeprom@50 {
+				compatible = "atmel,24c01";
+				reg = <0x50>;
+			};
+			sfp1diag: eeprom@51 {
+				compatible = "atmel,24c01";
+				reg = <0x51>;
+			};
+		};
+
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 34>;
+		};
+
+		uart1: serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 35>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f800000  0x800000>,
+				 <1 0  0x10000 0x30000000  0>,
+				 <2 0  0       0x1f000000  0x100000>,
+				 <3 0  0x10000 0x50000000  0>,
+				 <4 0  0x10000 0x60000000  0>,
+				 <5 0  0x10000 0x70000000  0>,
+				 <6 0  0x10000 0x80000000  0>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			cavium,cs-config@2 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <2>;
+				cavium,t-adr  = <0>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <20>;
+				cavium,t-we   = <46>;
+				cavium,t-rd-hld = <8>;
+				cavium,t-wr-hld = <10>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <0>;
+				cavium,t-page   = <1>;
+				cavium,t-ale	= <1>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x400000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0x0 0x180000>;
+					read-only;
+				};
+				partition@100000 {
+					label = "storage";
+					reg = <0x180000 0x160000>;
+				};
+				partition@3e0000 {
+					label = "environment";
+					reg = <0x2e0000 0x20000>;
+					read-only;
+				};
+
+			};
+			psram0: psram@2,0 {
+				compatible = "micron,mt45w1mw16pd";
+				reg = <2 0x20 0x20>, <2 0 0x20>;
+			};
+		};
+
+		dma0: dma-engine@1180000000100 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000100 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+		dma1: dma-engine@1180000000108 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000108 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+		nand-flash-interface@1070001000000 {
+			compatible = "cavium,octeon-5230-nand";
+			reg = <0x10700 0x01000000 0x0 0x100>,
+				<0x11800 0x00000168 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0 63>;
+
+			flash@1 {
+				compatible = "nand-flash";
+				reg = <1>;
+
+				/* soft_bch is used to support multi-bit ECC */
+				nand-ecc-mode = "soft";
+
+				/* Number of bytes of data to perform ECC over */
+				nand-ecc-size = <512>;
+
+				/* nand-ecc-size and nand-ecc-bytes are
+				 * calculated based on the error management
+				 * requirements of the NAND device.
+				 *
+				 * For example, if a device says it requires
+				 * 12 bits of ECC per 540 bytes then
+				 * nand-ecc-size would be set to 512.
+				 *
+				 * nand-ecc-bytes is calculated based on the
+				 * requirements for the Galios field order.
+				 * There are two variables involved, m and t.
+				 *
+				 * m must be chosen such that:
+				 *	(2^m) - 1 > (nand-ecc-size * 8)
+				 * In the case of 512, m=13 since
+				 * nand-ecc-size * 8 = 2^12.
+				 *
+				 * We need 12 bits of ecc per 512 bytes so t=12.
+				 *
+				 * nand-ecc-bytes = (m*t) / 8 rounded up so
+				 * 19.5 = 20 bytes of ECC per 512 bytes.
+				 *
+				 * For 24 bits of ECC per 1024 bytes of data
+				 * this works out to 42.  For 4 bits of ECC
+				 * per 512 bytes this should be 7.
+				 *
+				 * If nand-ecc-size and nand-ecc-bytes are not
+				 * specified then the default values of 512 and
+				 * 7 will be used respectively, providing 4 bits
+				 * of ecc per 512 bytes of data.
+				 *
+				 * Note that for booting purposes, OCTEON only
+				 * supports 1 bit of ECC per 256 bytes which
+				 * means that NAND devices requiring the
+				 * extended ECC support cannot be used for
+				 * booting purposes.
+				 */
+				nand-ecc-bytes = <3>;
+
+				/* With of NAND on bus, OCTEON supports both 8
+				 * and 16-bits
+				 */
+				nand-bus-width = <8>;
+			};
+		};
+
+		sfp0: sfp-slot@0 {
+			compatible = "ethernet,sfp-slot";
+			mod_abs = <&gpio 15 0>;
+			tx_error = <&gpio 5 0>;
+			/* NOTE: shared with SFP 1!!! */
+			tx_disable = <&gpio 8 0>;
+			eeprom = <&sfp0eeprom>;
+			diag = <&sfp0diag>;
+		};
+		sfp1: sfp-slot@1 {
+			compatible = "ethernet,sfp-slot";
+			mod_abs = <&gpio 14 0>;
+			tx_error = <&gpio 4 0>;
+			/* NOTE: shared with SFP 0!!! */
+			tx_disable = <&gpio 8 0>;
+			eeprom = <&sfp1eeprom>;
+			diag = <&sfp1diag>;
+		};
+	};
+
+	aliases {
+		pip = &pip;
+		smi0 = &smi0;
+		twsi0 = &twsi0;
+		twsi1 = &twsi1;
+		uart0 = &uart0;
+		uart1 = &uart1;
+		flash0 = &flash0;
+	};
+ };

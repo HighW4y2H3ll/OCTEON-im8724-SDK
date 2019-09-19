@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+# uudecode(1) decodes only one file, restart it after each file.
+
+if (grep /^-/, @ARGV) {
+  print STDERR
+"Usage: oct-uudecode <file(s)>\nDecode the files encoded in <file(s)>.\n";
+  exit 1;
+}
+
+while (<>) {
+  if (/^begin \d+ (\S+)/) {
+    print STDERR "$1\n";
+    close OUT;
+    open OUT, "|uudecode" or die "Can't find uudecode";
+  }
+  print OUT;
+}
+close OUT;

@@ -1,0 +1,1 @@
+../standalone/mips-octeon.lds

@@ -1,0 +1,23 @@
+config CONFIG_ptpd
+	bool "PTPd - Precision Time Protocol Daemon"
+	default y
+	help
+		From the PTPd homepage:
+		The PTP daemon (PTPd) implements the Precision Time
+		protocol (PTP) as defined by the IEEE 1588 standard. PTP
+		was developed to provide very precise time coordination of
+		LAN connected computers.
+
+		PTPd is a complete implementation of the IEEE 1588
+		specification for a standard (non-boundary) clock. PTPd has
+		been tested with and is known to work properly with other
+		IEEE 1588 implementations. The source code for PTPd is
+		freely available under a BSD-style license. Thanks to
+		contributions from users, PTPd is becoming an increasingly
+		portable, interoperable, and stable IEEE 1588
+		implementation.
+
+
+
+
+

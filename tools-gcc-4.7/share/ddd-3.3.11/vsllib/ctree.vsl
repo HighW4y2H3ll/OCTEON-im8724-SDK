@@ -1,0 +1,85 @@
+// $Id: ctree.vsl 14384 2006-04-11 21:46:04Z cchavva $ 
+// Drawing compact trees
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "tree.vsl"
+
+// Version
+ctree_version() = "$Revision: 14384 $";
+
+// Horizontal tree
+
+hreplaceEven([], _) = [];
+hreplaceEven([arg], _) = [arg];
+hreplaceEven([arg1, arg2], join) = 
+	[arg1, join ^ safe]
+	where safe = vspace(arg2 - arg1);
+hreplaceEven([arg1, arg2, arg3, argtail...], join) = 
+	[arg1, join ^ safe, hreplaceEven([arg3 : argtail], join)...]
+	where safe = vspace(arg2 - arg1) ^ vspace(arg2 - arg3);
+
+_hattachEven(_, [], []) = 0;
+_hattachEven(_, [_], [_]) = 0;
+
+_hattachEven(sum, [_, son2, sontail...], [new1, new2, newtail...]) =
+  (vspace((sum | new1 | (new2 / 2)) - son2 / 2) | (vcenter(new2 ^ 2) & son2)) ^ 
+  _hattachEven(sum | new1 | new2, sontail, newtail);
+
+hattachEven(sons, newsons) = _hattachEven(0, sons, newsons);
+
+hctree(root, sons...) = 
+	(let newsons = hreplaceEven(sons, join) in
+	    vfix(htree(root, newsons...)) 
+	  & hattachEven(sons, newsons))
+	where join = vcenter(hwhite() | hrule() | hwhite());
+
+
+// Vertical tree
+
+vreplaceEven([], _) = [];
+vreplaceEven([arg], _) = [arg];
+vreplaceEven([arg1, arg2], join) = 
+	[arg1, join ^ safe]
+	where safe = hspace(arg2 - arg1);
+vreplaceEven([arg1, arg2, arg3, argtail...], join) = 
+	[arg1, join ^ safe, vreplaceEven([arg3 : argtail], join)...]
+	where safe = hspace(arg2 - arg1) ^ hspace(arg2 - arg3);
+
+_vattachEven(_, [], []) = 0;
+_vattachEven(_, [_], [_]) = 0;
+
+_vattachEven(sum, [_, son2, sontail...], [new1, new2, newtail...]) =
+  (hspace((sum & new1 & (new2 / 2)) - son2 / 2) & (hcenter(new2 ^ 2) | son2)) ^ 
+  _vattachEven(sum & new1 & new2, sontail, newtail);
+
+vattachEven(sons, newsons) = _vattachEven(0, sons, newsons);
+
+vctree(root, sons...) = 
+	(let newsons = vreplaceEven(sons, join) in
+	    hfix(vtree(root, newsons...)) 
+	  | vattachEven(sons, newsons))
+	where join = hcenter(vwhite() & vrule() & vwhite());

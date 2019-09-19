@@ -1,0 +1,38 @@
+#
+# (C) Copyright 2006
+# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+#
+# (C) Copyright 2002
+# Stäubli Faverges - <www.staubli.com>
+# Pierre AUBERT  p.aubert@staubli.com
+#
+#
+# SPDX-License-Identifier:	GPL-2.0+
+#
+
+include $(TOPDIR)/config.mk
+
+LIB	= $(obj)libfdos.o
+
+AOBJS	=
+COBJS-$(CONFIG_CMD_FDOS) := fat.o vfat.o dev.o fdos.o fs.o subdir.o
+
+SRCS	:= $(AOBJS:.o=.S) $(COBJS-y:.o=.c)
+OBJS	:= $(addprefix $(obj),$(AOBJS) $(COBJS-y))
+
+#CPPFLAGS +=
+
+all:	$(LIB) $(AOBJS)
+
+$(LIB):	$(obj).depend $(OBJS)
+	$(call cmd_link_o_target, $(OBJS))
+
+
+#########################################################################
+
+# defines $(obj).depend target
+include $(SRCTREE)/rules.mk
+
+sinclude $(obj).depend
+
+#########################################################################

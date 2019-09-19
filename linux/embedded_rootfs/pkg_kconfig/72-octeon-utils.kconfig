@@ -1,0 +1,112 @@
+menu "Octeon Utilities"
+
+config OCTEON_UTILS
+	bool "Include Octeon Utilities"
+	default y
+	help
+		Include various Octeon utilities
+
+
+config CONFIG_oct-app-ctl
+	bool "oct-app-ctl"
+	depends OCTEON_UTILS
+	select CONFIG_libelf
+	requires TOOLCHAIN_BIG_ENDIAN
+	default y
+	help
+		Usage:	oct-app-ctl info
+		Display info on any running applications and cores available
+		
+		Usage:  oct-app-ctl boot -numcores=2 se_app_name app_args ...
+		Start an SE application on a number of cores
+		
+		Usage	oct-app-ctl add -numcores se_app_name
+		Add cores to a running hotplug-able SE application
+		
+		Usage	oct-app-ctl del -numcores se_app_name
+		Unplug cores from a hotplug-able SE application
+		
+		Usage:  oct-app-ctl shutdown se_app_name
+		Shutdown the application that is running on a set of cores 
+		specified by the application name
+		
+		Replaces "bootoct" and "oct-shutdown-app" from easlier versions.
+
+config CONFIG_oct-linux-identify
+	bool "oct-linux-identify"
+	depends OCTEON_UTILS
+	default y
+	help
+		Usage: oct-linux-identify
+		Displays information about Octeon.
+
+config CONFIG_oct-linux-mdio
+	bool "oct-linux-mdio"
+	depends OCTEON_UTILS
+	default y
+	help
+               Usage: oct-linux-mdio <bus> <phy> <reg> [value]
+
+	       Read or write SMI/MDIO registers.
+
+config CONFIG_load-llm
+	bool "load-llm"
+	depends OCTEON_UTILS
+	requires TOOLCHAIN_BIG_ENDIAN
+	default y
+	help
+		Usage: ./load_llm_nrw <file_to_load>
+
+		Loads specified configuration into low latency memory.
+		Uses narrow interface.
+
+		Usage: ./load_llm_wide <file_to_load>
+
+		Loads specified configuration into low latency memory.
+		Uses wide interface.
+
+config CONFIG_octeon-remote-utils
+	bool "Include Octeon Remote Utilities"
+	depends OCTEON_UTILS
+	default y
+	help
+		Select Octeon remote utilities for controlling another Octeon
+		through various remote interfaces, such as PCI and EJTAG.
+
+config CONFIG_octeon-remote-utils-bootloaders
+	bool "Include bootloader images for Octeon Remote Utilities"
+	depends CONFIG_octeon-remote-utils
+	help
+		Include bootloader images for use with the Octeon
+		remote utilities.
+
+config CONFIG_htlbremap
+	bool "htlbremap"
+	depends OCTEON_UTILS
+	default y
+	help
+		"htlbremap" is a utility for mapping an entire application
+		using HugeTLB pages. Using the LD_PRELOAD environment variable,
+		it intercepts the application after dynamic linking and remaps
+		code, data, stack, and heap using HugeTLB pages. It doesn't
+		work for all applications. See the Octeon SDK documentation
+		for more information.
+
+		LD_PRELOAD=libhtlbremap.so application <args>
+
+config CONFIG_rio-control
+	bool "rio-control"
+	depends OCTEON_UTILS
+	requires TOOLCHAIN_BIG_ENDIAN
+	default n
+	help
+		"rio-control" is a utility for manipulation Serial Rapid IO
+		packet interface parameters. This utility provides comamnd line
+		access to the IOCTLs exposed by the Cavium ethernet driver for
+		Serial Rapid IO mailboxes. See the Octeon SDK documentation
+		for more information.
+
+endmenu
+
+
+

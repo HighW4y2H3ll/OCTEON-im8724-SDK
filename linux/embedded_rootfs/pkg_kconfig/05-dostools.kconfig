@@ -1,0 +1,8 @@
+config CONFIG_dostools
+	bool "dostools"
+	default y
+	help
+
+		* To make a partitioned space in mkdosfs file system 
+
+

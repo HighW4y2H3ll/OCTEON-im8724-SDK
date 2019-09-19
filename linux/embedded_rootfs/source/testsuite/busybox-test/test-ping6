@@ -1,0 +1,13 @@
+#!/bin/sh                                                                       
+source ./functions.sh
+
+ping6 -c 3 0:0:0:0:0:0:0:1 > $0.log
+require [ $? -eq 0 ]
+
+ping6 -c 3 -s 120 0:0:0:0:0:0:0:1 > $0.log
+require [ $? = 0 ]
+
+for i in `grep -c 128 $0.log | awk '{ print $1 }'`
+do
+  require [ $i -eq 3 ]
+done

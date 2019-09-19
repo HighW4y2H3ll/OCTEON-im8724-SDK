@@ -1,0 +1,13 @@
+#!/bin/bash
+
+memory=384,384
+uart=2020
+packet_port=2000
+cores=${cores:=4,4}
+rootfs=rootfs.ext2
+if [ ! -z "$OCTEON_LE" ]; then
+    rootfs=rootfs-le.ext2
+fi
+
+oct-sim linux/vmlinux.64 -envfile=u-boot-env-numa -memsize=${memory} -uart0=${uart} -uart1=2021 -serve=${packet_port} -ld0x40000000:../embedded_rootfs/$rootfs $* -numnodes=2 -numcores=${cores}
+

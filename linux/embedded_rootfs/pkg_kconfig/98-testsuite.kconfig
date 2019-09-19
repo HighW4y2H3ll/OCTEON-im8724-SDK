@@ -1,0 +1,8 @@
+config CONFIG_testsuite
+	bool "Include a simple testsuite"
+	default y
+	help
+		Includes a simple testsuite for the command line utilities
+		under /examples/testsuite. It is meant for basic functionality
+		and does not cover the tools in depth.
+

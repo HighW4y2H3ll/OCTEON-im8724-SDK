@@ -1,0 +1,1 @@
+bootcmd=bootoct 0x10000000 stack=0x34500 heap=0x567800 coremask=0,3 nodemask=0x2 endbootargs -arg1 -arg2=foo -another_arg; bootoct 0x11000000 coremask=3,0 nodemask=0x1

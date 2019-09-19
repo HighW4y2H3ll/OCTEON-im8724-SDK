@@ -1,0 +1,882 @@
+/dts-v1/;
+/*
+ * Cavium Inc. NIC401NVG board
+ */
+/ {
+	model = "cavium,nic401nvg";
+	compatible = "cavium,nic4e";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&ciu>;
+
+	soc@0 {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu: interrupt-controller@1070000000000 {
+			compatible = "cavium,octeon-3860-ciu";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Controller register (0 or 1)
+			 * 2) Bit within the register (0..63)
+			 */
+			#interrupt-cells = <2>;
+			reg = <0x10700 0x00000000 0x0 0x7000>;
+		};
+
+		gpio: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-3860-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0 16>; /* <0 17> <0 18> <0 19>
+				     <0 20> <0 21> <0 22> <0 23>
+				     <0 24> <0 25> <0 26> <0 27>
+				     <0 28> <0 29> <0 30> <0 31>; */
+		};
+
+		smi0: mdio@1180000001800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00001800 0x0 0x40>;
+
+			phy0: ethernet-phy@0 {
+				reg = <0x0>;
+				compatible = "vitesse,vsc8664", "ethernet-phy-ieee802.3-c22";
+				interrupt-parent = <&gpio>;
+				interrupts = <9 8>;	/* pin 9, active low */
+
+				mod-def-parent = <&gpio>;
+				/* GPIO pin, 1 = active high, 0 = active low */
+				mod-def = <17 0>;
+				/* This configures which GPIO pin is connected
+				 * to TX Disable on the SFP port.
+				 */
+				tx-enable-gpio = <13>;
+				/* Enable MAC autonegotiation */
+				cmode-mac-an = <1>;
+				/* 1000BASE-X fiber/SFP only with A/N performed
+				 * by the PHY.
+				 *
+				 * 0: Cat5 copper only.
+				 * 1: SerDes fiber/SFP pass-through mode only.
+				 *    No auto-negotiation performed in the PHY.
+				 * 2: 1000BASE-X fiber/SFP media only with
+				 *    auto-negotiation performed by the PHY.
+				 * 3: 100BASE-FX fiber/SFP on the fiber media
+				 *    pins only.
+				 * 4: Reserved.
+				 * 5: Auto-Media Sense with Cat5 media or SerDes
+				 *    fiber/SFP pass-through mode.
+				 * 6: Auto-Media Sense with Cat5 media or
+				 *    1000BASE-X fiber/SFP media with
+				 *    auto-negotiation performed by the PHY.
+				 * 7: Auto-Media Sense with Cat5 media or
+				 *    100BASE-FX fiber/SFP media.
+				 */
+				cmode-mode = <2>;
+
+				/* MAC operating mode
+				 * 0: SGMII
+				 * 1: 1000BASE-X
+				 */
+				cmode-mac-mode = <1>;
+
+				/* SIGDET pin polarity
+				 * 0: Active high
+				 * 1: Active low
+				 */
+				cmode-sigdet-polarity = <1>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-mac-loopback-mode = <3>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-media-loopback-mode = <3>;
+				/* One nibble per LED. LS = link state
+				 * 0: Link/Activity
+				 *    LS0: Valid link at any speed on any media
+				 *         interface.
+				 *    LS1: No link in any speed on any media
+				 *         interface.
+				 *    Blink or pulse-stretch: Valid link at any
+				 *         speed on any media interface with
+				 *         activity present.
+				 * 1: Link1000/Activity
+				 *    LS0: Valid 1000BASE-T or 1000BASE-X link.
+				 *    LS1: No link in 1000BASE-T or 1000BASE-X.
+				 *    Blink or pulse-stretch: Valid 1000BASE-T or
+				 *         1000BASE-X link with activity present.
+				 * 2: Link100/Activity
+				 *    LS0: Valid 100BASE-TX or 100BASE-FX link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX
+				 *         or 100BASE-FX link with activity
+				 *         present.
+				 * 3: Link10/Activity
+				 *    LS0: Valid 10BASE-T.
+				 *    LS1: No link in 10BASE-T.
+				 *    Blink or pulse-stretch: Valid 10BASE-T
+				 *         with activity present.
+				 * 4: Link100/1000Activity
+				 *    LS0: Valid 100BASE-TX, 100BASE-FX,
+				 *         1000BASE-X or 1000BASE-T link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX,
+				 *         100BASE-FX, 1000BASE-X or 1000BASE-T
+				 *         link with activity present.
+				 * 5: Same as 4 but with 10BASE-T, 1000BASE-X or
+				 *    1000BASE-T.
+				 * 6: Same as 4 but with 10BASE-T, 100BASE-FX or
+				 *    100BASE-TX.
+				 * 7. Same as 4 but with 100BASE-FX and
+				 *    1000BASE-X.
+				 * 8. Duplex/Collision
+				 *    LS0: Link established in full-duplex mode.
+				 *    LS1: Link established in half-duplex mode
+				 *         or no link established.
+				 *    Blink or pulse-stretch: Link established
+				 *         in half-diplex mode but collisions
+				 *         are present.
+				 * 9: Collision
+				 *    LS1: No collision detected
+				 *    Blink or pulse-stretch: Collision detected
+				 * A: Activity
+				 *    LS1: No activity present
+				 *    Blink or pulse-stretch: Activity present
+				 *         (becomes TX activity present if
+				 *          register bit 30.14 is set to 1).
+				 * B: 100BASE-FX/1000BASE-X Fiber Activity
+				 * C: Auto-Negotiation Fault
+				 *    LS0: Auto-negotiation fault occurred
+				 *    LS1: No auto-negotiation fault present
+				 * D: Serial mode
+				 * E: Force LED Off
+				 * F: Force LED On
+				 */
+
+				led-mode = <0x403>;
+				/* LED Behavior
+				 * See Table 38 on LED Behavior
+				 */
+				led-behavior = <0x8012>;
+			};
+			phy1: ethernet-phy@1 {
+				reg = <1>;
+				compatible = "vitesse,vsc8664", "ethernet-phy-ieee802.3-c22";
+				interrupt-parent = <&gpio>;
+				interrupts = <10 8>;	/* pin 10, active low */
+
+				mod-def-parent = <&gpio>;
+				/* GPIO pin, 1 = active high, 0 = active low */
+				mod-def = <6 0>;
+				/* This configures which GPIO pin is connected
+				 * to TX Disable on the SFP port.
+				 */
+				tx-enable-gpio = <10>;
+				/* Enable MAC autonegotiation */
+				cmode-mac-an = <1>;
+				/* 1000BASE-X fiber/SFP only with A/N performed
+				 * by the PHY.
+				 *
+				 * 0: Cat5 copper only.
+				 * 1: SerDes fiber/SFP pass-through mode only.
+				 *    No auto-negotiation performed in the PHY.
+				 * 2: 1000BASE-X fiber/SFP media only with
+				 *    auto-negotiation performed by the PHY.
+				 * 3: 100BASE-FX fiber/SFP on the fiber media
+				 *    pins only.
+				 * 4: Reserved.
+				 * 5: Auto-Media Sense with Cat5 media or SerDes
+				 *    fiber/SFP pass-through mode.
+				 * 6: Auto-Media Sense with Cat5 media or
+				 *    1000BASE-X fiber/SFP media with
+				 *    auto-negotiation performed by the PHY.
+				 * 7: Auto-Media Sense with Cat5 media or
+				 *    100BASE-FX fiber/SFP media.
+				 */
+				cmode-mode = <2>;
+
+				/* MAC operating mode
+				 * 0: SGMII
+				 * 1: 1000BASE-X
+				 */
+				cmode-mac-mode = <1>;
+
+				/* SIGDET pin polarity
+				 * 0: Active high
+				 * 1: Active low
+				 */
+				cmode-sigdet-polarity = <1>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-mac-loopback-mode = <3>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-media-loopback-mode = <3>;
+				/* One nibble per LED. LS = link state
+				 * 0: Link/Activity
+				 *    LS0: Valid link at any speed on any media
+				 *         interface.
+				 *    LS1: No link in any speed on any media
+				 *         interface.
+				 *    Blink or pulse-stretch: Valid link at any
+				 *         speed on any media interface with
+				 *         activity present.
+				 * 1: Link1000/Activity
+				 *    LS0: Valid 1000BASE-T or 1000BASE-X link.
+				 *    LS1: No link in 1000BASE-T or 1000BASE-X.
+				 *    Blink or pulse-stretch: Valid 1000BASE-T or
+				 *         1000BASE-X link with activity present.
+				 * 2: Link100/Activity
+				 *    LS0: Valid 100BASE-TX or 100BASE-FX link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX
+				 *         or 100BASE-FX link with activity
+				 *         present.
+				 * 3: Link10/Activity
+				 *    LS0: Valid 10BASE-T.
+				 *    LS1: No link in 10BASE-T.
+				 *    Blink or pulse-stretch: Valid 10BASE-T
+				 *         with activity present.
+				 * 4: Link100/1000Activity
+				 *    LS0: Valid 100BASE-TX, 100BASE-FX,
+				 *         1000BASE-X or 1000BASE-T link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX,
+				 *         100BASE-FX, 1000BASE-X or 1000BASE-T
+				 *         link with activity present.
+				 * 5: Same as 4 but with 10BASE-T, 1000BASE-X or
+				 *    1000BASE-T.
+				 * 6: Same as 4 but with 10BASE-T, 100BASE-FX or
+				 *    100BASE-TX.
+				 * 7. Same as 4 but with 100BASE-FX and
+				 *    1000BASE-X.
+				 * 8. Duplex/Collision
+				 *    LS0: Link established in full-duplex mode.
+				 *    LS1: Link established in half-duplex mode
+				 *         or no link established.
+				 *    Blink or pulse-stretch: Link established
+				 *         in half-diplex mode but collisions
+				 *         are present.
+				 * 9: Collision
+				 *    LS1: No collision detected
+				 *    Blink or pulse-stretch: Collision detected
+				 * A: Activity
+				 *    LS1: No activity present
+				 *    Blink or pulse-stretch: Activity present
+				 *         (becomes TX activity present if
+				 *          register bit 30.14 is set to 1).
+				 * B: 100BASE-FX/1000BASE-X Fiber Activity
+				 * C: Auto-Negotiation Fault
+				 *    LS0: Auto-negotiation fault occurred
+				 *    LS1: No auto-negotiation fault present
+				 * D: Serial mode
+				 * E: Force LED Off
+				 * F: Force LED On
+				 */
+
+				led-mode = <0x403>;
+				/* LED Behavior
+				 * See Table 38 on LED Behavior
+				 */
+				led-behavior = <0x8012>;
+			};
+			phy2: ethernet-phy@2 {
+				reg = <2>;
+				compatible = "vitesse,vsc8664", "ethernet-phy-ieee802.3-c22";
+				interrupt-parent = <&gpio>;
+				interrupts = <11 8>;	/* pin 11, active low */
+
+				mod-def-parent = <&gpio>;
+				/* GPIO pin, 1 = active high, 0 = active low */
+				mod-def = <8 0>;
+				/* This configures which GPIO pin is connected
+				 * to TX Disable on the SFP port.
+				 */
+				tx-enable-gpio = <11>;
+				/* Enable MAC autonegotiation */
+				cmode-mac-an = <1>;
+				/* 1000BASE-X fiber/SFP only with A/N performed
+				 * by the PHY.
+				 *
+				 * 0: Cat5 copper only.
+				 * 1: SerDes fiber/SFP pass-through mode only.
+				 *    No auto-negotiation performed in the PHY.
+				 * 2: 1000BASE-X fiber/SFP media only with
+				 *    auto-negotiation performed by the PHY.
+				 * 3: 100BASE-FX fiber/SFP on the fiber media
+				 *    pins only.
+				 * 4: Reserved.
+				 * 5: Auto-Media Sense with Cat5 media or SerDes
+				 *    fiber/SFP pass-through mode.
+				 * 6: Auto-Media Sense with Cat5 media or
+				 *    1000BASE-X fiber/SFP media with
+				 *    auto-negotiation performed by the PHY.
+				 * 7: Auto-Media Sense with Cat5 media or
+				 *    100BASE-FX fiber/SFP media.
+				 */
+				cmode-mode = <2>;
+
+				/* MAC operating mode
+				 * 0: SGMII
+				 * 1: 1000BASE-X
+				 */
+				cmode-mac-mode = <1>;
+
+				/* SIGDET pin polarity
+				 * 0: Active high
+				 * 1: Active low
+				 */
+				cmode-sigdet-polarity = <1>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-mac-loopback-mode = <3>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-media-loopback-mode = <3>;
+				/* One nibble per LED. LS = link state
+				 * 0: Link/Activity
+				 *    LS0: Valid link at any speed on any media
+				 *         interface.
+				 *    LS1: No link in any speed on any media
+				 *         interface.
+				 *    Blink or pulse-stretch: Valid link at any
+				 *         speed on any media interface with
+				 *         activity present.
+				 * 1: Link1000/Activity
+				 *    LS0: Valid 1000BASE-T or 1000BASE-X link.
+				 *    LS1: No link in 1000BASE-T or 1000BASE-X.
+				 *    Blink or pulse-stretch: Valid 1000BASE-T or
+				 *         1000BASE-X link with activity present.
+				 * 2: Link100/Activity
+				 *    LS0: Valid 100BASE-TX or 100BASE-FX link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX
+				 *         or 100BASE-FX link with activity
+				 *         present.
+				 * 3: Link10/Activity
+				 *    LS0: Valid 10BASE-T.
+				 *    LS1: No link in 10BASE-T.
+				 *    Blink or pulse-stretch: Valid 10BASE-T
+				 *         with activity present.
+				 * 4: Link100/1000Activity
+				 *    LS0: Valid 100BASE-TX, 100BASE-FX,
+				 *         1000BASE-X or 1000BASE-T link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX,
+				 *         100BASE-FX, 1000BASE-X or 1000BASE-T
+				 *         link with activity present.
+				 * 5: Same as 4 but with 10BASE-T, 1000BASE-X or
+				 *    1000BASE-T.
+				 * 6: Same as 4 but with 10BASE-T, 100BASE-FX or
+				 *    100BASE-TX.
+				 * 7. Same as 4 but with 100BASE-FX and
+				 *    1000BASE-X.
+				 * 8. Duplex/Collision
+				 *    LS0: Link established in full-duplex mode.
+				 *    LS1: Link established in half-duplex mode
+				 *         or no link established.
+				 *    Blink or pulse-stretch: Link established
+				 *         in half-diplex mode but collisions
+				 *         are present.
+				 * 9: Collision
+				 *    LS1: No collision detected
+				 *    Blink or pulse-stretch: Collision detected
+				 * A: Activity
+				 *    LS1: No activity present
+				 *    Blink or pulse-stretch: Activity present
+				 *         (becomes TX activity present if
+				 *          register bit 30.14 is set to 1).
+				 * B: 100BASE-FX/1000BASE-X Fiber Activity
+				 * C: Auto-Negotiation Fault
+				 *    LS0: Auto-negotiation fault occurred
+				 *    LS1: No auto-negotiation fault present
+				 * D: Serial mode
+				 * E: Force LED Off
+				 * F: Force LED On
+				 */
+
+				led-mode = <0x403>;
+				/* LED Behavior
+				 * See Table 38 on LED Behavior
+				 */
+				led-behavior = <0x8012>;
+			};
+			phy3: ethernet-phy@3 {
+				reg = <3>;
+				compatible = "vitesse,vsc8664", "ethernet-phy-ieee802.3-c22";
+				interrupt-parent = <&gpio>;
+				interrupts = <12 8>;	/* pin 12, active low */
+
+				mod-def-parent = <&gpio>;
+				/* GPIO pin, 1 = active high, 0 = active low */
+				mod-def = <1 0>;
+				/* This configures which GPIO pin is connected
+				 * to TX Disable on the SFP port.
+				 */
+				tx-enable-gpio = <15>;
+				/* Enable MAC autonegotiation */
+				cmode-mac-an = <1>;
+				/* 1000BASE-X fiber/SFP only with A/N performed
+				 * by the PHY.
+				 *
+				 * 0: Cat5 copper only.
+				 * 1: SerDes fiber/SFP pass-through mode only.
+				 *    No auto-negotiation performed in the PHY.
+				 * 2: 1000BASE-X fiber/SFP media only with
+				 *    auto-negotiation performed by the PHY.
+				 * 3: 100BASE-FX fiber/SFP on the fiber media
+				 *    pins only.
+				 * 4: Reserved.
+				 * 5: Auto-Media Sense with Cat5 media or SerDes
+				 *    fiber/SFP pass-through mode.
+				 * 6: Auto-Media Sense with Cat5 media or
+				 *    1000BASE-X fiber/SFP media with
+				 *    auto-negotiation performed by the PHY.
+				 * 7: Auto-Media Sense with Cat5 media or
+				 *    100BASE-FX fiber/SFP media.
+				 */
+				cmode-mode = <2>;
+
+				/* MAC operating mode
+				 * 0: SGMII
+				 * 1: 1000BASE-X
+				 */
+				cmode-mac-mode = <1>;
+
+				/* SIGDET pin polarity
+				 * 0: Active high
+				 * 1: Active low
+				 */
+				cmode-sigdet-polarity = <1>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-mac-loopback-mode = <3>;
+				/* 0: Pad loopback
+				 * 1: SerDes serial loopback
+				 * 2: SerDes parallel loopback
+				 * 3: Normal data operation, but with recovered
+				 *    clock as SerDes transmit clock.
+				 */
+				serdes-media-loopback-mode = <3>;
+				/* One nibble per LED. LS = link state
+				 * 0: Link/Activity
+				 *    LS0: Valid link at any speed on any media
+				 *         interface.
+				 *    LS1: No link in any speed on any media
+				 *         interface.
+				 *    Blink or pulse-stretch: Valid link at any
+				 *         speed on any media interface with
+				 *         activity present.
+				 * 1: Link1000/Activity
+				 *    LS0: Valid 1000BASE-T or 1000BASE-X link.
+				 *    LS1: No link in 1000BASE-T or 1000BASE-X.
+				 *    Blink or pulse-stretch: Valid 1000BASE-T or
+				 *         1000BASE-X link with activity present.
+				 * 2: Link100/Activity
+				 *    LS0: Valid 100BASE-TX or 100BASE-FX link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX
+				 *         or 100BASE-FX link with activity
+				 *         present.
+				 * 3: Link10/Activity
+				 *    LS0: Valid 10BASE-T.
+				 *    LS1: No link in 10BASE-T.
+				 *    Blink or pulse-stretch: Valid 10BASE-T
+				 *         with activity present.
+				 * 4: Link100/1000Activity
+				 *    LS0: Valid 100BASE-TX, 100BASE-FX,
+				 *         1000BASE-X or 1000BASE-T link.
+				 *    LS1: No link in 100BASE-TX or 100BASE-FX.
+				 *    Blink or pulse-stretch: Valid 100BASE-TX,
+				 *         100BASE-FX, 1000BASE-X or 1000BASE-T
+				 *         link with activity present.
+				 * 5: Same as 4 but with 10BASE-T, 1000BASE-X or
+				 *    1000BASE-T.
+				 * 6: Same as 4 but with 10BASE-T, 100BASE-FX or
+				 *    100BASE-TX.
+				 * 7. Same as 4 but with 100BASE-FX and
+				 *    1000BASE-X.
+				 * 8. Duplex/Collision
+				 *    LS0: Link established in full-duplex mode.
+				 *    LS1: Link established in half-duplex mode
+				 *         or no link established.
+				 *    Blink or pulse-stretch: Link established
+				 *         in half-diplex mode but collisions
+				 *         are present.
+				 * 9: Collision
+				 *    LS1: No collision detected
+				 *    Blink or pulse-stretch: Collision detected
+				 * A: Activity
+				 *    LS1: No activity present
+				 *    Blink or pulse-stretch: Activity present
+				 *         (becomes TX activity present if
+				 *          register bit 30.14 is set to 1).
+				 * B: 100BASE-FX/1000BASE-X Fiber Activity
+				 * C: Auto-Negotiation Fault
+				 *    LS0: Auto-negotiation fault occurred
+				 *    LS1: No auto-negotiation fault present
+				 * D: Serial mode
+				 * E: Force LED Off
+				 * F: Force LED On
+				 */
+
+				led-mode = <0x403>;
+				/* LED Behavior
+				 * See Table 38 on LED Behavior
+				 */
+				led-behavior = <0x8012>;
+			};
+		};
+
+		pip: pip@11800a0000000 {
+			compatible = "cavium,octeon-3860-pip";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0xa0000000 0x0 0x2000>;
+
+			interface@0 {
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy0>;
+					cavium,sgmii-mac-1000x-mode;
+				};
+				ethernet@1 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x1>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy1>;
+					cavium,sgmii-mac-1000x-mode;
+				};
+				ethernet@2 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x2>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy2>;
+					cavium,sgmii-mac-1000x-mode;
+				};
+				ethernet@3 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x3>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy3>;
+					cavium,sgmii-mac-1000x-mode;
+				};
+			};
+		};
+
+		twsi0: i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			interrupts = <0 45>;
+			clock-frequency = <100000>;
+
+			tmp@4a {
+				compatible = "nxp,sa56004";
+				reg = <0x4a>;
+				interrupt-parent = <&gpio>;
+				interrupts = <14 8>; /* therm event */
+			};
+			tmp@4f {
+				compatible = "ti,lm75";
+				reg = <0x4f>;
+				interrupt-parent = <&gpio>;
+				interrupt = <16 8>;
+			};
+			tlv-eeprom@53 {
+				compatible = "atmel,24c256";
+				reg = <0x53>;
+				pagesize = <64>;
+			};
+		};
+
+		twsi1: i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			interrupts = <0 59>;
+			clock-frequency = <100000>;
+
+			/* PHY temp sensor */
+			tmp@4a {
+				compatible = "nxp,saa56004x";
+				reg = <0x4a>;
+				interrupt-parent = <&gpio>;
+				interrupts = <14 8>; /* therm event */
+			};
+
+			mux@70 {
+				compatible = "nxp,pca9548";
+				reg = <0x70>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				i2c@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+					sfp0: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp0alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>;
+					sfp1: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp1alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>;
+					sfp2: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp2alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@3 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>;
+					sfp3: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp3alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+			};
+		};
+
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 34>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f800000  0x800000>,
+				 <1 0  0x10000 0x30000000  0>,
+				 <2 0  0       0x1f000000  0x80000>,
+				 <3 0  0x10000 0x50000000  0>,
+				 <4 0  0x10000 0x60000000  0>,
+				 <5 0  0x10000 0x70000000  0>,
+				 <6 0  0x10000 0x80000000  0>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x400000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0x0 0x180000>;
+					read-only;
+				};
+				partition@180000 {
+					label = "storage";
+					reg = <0x180000 0x160000>;
+				};
+				partition@3e0000 {
+					label = "environment";
+					reg = <0x2e0000 0x20000>;
+					read-only;
+				};
+			};
+		};
+
+		dma0: dma-engine@1180000000100 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000100 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+		dma1: dma-engine@1180000000108 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000108 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+
+		nand-flash-interface@1070001000000 {
+			compatible = "cavium,octeon-5230-nand";
+			reg = <0x10700 0x01000000 0x0 0x100>,
+				<0x11800 0x00000168 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0 63>;
+
+			flash@1 {
+				compatible = "nand-flash";
+				reg = <1>;
+
+				/* soft_bch is used to support multi-bit ECC */
+				nand-ecc-mode = "soft";
+
+				/* Number of bytes of data to perform ECC over */
+				nand-ecc-size = <512>;
+
+				/* nand-ecc-size and nand-ecc-bytes are
+				 * calculated based on the error management
+				 * requirements of the NAND device.
+				 *
+				 * For example, if a device says it requires
+				 * 12 bits of ECC per 540 bytes then
+				 * nand-ecc-size would be set to 512.
+				 *
+				 * nand-ecc-bytes is calculated based on the
+				 * requirements for the Galios field order.
+				 * There are two variables involved, m and t.
+				 *
+				 * m must be chosen such that:
+				 *	(2^m) - 1 > (nand-ecc-size * 8)
+				 * In the case of 512, m=13 since
+				 * nand-ecc-size * 8 = 2^12.
+				 *
+				 * We need 12 bits of ecc per 512 bytes so t=12.
+				 *
+				 * nand-ecc-bytes = (m*t) / 8 rounded up so
+				 * 19.5 = 20 bytes of ECC per 512 bytes.
+				 *
+				 * For 24 bits of ECC per 1024 bytes of data
+				 * this works out to 42.  For 4 bits of ECC
+				 * per 512 bytes this should be 7.
+				 *
+				 * If nand-ecc-size and nand-ecc-bytes are not
+				 * specified then the default values of 512 and
+				 * 7 will be used respectively, providing 4 bits
+				 * of ecc per 512 bytes of data.
+				 *
+				 * Note that for booting purposes, OCTEON only
+				 * supports 1 bit of ECC per 256 bytes which
+				 * means that NAND devices requiring the
+				 * extended ECC support cannot be used for
+				 * booting purposes.
+				 */
+				nand-ecc-bytes = <3>;
+
+				/* With of NAND on bus, OCTEON supports both 8
+				 * and 16-bits
+				 */
+				nand-bus-width = <8>;
+			};
+		};
+	};
+
+	aliases {
+		pip = &pip;
+		smi0 = &smi0;
+		twsi0 = &twsi0;
+		twsi1 = &twsi1;
+		uart0 = &uart0;
+		flash0 = &flash0;
+	};
+ };

@@ -1,0 +1,6 @@
+config CONFIG_libuuid
+	bool "libuuid"
+	default n
+	help
+		This enables libuuid, needed for NVME
+

@@ -1,0 +1,19 @@
+config CONFIG_i2ctools
+	bool "i2ctools"
+	default n
+	help
+		From the I2C Tools homepage:
+		The I2C tools that used to be part of the lm-sensors package
+		have been split to a separate package. The rationale for that
+		move is that not all hardware monitoring chips are I2C devices,
+		and not all I2C devices are hardware monitoring chips, so having
+		everything in a single package was confusing and impractical.
+
+		The i2c-tools package contains a heterogeneous set of I2C tools
+		for Linux: a bus probing tool, a chip dumper, register-level
+		SMBus access helpers, EEPROM decoding scripts, EEPROM
+		programming tools, and a python module for SMBus access.
+
+		All versions of Linux are supported, as long as I2C support is
+		included in the kernel.
+

@@ -1,0 +1,1704 @@
+/dts-v1/;
+/*
+ * Cavium Inc. EVB CN7800
+ */
+/ {
+	model = "cavium,rainier";
+	compatible = "cavium,rainier";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	soc@0 {
+		interrupt-parent = <&ciu3>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu3: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x17c00000  0x8400000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0x10000 0x40000000  0>,
+				 <5 0  0x10000 0x50000000  0>,
+				 <6 0  0x10000 0x60000000  0>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ale  = <5>;
+				cavium,t-ce   = <100>;
+				cavium,t-oe   = <30>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <20>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <0>;
+				cavium,t-page   = <20>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,page-mode = <1>;
+				cavium,pages     = <8>;
+				cavium,bus-width = <16>;
+				cavium,ale-mode  = <1>;
+			};
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x8000000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0 0x400000>;
+					read-only;
+				};
+				partition@400000 {
+					label = "storage";
+					reg = <0x400000 0x7be0000>;
+				};
+				partition@7fe0000 {
+					label = "environment";
+					reg = <0x7fe0000 0x20000>;
+					read-only;
+				};
+			};
+		};
+
+		serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+			cavium,board-trim = "0,notrev1";
+		};
+
+		serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		gpio0: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-7890-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0x03000 4>, <0x03001 4>, <0x03002 4>, <0x03003 4>,
+				     <0x03004 4>, <0x03005 4>, <0x03006 4>, <0x03007 4>,
+				     <0x03008 4>, <0x03009 4>, <0x0300a 4>, <0x0300b 4>,
+				     <0x0300c 4>, <0x0300d 4>, <0x0300e 4>, <0x0300f 4>;
+		};
+
+		/* SMI_0 */
+		mdio@1180000003800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003800 0x0 0x40>;
+		};
+
+		/* SMI_1 */
+		mdio@1180000003880 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003880 0x0 0x40>;
+
+			/* Please refer to the HRM for the PCTL values from the
+			 * SMI_DRV_CTL register.  For CN7XXX use 4 for 75 ohm,
+			 * 6 for 50 ohm (default) and 7 for 40 ohm.  For CN63XX
+			 * use 0x13 (default) for a 3.3v supply
+			 * (assuming 50 ohm) and0x17 for 2.5v. Note: this value
+			 * applies to all MDIO interfaces.  These values are
+			 * ignored for CN3XXX and CN5XXX.
+			 */
+			cavium,pctl-drive-strength = <7>;
+
+			/* Please refer to the HRM for the NCTL values from the
+			 * SMI_DRV_CTL register.  For CN7XXX use 4 for 75 ohm,
+			 * 6 for 50 ohm (default) and 7 for 40 ohm.  For CN63XX
+			 * use 0x0F (default) for a 3.3v supply
+			 * (assuming 50 ohm) and 0x13 for 2.5v. Note: this value
+			 * applies to all MDIO interfaces.  These values are
+			 * ignored for CN3XXX and CN5XXX.
+			 */
+			cavium,nctl-drive-strength = <7>;
+
+			/* The CS4343 is a really confusing device.  die 0 has
+			 * the lsb of the address set to 1 and die 1 has the
+			 * lsb set to 0.
+			 *
+			 * Furthermore, the slices are addressed with offsets
+			 * 0x0000, 0x1000, 0x2000, 0x3000 for die 0 (addr 1) and
+			 * 0x3000, 0x2000, 0x1000, 0x0000 for die 1 (addr 0).
+			 *
+			 * So to talk with the first slice the lsb of the mdio
+			 * address would be 1 and the offset for the registers
+			 * would be 0, but to talk to slice 4, the mdio address
+			 * would have bit 0 clear and use offset 0x3000.
+			 */
+			mphy0: ethernet-phy-nexus@0 {
+				reg = <0x1>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4343", "ethernet-phy-nexus";
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <17 8>;
+
+				/* The Cortina CS4343 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+
+				phy01000: ethernet-phy@0 {
+					compatible = "cortina,cs4343-slice";
+					reg = <0>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x0000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x1c>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <8>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x1c>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0xc>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x1c>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <8>;
+				};
+				phy01001: ethernet-phy@1 {
+					compatible = "cortina,cs4343-slice";
+					reg = <1>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x1000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x1c>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <8>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x1b>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x8>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x1c>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <8>;
+				};
+				phy01002: ethernet-phy@2 {
+					compatible = "cortina,cs4343-slice";
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x2000>;
+					reg = <2>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x19>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <6>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x6>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x19>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy01003: ethernet-phy@3 {
+					compatible = "cortina,cs4343-slice";
+					reg = <3>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x3000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x19>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <5>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x19>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <7>;
+				};
+			};
+
+			mphy1: ethernet-phy-nexus@1 {
+				reg = <0x0>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4343", "ethernet-phy-nexus";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <17 8>;
+
+				phy11000: ethernet-phy@0 {
+					compatible = "cortina,cs4343-slice";
+					reg = <0>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x3000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x10>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <7>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x7>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x10>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <7>;
+				};
+				phy11001: ethernet-phy@1 {
+					compatible = "cortina,cs4343-slice";
+					reg = <1>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x2000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x16>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <6>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x7>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x16>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy11002: ethernet-phy@2 {
+					compatible = "cortina,cs4343-slice";
+					reg = <2>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x1000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x17>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <6>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x17>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <6>;
+				};
+				phy11003: ethernet-phy@3 {
+					compatible = "cortina,cs4343-slice";
+					reg = <3>;
+					/* Offset from 0x1000 for slice regs */
+					slice_offset = <0x0000>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLA
+					 *
+					 * STX_CMODE_RES:
+					 * Adjust CMODE resistor.
+					 * 000 Connect Driver termination to
+					 *     SRX_AVDD.  For 10mA operation
+					 *     gives <40mV drop
+					 * 001 115.8ohm +/-13%
+					 * 010 66.2ohm +/-13%
+					 * 011 35.7ohm +/-13.1%
+					 * 100 19.4ohm +/-13.6%
+					 * 101 12.1ohm +/-19.6%
+					 * 110 7.6ohm +/-22.4%
+					 * 111 3.6ohm +/-23.9%
+					 */
+					sr-stx-cmode-res = <3>;
+					/* STX_DRV_LOWER_CM[3:0]
+					 * 1XXX Disable auto clamping when when
+					 *      an over-voltage is detected.
+					 * 0XXX Enable auto clamping when when
+					 *      an over-voltage is detected
+					 *      by forcing STX_CMODE_RES to 001
+					 * Turns on current source to CMODE
+					 * resistor bypassing driver diffpair.
+					 * This is used primarily limit/adjust
+					 * the common-mode of SRX_DOUTP/N.
+					 * X000 1mA
+					 * X001 2mA
+					 * X010 3mA
+					 * X011 4mA
+					 * X100 5mA
+					 * X101 6mA
+					 * X110 7mA
+					 * X111 8mA
+					 */
+					sr-stx-drv-lower-cm = <8>;
+					/* STX_LEVEL
+					 * Output driver cursor output level
+					 * adjust, binary weighted, 0.5mA LSB.
+					 * 111111 32mA
+					 * 000000 0.5mA
+					 */
+					sr-stx-level = <0x18>;
+					/* PP_LINE_SDS_COMMON_STX0_TX_OUTPUT_CTRLB
+					 * STX_PRE_PEAK
+					 * Output driver pre-cursor level
+					 * adjust, binary weighted, 0.3125mA
+					 * LSB.
+					 * LSB can be adjusted by XXX to enable
+					 * 0.25mA, 0.3125mA or 0.41667mA step
+					 * size.
+					 * 11111 9.6875mA
+					 * 00000 off
+					 */
+					sr-stx-pre-peak = <1>;
+					/* STX_MUXSUBRATE_SEL
+					 * mux subrate timing selection
+					 * 1 enable subrate timing
+					 * 0 disabled subrate timing
+					 */
+					sr-stx-muxsubrate-sel = <0>;
+					/* STX_POST_PEAK[5:0]
+					 * Output driver post-cursor level
+					 * adjust, binary weighted, 0.25mA LSB.
+					 * 111111 15.75mA
+					 * 00000 off
+					 */
+					sr-stx-post-peak = <5>;
+					/* Settings for CX (passive copper)
+					 * mode.
+					 */
+					cx-stx-cmode-res = <3>;
+					cx-stx-drv-lower-cm = <8>;
+					cx-stx-level = <0x19>;
+					cx-stx-pre-peak = <1>;
+					cx-stx-muxsubrate-sel = <0>;
+					cx-stx-post-peak = <0x5>;
+					/* Settings for 1000Base-X mode.
+					 */
+					basex-stx-cmode-res = <3>;
+					basex-stx-drv-lower-cm = <8>;
+					basex-stx-level = <0x18>;
+					basex-stx-pre-peak = <1>;
+					basex-stx-muxsubrate-sel = <0>;
+					basex-stx-post-peak = <5>;
+				};
+			};
+		};
+
+		/* SMI_2 -- Available on rev 2 and later boards */
+		mdio@1180000003900 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003900 0x0 0x40>;
+
+			/* Please refer to the HRM for the PCTL values from the
+			 * SMI_DRV_CTL register.  For CN7XXX use 4 for 75 ohm,
+			 * 6 for 50 ohm (default) and 7 for 40 ohm.  For CN63XX
+			 * use 0x13 (default) for a 3.3v supply
+			 * (assuming 50 ohm) and0x17 for 2.5v. Note: this value
+			 * applies to all MDIO interfaces.  These values are
+			 * ignored for CN3XXX and CN5XXX.
+			 */
+			cavium,pctl-drive-strength = <7>;
+
+			/* Please refer to the HRM for the NCTL values from the
+			 * SMI_DRV_CTL register.  For CN7XXX use 4 for 75 ohm,
+			 * 6 for 50 ohm (default) and 7 for 40 ohm.  For CN63XX
+			 * use 0x0F (default) for a 3.3v supply
+			 * (assuming 50 ohm) and 0x13 for 2.5v. Note: this value
+			 * applies to all MDIO interfaces.  These values are
+			 * ignored for CN3XXX and CN5XXX.
+			 */
+			cavium,nctl-drive-strength = <7>;
+
+			phy0: ethernet-phy@0 {
+				reg = <0x0>;
+				compatible = "marvell,88e1512", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+						   <3 0x11 0 0x00aa>,
+						   <3 0x12 0 0x4105>,
+						   <3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy1: ethernet-phy@1 {
+				reg = <0x1>;
+				compatible = "marvell,88e1512", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+						   <3 0x11 0 0x00aa>,
+						   <3 0x12 0 0x4105>,
+						   <3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* SMI_3 -- Available on rev 2 and later boards */
+		mdio@1180000003980 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003980 0x0 0x40>;
+		};
+
+		/* BGX definitions here must match sim_board.c settings. */
+		/* BGX 0*/
+		ethernet-mac-nexus@11800e0000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe0000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* SerDes 0 (SGMII) */
+			ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy0>;
+			};
+			/* SerDes 1 (SGMII) */
+			ethernet-mac@1 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy1>;
+			};
+		};
+
+		/* BGX 1 */
+		ethernet-mac-nexus@11800e1000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe1000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		/* BGX 2 */
+		ethernet-mac-nexus@11800e2000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe2000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		/* BGX 3 */
+		ethernet-mac-nexus@11800e3000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe3000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		/* BGX 4*/
+		ethernet-mac-nexus@11800e4000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe4000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01000>;
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				cavium,disable-autonegotiation;
+				sfp-slot = <&sfp0>;
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01001>;
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				sfp-slot = <&sfp1>;
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01002>;
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				sfp-slot = <&sfp2>;
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01003>;
+				cavium,qlm-trim = "6,xfi","6,sgmii";
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				sfp-slot = <&sfp3>;
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&mphy0>;
+				cavium,qlm-trim = "6,xlaui";
+				sfp-slot = <&sfp0>, <&sfp1>, <&sfp2>, <&sfp3>;
+			};
+		};
+
+		/* BGX 5 */
+		ethernet-mac-nexus@11800e5000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe5000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy11000>;
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				sfp-slot = <&sfp4>;
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy11001>;
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				sfp-slot = <&sfp5>;
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy11002>;
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				sfp-slot = <&sfp6>;
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy11003>;
+				cavium,qlm-trim = "7,xfi","7,sgmii";
+				/* Use 1000Base-X for gigabit mode */
+				cavium,sgmii-mac-1000x-mode;
+				cavium,disable-autonegotiation;
+				sfp-slot = <&sfp7>;
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&mphy1>;
+				cavium,qlm-trim = "7,xlaui";
+				sfp-slot = <&sfp4>, <&sfp5>, <&sfp6>, <&sfp7>;
+			};
+		};
+
+		i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b000 1>, <0x0b001 1>, <0x0b002 1>;
+			clock-frequency = <100000>;
+
+			cpld@17 {
+				compatible = "isppac,powr1220at8";
+				reg = <0x17>;
+			};
+			gpio20: gpio@20 {
+				compatible = "nxp,pca9505";
+				reg = <0x20>;
+				gpio-controller;
+				#gpio-cells = <2>;
+
+				/* IO0_0: SFP0_TXFAULT
+				 * IO0_1: SFP0_TXDIS
+				 * IO0_2: SFP0_ABS
+				 * IO0_3: SFP0_LOS
+				 * IO0_4: SFP1_TXFAULT
+				 * IO0_5: SFP1_TXDIS
+				 * IO0_6: SFP1_ABS
+				 * IO0_7: SFP1_LOS
+				 *
+				 * IO1_0: SFP2_TXFAULT
+				 * IO1_1: SFP2_TXDIS
+				 * IO1_2: SFP2_ABS
+				 * IO1_3: SFP2_LOS
+				 * IO1_4: SFP3_TXFAULT
+				 * IO1_5: SFP3_TXDIS
+				 * IO1_6: SFP3_ABS
+				 * IO1_7: SFP3_LOS
+				 *
+				 * IO2_0: SFP4_TXFAULT
+				 * IO2_1: SFP4_TXDIS
+				 * IO2_2: SFP4_ABS
+				 * IO2_3: SFP4_LOS
+				 * IO2_4: SFP5_TXFAULT
+				 * IO2_5: SFP5_TXDIS
+				 * IO2_6: SFP5_ABS
+				 * IO2_7: SFP5_LOS
+				 *
+				 * IO3_0: SFP6_TXFAULT
+				 * IO3_1: SFP6_TXDIS
+				 * IO3_2: SFP6_ABS
+				 * IO3_3: SFP6_LOS
+				 * IO3_4: SFP7_TXFAULT
+				 * IO3_5: SFP7_TXDIS
+				 * IO3_6: SFP7_ABS
+				 * IO3_7: SFP7_LOS
+				 *
+				 * IO4_0: SFP0_STATUS_FAULT
+				 * IO4_1: SFP1_STATUS_FAULT
+				 * IO4_2: SFP2_STATUS_FAULT
+				 * IO4_3: SFP3_STATUS_FAULT
+				 * IO4_4: SFP4_STATUS_FAULT
+				 * IO4_5: SFP5_STATUS_FAULT
+				 * IO4_6: SFP6_STATUS_FAULT
+				 * IO4_7: SFP7_STATUS_FAULT
+				 */
+			};
+
+			gpio21: gpio@21 {
+				compatible = "nxp,pca9555";
+				reg = <0x21>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				/* IO0_0: COIN_BAT_PRESENT_N
+				 * IO0_1: 1GPHY1_RESET_N
+				 * IO0_2: I2C_SWITCH_RESET_N
+				 * IO0_3: I2C_SWITCH4P_RESET_N
+				 * IO0_4: HDD0_LED_FLT
+				 * IO0_5: HDD1_LED_FLT
+				 * IO0_6: HDD2_LED_FLT
+				 * IO0_7: HDD3_LED_FLT
+				 *
+				 * IO1_0: GPIO_PS0_KILL
+				 * IO1_1: GPIO_PS1_KILL
+				 * IO1_2: GPIO_PS0_ALERT_N
+				 * IO1_3: GPIO_PS1_ALERT_N
+				 * IO1_4: GPIO_PS0_VINGOOD
+				 * IO1_5: GPIO_PS1_VINGOOD
+				 * IO1_6: EXP2_IO_INT_N
+				 * IO1_7: EXP3_IO_INT_N
+				 */
+			};
+
+			gpio23: gpio@23 {
+				compatible = "nxp,pca9554";
+				reg = <0x23>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				/* IO0:	FAN0_PRESENT_N
+				 * IO1: FAN1_PRESENT_N
+				 * IO2: FAN2_PRESENT_N
+				 * IO3: HDD0_PRESENT_N
+				 * IO4: HDD1_PRESENT_N
+				 * IO5: HDD2_PRESENT_N
+				 * IO6: HDD3_PRESENT_N
+				 * IO7: DC_EXP3_IO7
+				 */
+			};
+
+			fan-controller@2e {
+				compatible = "onsemi,adt7476";
+				reg = <0x2e>;
+			};
+
+			tmp@4c {
+				compatible = "nxp,sa56004";
+				reg = <0x4c>;
+				interrupt-parent = <&gpio0>;
+				interrupts = <11 8>, <12 8>;
+			};
+
+			tlv-eeprom@54 {
+				compatible = "atmel,24c512";
+				reg = <0x54>;
+				pagesize = <128>;
+			};
+
+			switch@70 {
+				compatible = "nxp,pca9548";
+				reg = <0x70>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				i2c@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+
+					sfpeeprom0: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp0alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>;
+
+					sfpeeprom1: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp1alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>;
+
+					sfpeeprom2: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp2alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@3 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>;
+
+					sfpeeprom3: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp3alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@4 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <4>;
+
+					sfpeeprom4: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp4alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@5 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <5>;
+
+					sfpeeprom5: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp5alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@6 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <6>;
+
+					sfpeeprom6: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp6alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+				i2c@7 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <7>;
+
+					sfpeeprom7: eeprom@50 {
+						compatible = "atmel,24c01";
+						reg = <0x50>;
+					};
+					/* This is optional, available on some
+					 * Avago devices
+					 */
+					sfp7alerts: eeprom@51 {
+						compatible = "atmel,24c01";
+						reg = <0x51>;
+					};
+				};
+			};
+
+			switch@71 {
+				compatible = "nxp,pca9545";
+				reg = <0x71>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				i2c@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+					/* PS0_HOST_R */
+				};
+				i2c@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>;
+					/* PS1_HOST_R */
+				};
+				i2c@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>;
+					/* VR_SVID */
+				};
+				i2c@3 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>;
+				};
+			};
+		};
+
+		i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b100 1>, <0x0b101 1>, <0x0b102 1>;
+			clock-frequency = <100000>;
+
+			rtc@68 {
+				compatible = "st,m41t62";
+				reg = <0x68>;
+			};
+			tmp@49 {
+				compatible = "ti,tmp75", "lm75";
+				reg = <0x49>;
+				interrupt-parent = <&gpio0>;
+				interrupts = <3 8>;
+			};
+			/* NOTE: spd is not quite right for DDR4.  Currently
+			 * Linux does not support the DDR4 SPD EEPROM.
+			 */
+			ddr0-dimm0@50 {
+				compatible = "spd";
+				reg = <0x50>;
+			};
+			ddr0-dimm1@51 {
+				compatible = "spd";
+				reg = <0x51>;
+			};
+			ddr1-dimm0@52 {
+				compatible = "spd";
+				reg = <0x52>;
+			};
+			ddr1-dimm1@53 {
+				compatible = "spd";
+				reg = <0x53>;
+			};
+			ddr2-dimm0@54 {
+				compatible = "spd";
+				reg = <0x54>;
+			};
+			ddr2-dimm1@55 {
+				compatible = "spd";
+				reg = <0x55>;
+			};
+			ddr3-dimm0@56 {
+				compatible = "spd";
+				reg = <0x56>;
+			};
+			ddr3-dimm1@57 {
+				compatible = "spd";
+				reg = <0x57>;
+			};
+		};
+
+		mmc: mmc@1180000002000 {
+			compatible = "cavium,octeon-7890-mmc";
+			reg = <0x11800 0x00002000 0x0 0x100>,
+			      <0x11800 0x00000180 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* EMM_INT_BUF_DONE,
+			   EMM_INT_CMD_DONE,
+			   EMM_INT_DMA_DONE,
+			   EMM_INT_CMD_ERR,
+			   EMM_INT_DMA_ERR,
+			   EMM_INT_SWITCH_DONE,
+			   EMM_INT_SWITCH_ERR,
+			   EMM_DMA_DONE,
+			   EMM_DMA_FIFO*/
+			interrupts = <0x09040 1>,
+				     <0x09041 1>,
+				     <0x09042 1>,
+				     <0x09043 1>,
+				     <0x09044 1>,
+				     <0x09045 1>,
+				     <0x09046 1>,
+				     <0x09000 1>,
+				     <0x09001 1>;
+		};
+
+		spi: spi@1070000001000 {
+			compatible = "cavium,octeon-3010-spi";
+			reg = <0x10700 0x00001000 0x0 0x100>;
+			interrupts = <0x05001 1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			spi-max-frequency = <25000000>;
+		};
+
+		uctl@1180068000000 {
+			compatible = "cavium,octeon-7130-usb-uctl";
+			reg = <0x11800 0x68000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* Only 100MHz allowed */
+			refclk-frequency = <100000000>;
+			/* Only "dlmc_ref_clk0" is supported */
+			refclk-type-ss = "dlmc_ref_clk0";
+			/* Only "dlmc_ref_clk0" is supported */
+			refclk-type-hs = "dlmc_ref_clk0";
+
+			xhci@1680000000000 {
+				compatible = "cavium,octeon-7130-xhci","synopsys,dwc3";
+				reg = <0x16800 0x00000000 0x10 0x0>;
+				interrupts = <0x68080 4>; /* UAHC_IMAN, level */
+			};
+		};
+
+		ocla0@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 1>, /* Fsm0 */
+				     <0xa800d 1>, /* Fsm1 */
+				     <0xa800f 1>; /* Trigfull */
+		};
+
+		ocla1@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 1>, /* Fsm0 */
+				     <0xa900d 1>, /* Fsm1 */
+				     <0xa900f 1>; /* Trigfull */
+		};
+
+		ocla2@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 1>, /* Fsm0 */
+				     <0xaa00d 1>, /* Fsm1 */
+				     <0xaa00f 1>; /* Trigfull */
+		};
+
+		ocla3@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 1>, /* Fsm0 */
+				     <0xab00d 1>, /* Fsm1 */
+				     <0xab00f 1>; /* Trigfull */
+		};
+
+		ocla4@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 1>, /* Fsm0 */
+				     <0xac00d 1>, /* Fsm1 */
+				     <0xac00f 1>; /* Trigfull */
+		};
+
+		sfp0: sfp-slot@0 {
+			/* Top-left 1st group SFP slot */
+			compatible = "ethernet,sfp-slot";
+			tx_disable = <&gpio20 29 0>;
+			mod_abs = <&gpio20 30 0>;
+			tx_error = <&gpio20 28 0>;
+			rx_los = <&gpio20 31 0>;
+			eeprom = <&sfpeeprom0>;
+			diag = <&sfp0alerts>;
+		};
+		sfp1: sfp-slot@1 {
+			/* Bottom-left 2nd group SFP slot */
+			compatible = "ethernet,sfp-slot";
+
+			tx_disable = <&gpio20 25 0>;
+			mod_abs = <&gpio20 26 0>;
+			tx_error = <&gpio20 24 0>;
+			rx_los = <&gpio20 27 0>;
+			eeprom = <&sfpeeprom1>;
+			diag = <&sfp1alerts>;
+		};
+		sfp2: sfp-slot@2 {
+			/* Top-right 2nd group SFP slot */
+			compatible = "ethernet,sfp-slot";
+			tx_disable = <&gpio20 21 0>;
+			mod_abs = <&gpio20 22 0>;
+			tx_error = <&gpio20 20 0>;
+			rx_los = <&gpio20 23 0>;
+			eeprom = <&sfpeeprom2>;
+			diag = <&sfp2alerts>;
+		};
+		sfp3: sfp-slot@3 {
+			/* Bottom-right 2nd group SFP slot */
+			compatible = "ethernet,sfp-slot";
+			tx_disable = <&gpio20 17 0>;
+			mod_abs = <&gpio20 18 0>;
+			tx_error = <&gpio20 16 0>;
+			rx_los = <&gpio20 19 0>;
+			eeprom = <&sfpeeprom3>;
+			diag = <&sfp3alerts>;
+		};
+
+		sfp4: sfp-slot@4 {
+			/* Top-left 2nd group SFP slot */
+			compatible = "ethernet,sfp-slot";
+			tx_disable = <&gpio20 1 0>;
+			mod_abs = <&gpio20 2 0>;
+			tx_error = <&gpio20 0 0>;
+			rx_los = <&gpio20 3 0>;
+			eeprom = <&sfpeeprom4>;
+			diag = <&sfp4alerts>;
+		};
+		sfp5: sfp-slot@5 {
+			/* Bottom-left 2nd group SFP slot */
+			compatible = "ethernet,sfp-slot";
+
+			tx_disable = <&gpio20 5 0>;
+			mod_abs = <&gpio20 6 0>;
+			tx_error = <&gpio20 4 0>;
+			rx_los = <&gpio20 7 0>;
+			eeprom = <&sfpeeprom5>;
+			diag = <&sfp5alerts>;
+		};
+		sfp6: sfp-slot@6 {
+			/* Top-right 2nd group SFP slot */
+			compatible = "ethernet,sfp-slot";
+			tx_disable = <&gpio20 9 0>;
+			mod_abs = <&gpio20 10 0>;
+			tx_error = <&gpio20 8 0>;
+			rx_los = <&gpio20 11 0>;
+			eeprom = <&sfpeeprom6>;
+			diag = <&sfp6alerts>;
+		};
+		sfp7: sfp-slot@7 {
+			/* Bottom-right 2nd group SFP slot */
+			compatible = "ethernet,sfp-slot";
+			tx_disable = <&gpio20 13 0>;
+			mod_abs = <&gpio20 14 0>;
+			tx_error = <&gpio20 12 0>;
+			rx_los = <&gpio20 15 0>;
+			eeprom = <&sfpeeprom7>;
+			diag = <&sfp7alerts>;
+		};
+
+	};
+	gpio-leds {
+		compatible = "gpio-leds";
+	};
+};

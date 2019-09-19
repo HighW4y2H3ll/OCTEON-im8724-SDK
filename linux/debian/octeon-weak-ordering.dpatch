@@ -1,0 +1,84 @@
+#! /bin/sh -e
+
+# All lines beginning with `# DP:' are a description of the patch.
+# DP: Description: Add proper syncing for Octeon weak ordering
+# DP: Dpatch author: Chad Reese <kreese@caviumnetworks.com>
+# DP: Patch author: Chad Reese
+# DP: Upstream status: Not uploaded
+# DP: Date: 2005-08-25
+
+PATCHLEVEL=1
+
+if [ $# -ne 2 ]; then
+    echo >&2 "`basename $0`: script expects -patch|-unpatch as argument"
+    exit 1
+fi
+case "$1" in
+    -patch) patch -d "$2" -f --no-backup-if-mismatch -p$PATCHLEVEL < $0;;
+    -unpatch) patch -d "$2" -f --no-backup-if-mismatch -R -p$PATCHLEVEL < $0;;
+    *)
+	echo >&2 "`basename $0`: script expects -patch|-unpatch as argument"
+	exit 1
+esac
+exit 0
+
+# append the patch here and adjust the -p? flag in the patch calls.
+
+--- glibc-2.3.2/linuxthreads/sysdeps/mips/pspinlock.c.orig	2005-08-26 00:23:06.810398982 +0000
++++ glibc-2.3.2/linuxthreads/sysdeps/mips/pspinlock.c	2005-08-26 00:27:21.722905277 +0000
+@@ -31,6 +31,9 @@
+ 
+   asm volatile
+     ("\t\t\t# spin_lock\n"
++     ".set mips64\n\t"
++     "sync\n\t"
++     ".set mips0\n\t"
+      "1:\n\t"
+      ".set	push\n\t"
+ #if _MIPS_SIM == _MIPS_SIM_ABI32
+@@ -66,7 +67,11 @@
+ {
+   asm volatile
+     ("\t\t\t# spin_unlock\n\t"
+-     "sw	$0,%0"
++     ".set mips64\n\t"
++     "sync\n\t"
++     "sw	$0,%0\n\t"
++     "sync\n\t"
++     ".set mips0\n\t"
+      : "=m" (*lock)
+      :
+      : "memory");
+@@ -82,6 +85,7 @@
+      all processes which can access the memory location `lock' points
+      to can use the spinlock.  */
+   *lock = 0;
++  asm volatile (".set mips64; sync; .set mips0" ::: "memory");
+   return 0;
+ }
+ weak_alias (__pthread_spin_init, pthread_spin_init)
+--- glibc-2.3.2/linuxthreads/sysdeps/mips/pt-machine.h.orig	2005-08-26 00:23:13.844647093 +0000
++++ glibc-2.3.2/linuxthreads/sysdeps/mips/pt-machine.h	2005-08-26 00:29:28.545267766 +0000
+@@ -27,6 +27,12 @@
+ #include <sgidefs.h>
+ #include <sys/tas.h>
+ 
++#ifdef __OCTEON__
++#define MEMORY_BARRIER()        __asm__ __volatile__ (".set mips64; sync; .set mips0"  : : : "memory")
++#define READ_MEMORY_BARRIER()   __asm__ __volatile__ (""      : : : "memory")
++#define WRITE_MEMORY_BARRIER()  __asm__ __volatile__ (".set mips64; sync; .set mips0"  : : : "memory")
++#endif
++
+ #ifndef PT_EI
+ # define PT_EI extern inline __attribute__ ((always_inline))
+ #endif
+@@ -60,6 +66,9 @@
+ 
+   __asm__ __volatile__
+     ("/* Inline compare & swap */\n"
++     ".set mips64\n\t"
++     "sync\n\t"
++     ".set mips0\n\t"
+      "1:\n\t"
+      ".set	push\n\t"
+ #if _MIPS_SIM == _MIPS_SIM_ABI32

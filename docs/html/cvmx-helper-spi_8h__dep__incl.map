@@ -1,0 +1,51 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$cvmx-config-init_8c.html" title="cvmx&#45;config&#45;init.c" alt="" coords="1544,469,1688,499"/>
+<area shape="rect" id="node5" href="$cvmx-helper_8h.html" title="Helper functions for common, but complicated tasks." alt="" coords="2860,83,2977,112"/>
+<area shape="rect" id="node7" href="$cvmx-agl_8h.html" title="Functions for AGL (RGMII) commong initialization, configuration." alt="" coords="181,160,277,189"/>
+<area shape="rect" id="node11" href="$cvmx-helper-agl_8c.html" title="Functions for AGL (RGMII) initialization, configuration, and monitoring." alt="" coords="195,315,336,344"/>
+<area shape="rect" id="node13" href="$cvmx-helper-agl_8h.html" title="Functions for AGL (RGMII) initialization, configuration, and monitoring." alt="" coords="43,237,184,267"/>
+<area shape="rect" id="node16" href="$cvmx-appcfg-transport_8c.html" title="cvmx&#45;appcfg&#45;transport.c" alt="" coords="784,315,973,344"/>
+<area shape="rect" id="node18" href="$cvmx-error-custom_8c.html" title="Prototypes for custom error handler function not handled by the default message display..." alt="" coords="2072,315,2237,344"/>
+<area shape="rect" id="node20" href="$cvmx-error-gmx_8c.html" title="cvmx&#45;error&#45;gmx.c" alt="" coords="2261,315,2403,344"/>
+<area shape="rect" id="node22" href="$cvmx-fpa_8c.html" title="Support library for the hardware Free Pool Allocator." alt="" coords="3133,160,3232,189"/>
+<area shape="rect" id="node26" href="$cvmx-helper-bgx_8c.html" title="Functions to configure the BGX MAC." alt="" coords="2528,315,2675,344"/>
+<area shape="rect" id="node28" href="$cvmx-helper-board_8c.html" title="Helper functions to abstract board specific data about network ports from the rest..." alt="" coords="1149,315,1309,344"/>
+<area shape="rect" id="node30" href="$cvmx-helper-cfg_8c.html" title="Helper Functions for the Configuration Framework." alt="" coords="791,469,935,499"/>
+<area shape="rect" id="node32" href="$cvmx-helper-errata_8c.html" title="Fixes and workaround for Octeon chip errata." alt="" coords="3139,469,3304,499"/>
+<area shape="rect" id="node34" href="$cvmx-helper-ilk_8c.html" title="Functions for ILK initialization, configuration, and monitoring." alt="" coords="2477,392,2613,421"/>
+<area shape="rect" id="node36" href="$cvmx-helper-loop_8c.html" title="Functions for LOOP initialization, configuration, and monitoring." alt="" coords="461,392,611,421"/>
+<area shape="rect" id="node38" href="$cvmx-helper-npi_8c.html" title="Functions for NPI initialization, configuration, and monitoring." alt="" coords="2637,392,2779,421"/>
+<area shape="rect" id="node40" href="$cvmx-helper-pko_8c.html" title="Helper Functions for the PKO." alt="" coords="3389,392,3536,421"/>
+<area shape="rect" id="node42" href="$cvmx-helper-pko3_8c.html" title="cvmx&#45;helper&#45;pko3.c" alt="" coords="3573,315,3728,344"/>
+<area shape="rect" id="node44" href="$cvmx-helper-rgmii_8c.html" title="Functions for RGMII/GMII/MII initialization, configuration, and monitoring." alt="" coords="3939,392,4093,421"/>
+<area shape="rect" id="node46" href="$cvmx-helper-sfp_8c.html" title="cvmx&#45;helper&#45;sfp.c" alt="" coords="2509,237,2653,267"/>
+<area shape="rect" id="node48" href="$cvmx-helper-sgmii_8c.html" title="Functions for SGMII initialization, configuration, and monitoring." alt="" coords="2699,315,2856,344"/>
+<area shape="rect" id="node50" href="$cvmx-helper-spi_8c.html" title="Functions for SPI initialization, configuration, and monitoring." alt="" coords="3357,160,3499,189"/>
+<area shape="rect" id="node53" href="$cvmx-helper-srio_8c.html" title="Functions for SRIO initialization, configuration, and monitoring." alt="" coords="724,392,871,421"/>
+<area shape="rect" id="node55" href="$cvmx-helper-util_8c.html" title="Small helper utilities." alt="" coords="1323,469,1467,499"/>
+<area shape="rect" id="node57" href="$cvmx-helper-util_8h.html" title="Small helper utilities." alt="" coords="1493,160,1637,189"/>
+<area shape="rect" id="node77" href="$cvmx-helper-xaui_8c.html" title="Functions for XAUI initialization, configuration, and monitoring." alt="" coords="2880,315,3029,344"/>
+<area shape="rect" id="node79" href="$cvmx-helper_8c.html" title="Helper functions for common, but complicated tasks." alt="" coords="2269,469,2387,499"/>
+<area shape="rect" id="node81" href="$cvmx-hwpko_8h.html" title="Interface to the hardware Packet Output unit." alt="" coords="3381,315,3499,344"/>
+<area shape="rect" id="node95" href="$cvmx-pko_8c.html" title="Support library for the hardware Packet Output unit." alt="" coords="2679,469,2777,499"/>
+<area shape="rect" id="node113" href="$cvmx-higig_8h.html" title="Functions and typedefs for using Octeon in HiGig/HiGig+/HiGig2 mode over XAUI." alt="" coords="933,392,1040,421"/>
+<area shape="rect" id="node115" href="$cvmx-pip_8h.html" title="Interface to the hardware Packet Input Processing unit." alt="" coords="1483,392,1579,421"/>
+<area shape="rect" id="node121" href="$cvmx-pko-internal-ports-range_8c.html" title="cvmx&#45;pko&#45;internal&#45;ports&#45;range.c" alt="" coords="1805,315,2048,344"/>
+<area shape="rect" id="node141" href="$cvmx-ila_8c.html" title="Functions to configure the ILA&#45;LA interface." alt="" coords="4228,237,4319,267"/>
+<area shape="rect" id="node143" href="$cvmx-ila_8h.html" title="This file contains defines for the ILA interface." alt="" coords="4203,160,4293,189"/>
+<area shape="rect" id="node146" href="$cvmx-mgmt-port_8h.html" title="Support functions for managing the MII management port." alt="" coords="2981,237,3133,267"/>
+<area shape="rect" id="node152" href="$cvmx-pko3_8h.html" title="cvmx&#45;pko3.h" alt="" coords="3624,237,3731,267"/>
+<area shape="rect" id="node158" href="$cvmx-srio_8c.html" title="Interface to SRIO." alt="" coords="3725,160,3824,189"/>
+<area shape="rect" id="node160" href="$cvmx-usb_8c.html" title="&quot;cvmx&#45;usb.c&quot; defines a set of low level USB functions to help developers..." alt="" coords="3848,160,3947,189"/>
+<area shape="rect" id="node162" href="$cvmx-usbd_8c.html" title="&quot;cvmx&#45;usbd.c&quot; defines a set of low level USB functions to help developers..." alt="" coords="3971,160,4077,189"/>
+<area shape="rect" id="node9" href="$cvmx-agl_8c.html" title="Functions for RGMII (MGMT) initialization, configuration, and monitoring." alt="" coords="563,315,659,344"/>
+<area shape="rect" id="node62" href="$cvmx-helper-cfg_8h.html" title="Helper Functions for the Configuration Framework." alt="" coords="1645,237,1789,267"/>
+<area shape="rect" id="node89" href="$cvmx-ilk_8c.html" title="Support library for the ILK." alt="" coords="2803,392,2893,421"/>
+<area shape="rect" id="node103" href="$cvmx-pki_8h.html" title="Interface to the hardware Packet Input Data unit." alt="" coords="1384,315,1477,344"/>
+<area shape="rect" id="node108" href="$cvmx-helper-pki_8c.html" title="PKI helper functions." alt="" coords="1165,392,1307,421"/>
+<area shape="rect" id="node135" href="$cvmx-qlm_8c.html" title="Helper utilities for qlm." alt="" coords="1048,237,1149,267"/>
+<area shape="rect" id="node101" href="$cvmx-mgmt-port_8c.html" title="Support functions for managing the MII management port." alt="" coords="3053,315,3205,344"/>
+<area shape="rect" id="node91" href="$cvmx-pko_8h.html" title="cvmx&#45;pko.h" alt="" coords="2968,392,3067,421"/>
+<area shape="rect" id="node97" href="$cvmx-pko3_8c.html" title="cvmx&#45;pko3.c" alt="" coords="3259,392,3365,421"/>
+<area shape="rect" id="node99" href="$cvmx-spi_8c.html" title="Support library for the SPI." alt="" coords="3091,392,3184,421"/>
+</map>

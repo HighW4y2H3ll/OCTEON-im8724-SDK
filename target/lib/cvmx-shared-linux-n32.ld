@@ -1,0 +1,1 @@
+../../executive/cvmx-shared-linux-n32.ld

@@ -1,0 +1,14 @@
+// $Id: smallvalues.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Small values.  If enabled, display values in a smaller font.
+// This could be combined with a pattern like `*\[*\]' to make
+// all array members smaller.
+
+#pragma replace value_rm
+#pragma replace value_bf
+#pragma replace value_it
+#pragma replace value_bi
+
+value_rm(box) = small_rm(box);
+value_bf(box) = small_bf(box);
+value_it(box) = small_it(box);
+value_bi(box) = small_bi(box);

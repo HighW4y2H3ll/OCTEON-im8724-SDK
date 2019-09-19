@@ -1,0 +1,5850 @@
+/dts-v1/;
+/*
+ * Cavium Inc. EVB CN7800
+ */
+/ {
+	model = "cavium,ebb7800";
+	compatible = "cavium,ebb7800";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	soc@0 {
+		interrupt-parent = <&ciu3>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+		cavium,node-trim = "0,soc";
+
+		ciu3: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0       0x1d020000  0x10000>,
+				 <5 0  0x10000 0x50000000  0x10000>,
+				 <6 0  0x10000 0x60000000  0x10000>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <50>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,page-mode = <1>;
+				cavium,pages     = <8>;
+				cavium,bus-width = <8>;
+			};
+			cavium,cs-config@4 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <4>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <10>;
+				cavium,t-oe   = <160>;
+				cavium,t-we   = <100>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <0>;
+				cavium,t-pause  = <50>;
+				cavium,t-wait   = <50>;
+				cavium,t-page   = <10>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x800000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0 0x340000>;
+					read-only;
+				};
+				partition@300000 {
+					label = "storage";
+					reg = <0x340000 0x4be000>;
+				};
+				partition@7fe000 {
+					label = "environment";
+					reg = <0x7fe000 0x2000>;
+					read-only;
+				};
+			};
+			led-display@4,0 {
+				compatible = "avago,hdsp-253x";
+				reg = <4 0x20 0x20>, <4 0 0x20>;
+			};
+		};
+
+		serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+		};
+
+		serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		gpio0: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-7890-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0x03000 4>, <0x03001 4>, <0x03002 4>, <0x03003 4>,
+				     <0x03004 4>, <0x03005 4>, <0x03006 4>, <0x03007 4>,
+				     <0x03008 4>, <0x03009 4>, <0x0300a 4>, <0x0300b 4>,
+				     <0x0300c 4>, <0x0300d 4>, <0x0300e 4>, <0x0300f 4>;
+		};
+
+		/* SMI_0 -- The only bus connected on Rev 1 boards */
+		mdio@1180000003800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003800 0x0 0x40>;
+
+			phy100: ethernet-phy@100 {
+				cavium,qlm-trim = "0,xaui";
+				reg = <0>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy200: ethernet-phy@200 {
+				cavium,qlm-trim = "0,rxaui";
+				reg = <0>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy0: ethernet-phy@0 {
+				cavium,qlm-trim = "0,sgmii";
+				reg = <0>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+				/* LED[2,1]: Speed, LED[3]: RX, LED[0]: TX, all open-drain */
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy201: ethernet-phy@201 {
+				cavium,qlm-trim = "0,rxaui";
+				reg = <1>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy1: ethernet-phy@1 {
+				cavium,qlm-trim = "0,sgmii";
+				reg = <1>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy2: ethernet-phy@2 {
+				cavium,qlm-trim = "0,sgmii";
+				reg = <2>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy3: ethernet-phy@3 {
+				cavium,qlm-trim = "0,sgmii";
+				reg = <3>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy204: ethernet-phy@204 {
+				cavium,qlm-trim = "1,rxaui";
+				reg = <4>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy104: ethernet-phy@104 {
+				cavium,qlm-trim = "1,xaui";
+				reg = <4>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy4: ethernet-phy@4 {
+				cavium,qlm-trim = "1,sgmii";
+				reg = <4>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy205: ethernet-phy@205 {
+				cavium,qlm-trim = "1,rxaui";
+				reg = <5>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy5: ethernet-phy@5 {
+				cavium,qlm-trim = "1,sgmii";
+				reg = <5>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy6: ethernet-phy@6 {
+				cavium,qlm-trim = "1,sgmii";
+				reg = <6>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy7: ethernet-phy@7 {
+				cavium,qlm-trim = "1,sgmii";
+				reg = <7>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+
+			phy208: ethernet-phy@208 {
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <8>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy108: ethernet-phy@108 {
+				cavium,qlm-trim = "2,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <8>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy8: ethernet-phy@8 {
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <8>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy209: ethernet-phy@209 {
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <9>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy9: ethernet-phy@9 {
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <9>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy10: ethernet-phy@a {
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xa>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy11: ethernet-phy@b {
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xb>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			phy212: ethernet-phy@20c {
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0xc>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy112: ethernet-phy@10c {
+				cavium,qlm-trim = "3,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0xc>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy12: ethernet-phy@c {
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xc>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy213: ethernet-phy@20d {
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0xd>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy13: ethernet-phy@d {
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xd>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy14: ethernet-phy@e {
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xe>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy15: ethernet-phy@f {
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xf>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy116: ethernet-phy-nexus@10 {
+				reg = <0x10>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "4,xlaui","4,xfi","4,10G_KR","4,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10160: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10161: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "4,xfi","4,10G_KR";
+				};
+				phy10162: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "4,xfi","4,10G_KR";
+				};
+				phy10163: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "4,xfi","4,10G_KR";
+				};
+			};
+			phy216: ethernet-phy@210 {
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x10>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy116: ethernet-phy@110 {
+				cavium,qlm-trim = "4,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x10>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy16: ethernet-phy@10 {
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x10>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy217: ethernet-phy@211 {
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x11>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy17: ethernet-phy@11 {
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x11>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy18: ethernet-phy@12 {
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x12>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy19: ethernet-phy@13 {
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x13>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy120: ethernet-phy-nexus@14 {
+				reg = <0x14>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "5,xlaui","5,xfi","5,10G_KR","5,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10200: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10201: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "5,xfi","5,10G_KR";
+				};
+				phy10202: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "5,xfi","5,10G_KR";
+				};
+				phy10203: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "5,xfi","5,10G_KR";
+				};
+			};
+			phy220: ethernet-phy@214 {
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x14>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy120: ethernet-phy@114 {
+				cavium,qlm-trim = "5,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x14>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy20: ethernet-phy@14 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x14>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy221: ethernet-phy@215 {
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x15>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy21: ethernet-phy@15 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x15>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy22: ethernet-phy@16 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x16>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy23: ethernet-phy@17 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x17>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy124: ethernet-phy-nexus@18 {
+				reg = <0x18>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "6,xlaui","6,xfi","6,10G_KR","6,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10240: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10241: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "6,xfi","6,10G_KR";
+				};
+				phy10242: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "6,xfi","6,10G_KR";
+				};
+				phy10243: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "6,xfi","6,10G_KR";
+				};
+			};
+			phy224: ethernet-phy@218 {
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x18>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy124: ethernet-phy@118 {
+				cavium,qlm-trim = "6,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x18>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy24: ethernet-phy@18 {
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x18>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy225: ethernet-phy@219 {
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x19>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy25: ethernet-phy@19 {
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x19>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy26: ethernet-phy@1a {
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1a>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy27: ethernet-phy@1b {
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1b>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy128: ethernet-phy-nexus@1c {
+				reg = <0x1c>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "7,xlaui","7,xfi","7,10G_KR","7,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10280: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10281: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "7,xfi","7,10G_KR";
+				};
+				phy10282: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "7,xfi","7,10G_KR";
+				};
+				phy10283: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "7,xfi","7,10G_KR";
+				};
+			};
+			phy228: ethernet-phy@21c {
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1c>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy128: ethernet-phy@11c {
+				cavium,qlm-trim = "7,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1c>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy28: ethernet-phy@1c {
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1c>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy229: ethernet-phy@21d {
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1d>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy29: ethernet-phy@1d {
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1d>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy30: ethernet-phy@1e {
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1e>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy31: ethernet-phy@1f {
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1f>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* SMI_1 -- Available on rev 2 and later boards */
+		mdio@1180000003880 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003880 0x0 0x40>;
+			cavium,board-trim = "0,notrev1";
+
+			phy01208: ethernet-phy@208 {
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x8>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01108: ethernet-phy@108 {
+				cavium,qlm-trim = "2,xaui";
+				reg = <8>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy01008: ethernet-phy@8 {
+				cavium,qlm-trim = "2,sgmii";
+				reg = <8>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy01209: ethernet-phy@209 {
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x9>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01009: ethernet-phy@9 {
+				cavium,qlm-trim = "2,sgmii";
+				reg = <9>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy01010: ethernet-phy@a {
+				cavium,qlm-trim = "2,sgmii";
+				reg = <0xa>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy01011: ethernet-phy@b {
+				cavium,qlm-trim = "2,sgmii";
+				reg = <0xb>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			phy01212: ethernet-phy@20c {
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0xc>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01112: ethernet-phy@10c {
+				cavium,qlm-trim = "3,xaui";
+				reg = <0xc>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy01012: ethernet-phy@c {
+				cavium,qlm-trim = "3,sgmii";
+				reg = <0xc>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy01213: ethernet-phy@20d {
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0xd>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01013: ethernet-phy@d {
+				cavium,qlm-trim = "3,sgmii";
+				reg = <0xd>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy01014: ethernet-phy@e {
+				cavium,qlm-trim = "3,sgmii";
+				reg = <0xe>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy01015: ethernet-phy@f {
+				cavium,qlm-trim = "3,sgmii";
+				reg = <0xf>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* SMI_2 -- Available on rev 2 and later boards */
+		mdio@1180000003900 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003900 0x0 0x40>;
+			cavium,board-trim = "0,notrev1";
+
+			mphy02116: ethernet-phy-nexus@10 {
+				reg = <0x10>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "4,xlaui","4,xfi","4,10G_KR","4,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy020160: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy020161: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "4,xfi","4,10G_KR";
+				};
+				phy020162: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "4,xfi","4,10G_KR";
+				};
+				phy020163: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "4,xfi","4,10G_KR";
+				};
+			};
+			phy02216: ethernet-phy@210 {
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x10>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02116: ethernet-phy@110 {
+				cavium,qlm-trim = "4,xaui";
+				reg = <0x10>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy02016: ethernet-phy@10 {
+				cavium,qlm-trim = "4,sgmii";
+				reg = <0x10>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02217: ethernet-phy@20d {
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x11>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02017: ethernet-phy@11 {
+				cavium,qlm-trim = "4,sgmii";
+				reg = <0x11>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02018: ethernet-phy@12 {
+				cavium,qlm-trim = "4,sgmii";
+				reg = <0x12>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02019: ethernet-phy@13 {
+				cavium,qlm-trim = "4,sgmii";
+				reg = <0x13>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy02120: ethernet-phy-nexus@14 {
+				reg = <0x14>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "5,xlaui","5,xfi","5,10G_KR","5,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy020200: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy020201: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "5,xfi","5,10G_KR";
+				};
+				phy020202: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "5,xfi","5,10G_KR";
+				};
+				phy020203: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "5,xfi","5,10G_KR";
+				};
+			};
+			phy02220: ethernet-phy@214 {
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x14>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02120: ethernet-phy@114 {
+				cavium,qlm-trim = "5,xaui";
+				reg = <0x14>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy02020: ethernet-phy@14 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x14>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02221: ethernet-phy@215 {
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x15>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02021: ethernet-phy@15 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x15>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02022: ethernet-phy@16 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x16>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02023: ethernet-phy@17 {
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x17>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* SMI_3 -- Available on rev 2 and later boards */
+		mdio@1180000003980 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cavium,board-trim = "0,notrev1";
+			reg = <0x11800 0x00003980 0x0 0x40>;
+
+			mphy3024: ethernet-phy-nexus@18 {
+				reg = <0x18>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "6,xlaui","6,xfi","6,10G_KR","6,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy030240: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy030241: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "6,xfi","6,10G_KR";
+				};
+				phy030242: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "6,xfi","6,10G_KR";
+				};
+				phy030243: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "6,xfi","6,10G_KR";
+				};
+			};
+			phy03224: ethernet-phy@218 {
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x18>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03124: ethernet-phy@118 {
+				cavium,qlm-trim = "6,xaui";
+				reg = <0x18>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy03024: ethernet-phy@18 {
+				cavium,qlm-trim = "6,sgmii";
+				reg = <0x18>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03225: ethernet-phy@219 {
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x19>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03025: ethernet-phy@19 {
+				cavium,qlm-trim = "6,sgmii";
+				reg = <0x19>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03026: ethernet-phy@1a {
+				cavium,qlm-trim = "6,sgmii";
+				reg = <0x1a>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03027: ethernet-phy@1b {
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1b>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy3028: ethernet-phy-nexus@1c {
+				reg = <0x1c>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "7,xlaui","7,xfi","7,10G_KR","7,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy030280: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy030281: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "7,xfi","7,10G_KR";
+				};
+				phy030282: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "7,xfi","7,10G_KR";
+				};
+				phy030283: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "7,xfi","7,10G_KR";
+				};
+			};
+			phy03228: ethernet-phy@21c {
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1c>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03128: ethernet-phy@11c {
+				cavium,qlm-trim = "7,xaui";
+				reg = <0x1c>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy03028: ethernet-phy@1c {
+				cavium,qlm-trim = "7,sgmii";
+				reg = <0x1c>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03229: ethernet-phy@21d {
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1d>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03029: ethernet-phy@1d {
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1d>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03030: ethernet-phy@1e {
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1e>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03031: ethernet-phy@1f {
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1f>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* BGX definitions here must match sim_board.c settings. */
+		/* BGX 0*/
+		ethernet-mac-nexus@11800e0000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe0000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* SerDes 0 (RXAUI) */
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy200>;
+				cavium,qlm-trim = "0,rxaui";
+			};
+			/* SerDes 0 (XAUI) */
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy100>;
+				cavium,qlm-trim = "0,xaui", "0,dxaui";
+			};
+			/* SerDes 0, may differ from PCS Lane/LMAC */
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy0>;
+				cavium,qlm-trim = "0,sgmii";
+			};
+			/* SerDes 1 (RXAUI) */
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy201>;
+				cavium,qlm-trim = "0,rxaui";
+			};
+			/* SerDes 1, may differ from PCS Lane/LMAC */
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy1>;
+				cavium,qlm-trim = "0,sgmii";
+			};
+			/* SerDes 2, may differ from PCS Lane/LMAC */
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy2>;
+				cavium,qlm-trim = "0,sgmii";
+			};
+			/* SerDes 3, may differ from PCS Lane/LMAC */
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy3>;
+				cavium,qlm-trim = "0,sgmii";
+			};
+			/* SerDes 4 (RXAUI) */
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy208>;
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy8>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy108>;
+				cavium,qlm-trim = "2,xaui", "2,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 5 (RXAUI) */
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy209>;
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy9>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy11>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01008>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 4 (RXAUI) */
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01208>;
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01108>;
+				cavium,qlm-trim = "2,xaui", "2,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 5 (RXAUI) */
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01209>;
+				cavium,qlm-trim = "2,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01009>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01010>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01011>;
+				cavium,qlm-trim = "2,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 1*/
+		ethernet-mac-nexus@11800e1000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe1000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy204>;
+				cavium,qlm-trim = "1,rxaui";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy104>;
+				cavium,qlm-trim = "1,xaui", "1,dxaui";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy4>;
+				cavium,qlm-trim = "1,sgmii";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy205>;
+				cavium,qlm-trim = "1,rxaui";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				phy-handle = <&phy5>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				cavium,qlm-trim = "1,sgmii";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				phy-handle = <&phy6>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				cavium,qlm-trim = "1,sgmii";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				phy-handle = <&phy7>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				cavium,qlm-trim = "1,sgmii";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy212>;
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy12>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy112>;
+				cavium,qlm-trim = "3,xaui", "3,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy213>;
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy13>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy14>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy15>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01212>;
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01012>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01112>;
+				cavium,qlm-trim = "3,xaui", "3,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01213>;
+				cavium,qlm-trim = "3,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01013>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01014>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01015>;
+				cavium,qlm-trim = "3,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 2 */
+		ethernet-mac-nexus@11800e2000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe2000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10160>;
+				cavium,qlm-trim = "4,xlaui","4,xfi","4,10G_KR","4,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy216>;
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy116>;
+				cavium,qlm-trim = "4,xaui","4,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy16>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy217>;
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10161>;
+				cavium,qlm-trim = "4,xfi","4,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy17>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10162>;
+				cavium,qlm-trim = "4,xfi","4,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy18>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10163>;
+				cavium,qlm-trim = "4,xfi","4,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy19>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020160>;
+				cavium,qlm-trim = "4,xlaui","4,xfi","4,10G_KR","4,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02216>;
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02116>;
+				cavium,qlm-trim = "4,xaui","4,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02016>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02217>;
+				cavium,qlm-trim = "4,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020161>;
+				cavium,qlm-trim = "4,xfi","4,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02017>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020162>;
+				cavium,qlm-trim = "4,xfi","4,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02018>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020163>;
+				cavium,qlm-trim = "4,xfi","4,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02019>;
+				cavium,qlm-trim = "4,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 3 */
+		ethernet-mac-nexus@11800e3000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe3000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10200>;
+				cavium,qlm-trim = "5,xlaui","5,xfi","5,10G_KR","5,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy220>;
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy120>;
+				cavium,qlm-trim = "5,xaui", "5,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy20>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10201>;
+				cavium,qlm-trim = "5,xfi","5,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy221>;
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy21>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10202>;
+				cavium,qlm-trim = "5,xfi","5,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy22>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10203>;
+				cavium,qlm-trim = "5,xfi","5,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy23>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020200>;
+				cavium,qlm-trim = "5,xfi","5,xlaui","5,10G_KR","5,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02120>;
+				cavium,qlm-trim = "5,xaui", "5,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02220>;
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02020>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020201>;
+				cavium,qlm-trim = "5,xfi","5,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02221>;
+				cavium,qlm-trim = "5,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02021>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020202>;
+				cavium,qlm-trim = "5,xfi","5,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02022>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020203>;
+				cavium,qlm-trim = "5,xfi","5,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02023>;
+				cavium,qlm-trim = "5,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 4*/
+		ethernet-mac-nexus@11800e4000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe4000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10240>;
+				cavium,qlm-trim = "6,xlaui","6,xfi","6,10G_KR","6,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy224>;
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy124>;
+				cavium,qlm-trim = "6,xaui", "6,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy24>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10241>;
+				cavium,qlm-trim = "6,xfi","6,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy225>;
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy25>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10242>;
+				cavium,qlm-trim = "6,xfi","6,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy26>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10243>;
+				cavium,qlm-trim = "6,xfi","6,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy27>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030240>;
+				cavium,qlm-trim = "6,xlaui","6,xfi","6,10G_KR","6,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03224>;
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03124>;
+				cavium,qlm-trim = "6,xaui", "6,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03024>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030241>;
+				cavium,qlm-trim = "6,xfi","6,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03225>;
+				cavium,qlm-trim = "6,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03025>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030242>;
+				cavium,qlm-trim = "6,xfi","6,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03026>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030243>;
+				cavium,qlm-trim = "6,xfi","6,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03027>;
+				cavium,qlm-trim = "6,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 5*/
+		ethernet-mac-nexus@11800e5000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe5000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10280>;
+				cavium,qlm-trim = "7,xlaui","7,xfi","7,10G_KR","7,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy228>;
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy128>;
+				cavium,qlm-trim = "7,xaui", "7,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy28>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10281>;
+				cavium,qlm-trim = "7,xfi","7,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy229>;
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy29>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10282>;
+				cavium,qlm-trim = "7,xfi","7,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy30>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10283>;
+				cavium,qlm-trim = "7,xfi","7,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy31>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030280>;
+				cavium,qlm-trim = "7,xlaui","7,xfi","7,10G_KR","7,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03228>;
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03128>;
+				cavium,qlm-trim = "7,xaui", "7,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03028>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030281>;
+				cavium,qlm-trim = "7,xfi","7,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03229>;
+				cavium,qlm-trim = "7,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03029>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030282>;
+				cavium,qlm-trim = "7,xfi","7,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03030>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030283>;
+				cavium,qlm-trim = "7,xfi","7,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03031>;
+				cavium,qlm-trim = "7,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			cavium,cpu-trim = "0,notrev1.0";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b000 1>, <0x0b001 1>, <0x0b002 1>;
+			clock-frequency = <100000>;
+
+			rtc@68 {
+				compatible = "dallas,ds1337";
+				reg = <0x68>;
+			};
+			tlv-eeprom@56 {
+				compatible = "atmel,24c256", "microchip,24lc256";
+				reg = <0x56>;
+				pagesize = <64>;
+			};
+			ddr0-power0@2a {
+				compatible = "intersil,zl8800";
+				reg = <0x2a>;
+			};
+			ddr0-power1@2b {
+				compatible = "intersil,zl8800";
+				reg = <0x2b>;
+			};
+			ddr1-power0@2c {
+				compatible = "intersil,zl8800";
+				reg = <0x2c>;
+			};
+			ddr1-power1@2d {
+				compatible = "intersil,zl8800";
+				reg = <0x2d>;
+			};
+		};
+
+		i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			cavium,cpu-trim = "0,notrev1.0";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b100 1>, <0x0b101 1>, <0x0b102 1>;
+			clock-frequency = <100000>;
+		};
+
+		mmc: mmc@1180000002000 {
+			compatible = "cavium,octeon-7890-mmc";
+			reg = <0x11800 0x00002000 0x0 0x100>,
+			      <0x11800 0x00000180 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* EMM_INT_BUF_DONE,
+			   EMM_INT_CMD_DONE,
+			   EMM_INT_DMA_DONE,
+			   EMM_INT_CMD_ERR,
+			   EMM_INT_DMA_ERR,
+			   EMM_INT_SWITCH_DONE,
+			   EMM_INT_SWITCH_ERR,
+			   EMM_DMA_DONE,
+			   EMM_DMA_FIFO*/
+			interrupts = <0x09040 1>,
+				     <0x09041 1>,
+				     <0x09042 1>,
+				     <0x09043 1>,
+				     <0x09044 1>,
+				     <0x09045 1>,
+				     <0x09046 1>,
+				     <0x09000 1>,
+				     <0x09001 1>;
+
+			/* Power on GPIO 8, active high */
+			power-gpios = <&gpio0 8 0>;
+
+			/* The board only has a single MMC slot */
+			mmc-slot@0 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <0>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <40000000>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+			};
+			mmc-slot@1 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <1>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <40000000>;
+				non-removable;
+				bus-width = <8>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+			};
+		};
+
+		spi: spi@1070000001000 {
+			compatible = "cavium,octeon-3010-spi";
+			reg = <0x10700 0x00001000 0x0 0x100>;
+			interrupts = <0x05001 1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			spi-max-frequency = <25000000>;
+
+			flash@0 {
+				compatible = "atmel,at25040b", "atmel,at25";
+				reg = <0>;
+				spi-max-frequency = <2000000>;
+
+				pagesize = <64>;
+				size = <0x8000>;
+				address-width = <16>;
+			};
+			flash@1 {
+				compatible = "micron,n25q128a13","spi-flash";
+				reg = <1>;
+				spi-max-frequency = <75000000>;
+
+				pagesize = <0x10000>;
+				size = <0x1000000>;
+				address-width = <24>;
+			};
+		};
+
+		uctl@1180068000000 {
+			compatible = "cavium,octeon-7130-usb-uctl";
+			reg = <0x11800 0x68000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* 50MHz, 100MHz and 125MHz allowed */
+			refclk-frequency = <100000000>;
+			/* Either "dlmc_ref_clk0" or "dlmc_ref_clk1" */
+			refclk-type-ss = "dlmc_ref_clk0";
+			/* Either "dlmc_ref_clk0" "dlmc_ref_clk1" or "pll_ref_clk" */
+			refclk-type-hs = "dlmc_ref_clk0";
+
+			xhci@1680000000000 {
+				compatible = "cavium,octeon-7130-xhci","synopsys,dwc3";
+				reg = <0x16800 0x00000000 0x10 0x0>;
+				interrupts = <0x68080 4>; /* UAHC_IMAN, level */
+			};
+		};
+
+		ocla0@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 1>, /* Fsm0 */
+				     <0xa800d 1>, /* Fsm1 */
+				     <0xa800f 1>; /* Trigfull */
+		};
+
+		ocla1@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 1>, /* Fsm0 */
+				     <0xa900d 1>, /* Fsm1 */
+				     <0xa900f 1>; /* Trigfull */
+		};
+
+		ocla2@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 1>, /* Fsm0 */
+				     <0xaa00d 1>, /* Fsm1 */
+				     <0xaa00f 1>; /* Trigfull */
+		};
+
+		ocla3@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 1>, /* Fsm0 */
+				     <0xab00d 1>, /* Fsm1 */
+				     <0xab00f 1>; /* Trigfull */
+		};
+
+		ocla4@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 1>, /* Fsm0 */
+				     <0xac00d 1>, /* Fsm1 */
+				     <0xac00f 1>; /* Trigfull */
+		};
+
+		mix0@1070000100000 {
+			compatible = "cavium,octeon-7890-mix";
+			reg = <0x10700 0x00100000 0x0 0x100>;
+			interrupts = <0x10000 1>, /* ODBLOVF */
+				     <0x10001 1>, /* IDBLOVF */
+				     <0x10002 1>, /* ORTHRESH */
+				     <0x10003 1>, /* IRTHRESH */
+				     <0x10004 1>, /* DATA_DRP */
+				     <0x10005 1>, /* IRUN */
+				     <0x10006 1>, /* ORUN */
+				     <0x10007 1>; /* TS */
+			local-mac-address = [ 00 00 00 00 00 00 ];
+			cavium,mac-handle = <0xffff>;
+		};
+		mix1@1070000100800 {
+			compatible = "cavium,octeon-7890-mix";
+			reg = <0x10700 0x00100800 0x0 0x100>;
+			interrupts = <0x10010 1>, /* ODBLOVF */
+				     <0x10011 1>, /* IDBLOVF */
+				     <0x10012 1>, /* ORTHRESH */
+				     <0x10013 1>, /* IRTHRESH */
+				     <0x10014 1>, /* DATA_DRP */
+				     <0x10015 1>, /* IRUN */
+				     <0x10016 1>, /* ORUN */
+				     <0x10017 1>; /* TS */
+			local-mac-address = [ 00 00 00 00 00 00 ];
+			cavium,mac-handle = <0xffff>;
+		};
+	};
+	soc@1000000000 {
+		interrupt-parent = <&ciu13>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges = <0 0 0x10 0x00000000 0x20000 0x00000000>;
+		cavium,node-trim = "1,soc";
+
+		gpio1: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-7890-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0x03000 4>, <0x03001 4>, <0x03002 4>, <0x03003 4>,
+				     <0x03004 4>, <0x03005 4>, <0x03006 4>, <0x03007 4>,
+				     <0x03008 4>, <0x03009 4>, <0x0300a 4>, <0x0300b 4>,
+				     <0x0300c 4>, <0x0300d 4>, <0x0300e 4>, <0x0300f 4>;
+		};
+
+		ciu13: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+		};
+
+		serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08040 4>;
+		};
+
+		i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			cavium,cpu-trim = "1,notrev1.0";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b000 1>, <0x0b001 1>, <0x0b002 1>;
+			clock-frequency = <100000>;
+
+			rtc@68 {
+				compatible = "dallas,ds1337";
+				reg = <0x68>;
+			};
+			tlv-eeprom@56 {
+				compatible = "atmel,24c256", "microchip,24lc256";
+				reg = <0x56>;
+				pagesize = <64>;
+			};
+			ddr0-power0@2a {
+				compatible = "intersil,zl8800";
+				reg = <0x2a>;
+			};
+			ddr0-power1@2b {
+				compatible = "intersil,zl8800";
+				reg = <0x2b>;
+			};
+			ddr1-power0@2c {
+				compatible = "intersil,zl8800";
+				reg = <0x2c>;
+			};
+			ddr1-power1@2d {
+				compatible = "intersil,zl8800";
+				reg = <0x2d>;
+			};
+		};
+
+		i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			cavium,cpu-trim = "1,notrev1.0";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b100 1>, <0x0b101 1>, <0x0b102 1>;
+			clock-frequency = <100000>;
+		};
+
+		mmc@1180000002000 {
+			compatible = "cavium,octeon-7890-mmc";
+			reg = <0x11800 0x00002000 0x0 0x100>,
+			      <0x11800 0x00000180 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* EMM_INT_BUF_DONE,
+			   EMM_INT_CMD_DONE,
+			   EMM_INT_DMA_DONE,
+			   EMM_INT_CMD_ERR,
+			   EMM_INT_DMA_ERR,
+			   EMM_INT_SWITCH_DONE,
+			   EMM_INT_SWITCH_ERR,
+			   EMM_DMA_DONE,
+			   EMM_DMA_FIFO*/
+			interrupts = <0x09040 1>,
+				     <0x09041 1>,
+				     <0x09042 1>,
+				     <0x09043 1>,
+				     <0x09044 1>,
+				     <0x09045 1>,
+				     <0x09046 1>,
+				     <0x09000 1>,
+				     <0x09001 1>;
+
+			/* Power on GPIO 8, active high */
+			power-gpios = <&gpio1 8 0>;
+
+			/* The board only has a single MMC slot */
+			mmc-slot@0 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <0>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <35000000>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+			};
+			mmc-slot@1 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <1>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <35000000>;
+				non-removable;
+				bus-width = <8>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+			};
+		};
+
+		spi@1070000001000 {
+			compatible = "cavium,octeon-3010-spi";
+			reg = <0x10700 0x00001000 0x0 0x100>;
+			interrupts = <0x05001 1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			spi-max-frequency = <25000000>;
+
+			flash@0 {
+				compatible = "atmel,at25040b", "atmel,at25";
+				reg = <0>;
+				spi-max-frequency = <2000000>;
+
+				pagesize = <64>;
+				size = <0x8000>;
+				address-width = <16>;
+			};
+			flash@1 {
+				compatible = "micron,n25q128a13","spi-flash";
+				reg = <1>;
+				spi-max-frequency = <75000000>;
+
+				pagesize = <0x10000>;
+				size = <0x1000000>;
+				address-width = <24>;
+			};
+		};
+
+		uctl@1180068000000 {
+			compatible = "cavium,octeon-7130-usb-uctl";
+			reg = <0x11800 0x68000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* 50MHz, 100MHz and 125MHz allowed */
+			refclk-frequency = <100000000>;
+			/* Either "dlmc_ref_clk0" or "dlmc_ref_clk1" */
+			refclk-type-ss = "dlmc_ref_clk0";
+			/* Either "dlmc_ref_clk0" "dlmc_ref_clk1" or "pll_ref_clk" */
+			refclk-type-hs = "dlmc_ref_clk0";
+
+			xhci@1680000000000 {
+				compatible = "cavium,octeon-7130-xhci","synopsys,dwc3";
+				reg = <0x16800 0x00000000 0x10 0x0>;
+				interrupts = <0x68080 4>; /* UAHC_IMAN, level */
+			};
+		};
+
+		ocla0@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 1>, /* Fsm0 */
+				     <0xa800d 1>, /* Fsm1 */
+				     <0xa800f 1>; /* Trigfull */
+		};
+
+		ocla1@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 1>, /* Fsm0 */
+				     <0xa900d 1>, /* Fsm1 */
+				     <0xa900f 1>; /* Trigfull */
+		};
+
+		ocla2@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 1>, /* Fsm0 */
+				     <0xaa00d 1>, /* Fsm1 */
+				     <0xaa00f 1>; /* Trigfull */
+		};
+
+		ocla3@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 1>, /* Fsm0 */
+				     <0xab00d 1>, /* Fsm1 */
+				     <0xab00f 1>; /* Trigfull */
+		};
+
+		ocla4@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 1>, /* Fsm0 */
+				     <0xac00d 1>, /* Fsm1 */
+				     <0xac00f 1>; /* Trigfull */
+		};
+		bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0       0x1d020000  0x10000>,
+				 <5 0  0x10000 0x50000000  0x10000>,
+				 <6 0  0x10000 0x60000000  0x10000>,
+				 <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,page-mode = <1>;
+				cavium,pages     = <8>;
+				cavium,bus-width = <8>;
+			};
+			cavium,cs-config@4 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <4>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <10>;
+				cavium,t-oe   = <160>;
+				cavium,t-we   = <100>;
+				cavium,t-rd-hld = <0>;
+				cavium,t-wr-hld = <0>;
+				cavium,t-pause  = <50>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <300>;
+				cavium,t-rd-dly = <10>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			flash1: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x800000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0 0x340000>;
+					read-only;
+				};
+				partition@300000 {
+					label = "storage";
+					reg = <0x340000 0x4be000>;
+				};
+				partition@7fe000 {
+					label = "environment";
+					reg = <0x7fe000 0x2000>;
+					read-only;
+				};
+			};
+			led-display@4,0 {
+				compatible = "avago,hdsp-253x";
+				reg = <4 0x20 0x20>, <4 0 0x20>;
+			};
+		};
+
+		/* SMI_0 -- The only bus connected on Rev 1 boards */
+		mdio@1180000003800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003800 0x0 0x40>;
+
+			phy100B: ethernet-phy@100 {
+				cavium,qlm-trim = "10,xaui";
+				reg = <0>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy200B: ethernet-phy@200 {
+				cavium,qlm-trim = "10,rxaui";
+				reg = <0>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy0B: ethernet-phy@0 {
+				cavium,qlm-trim = "10,sgmii";
+				reg = <0>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+				/* LED[2,1]: Speed, LED[3]: RX, LED[0]: TX, all open-drain */
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy201B: ethernet-phy@201 {
+				cavium,qlm-trim = "10,rxaui";
+				reg = <1>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy1B: ethernet-phy@1 {
+				cavium,qlm-trim = "10,sgmii";
+				reg = <1>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy2B: ethernet-phy@2 {
+				cavium,qlm-trim = "10,sgmii";
+				reg = <2>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy3B: ethernet-phy@3 {
+				cavium,qlm-trim = "10,sgmii";
+				reg = <3>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy204B: ethernet-phy@204 {
+				cavium,qlm-trim = "11,rxaui";
+				reg = <4>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy104B: ethernet-phy@104 {
+				cavium,qlm-trim = "11,xaui";
+				reg = <4>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy4B: ethernet-phy@4 {
+				cavium,qlm-trim = "11,sgmii";
+				reg = <4>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy205B: ethernet-phy@205 {
+				cavium,qlm-trim = "11,rxaui";
+				reg = <5>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy5B: ethernet-phy@5 {
+				cavium,qlm-trim = "11,sgmii";
+				reg = <5>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy6B: ethernet-phy@6 {
+				cavium,qlm-trim = "11,sgmii";
+				reg = <6>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+			phy7B: ethernet-phy@7 {
+				cavium,qlm-trim = "11,sgmii";
+				reg = <7>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 12, active low */
+			};
+
+			phy208B: ethernet-phy@208 {
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <8>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy108B: ethernet-phy@108 {
+				cavium,qlm-trim = "12,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <8>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy8B: ethernet-phy@8 {
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <8>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy209B: ethernet-phy@209 {
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <9>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy9B: ethernet-phy@9 {
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <9>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy10B: ethernet-phy@a {
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xa>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy11B: ethernet-phy@b {
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xb>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			phy212B: ethernet-phy@20c {
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0xc>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy112B: ethernet-phy@10c {
+				cavium,qlm-trim = "13,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0xc>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy12B: ethernet-phy@c {
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xc>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy213B: ethernet-phy@20d {
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0xd>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy13B: ethernet-phy@d {
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xd>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy14B: ethernet-phy@e {
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xe>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy15B: ethernet-phy@f {
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0xf>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy116B: ethernet-phy-nexus@10 {
+				reg = <0x10>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "14,xlaui","14,xfi","14,10G_KR","14,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10160B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10161B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "14,xfi","14,10G_KR";
+				};
+				phy10162B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "14,xfi","14,10G_KR";
+				};
+				phy10163B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "14,xfi","14,10G_KR";
+				};
+			};
+			phy216B: ethernet-phy@210 {
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x10>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy116B: ethernet-phy@110 {
+				cavium,qlm-trim = "14,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x10>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy16B: ethernet-phy@10 {
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x10>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy217B: ethernet-phy@211 {
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x11>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy17B: ethernet-phy@11 {
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x11>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy18B: ethernet-phy@12 {
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x12>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy19B: ethernet-phy@13 {
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x13>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy120B: ethernet-phy-nexus@14 {
+				reg = <0x14>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "15,xlaui","15,xfi","15,10G_KR","15,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10200B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10201B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "15,xfi","15,10G_KR";
+				};
+				phy10202B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "15,xfi","15,10G_KR";
+				};
+				phy10203B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "15,xfi","15,10G_KR";
+				};
+			};
+			phy220B: ethernet-phy@214 {
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x14>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy120B: ethernet-phy@114 {
+				cavium,qlm-trim = "15,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x14>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy20B: ethernet-phy@14 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x14>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy221B: ethernet-phy@215 {
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x15>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy21B: ethernet-phy@15 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x15>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy22B: ethernet-phy@16 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x16>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy23B: ethernet-phy@17 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x17>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy124B: ethernet-phy-nexus@18 {
+				reg = <0x18>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "16,xlaui","16,xfi","16,10G_KR","16,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10240B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10241B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "16,xfi","16,10G_KR";
+				};
+				phy10242B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "16,xfi","16,10G_KR";
+				};
+				phy10243B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "16,xfi","16,10G_KR";
+				};
+			};
+			phy224B: ethernet-phy@218 {
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x18>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy124B: ethernet-phy@118 {
+				cavium,qlm-trim = "16,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x18>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy24B: ethernet-phy@18 {
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x18>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy225B: ethernet-phy@219 {
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x19>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy25B: ethernet-phy@19 {
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x19>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy26B: ethernet-phy@1a {
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1a>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy27B: ethernet-phy@1b {
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1b>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy128B: ethernet-phy-nexus@1c {
+				reg = <0x1c>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "17,xlaui","17,xfi","17,10G_KR","17,40G_KR4";
+				cavium,board-trim = "0,rev1";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy10280B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy10281B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "17,xfi","17,10G_KR";
+				};
+				phy10282B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "17,xfi","17,10G_KR";
+				};
+				phy10283B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "17,xfi","17,10G_KR";
+				};
+			};
+			phy228B: ethernet-phy@21c {
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1c>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy128B: ethernet-phy@11c {
+				cavium,qlm-trim = "17,xaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1c>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy28B: ethernet-phy@1c {
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1c>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy229B: ethernet-phy@21d {
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1d>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy29B: ethernet-phy@1d {
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1d>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy30B: ethernet-phy@1e {
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1e>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy31B: ethernet-phy@1f {
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+				reg = <0x1f>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* SMI_1 -- Available on rev 2 and later boards */
+		mdio@1180000003880 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003880 0x0 0x40>;
+			cavium,board-trim = "0,notrev1";
+
+			phy01208B: ethernet-phy@208 {
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x8>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01108B: ethernet-phy@108 {
+				cavium,qlm-trim = "12,xaui";
+				reg = <8>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy01008B: ethernet-phy@8 {
+				cavium,qlm-trim = "12,sgmii";
+				reg = <8>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy01209B: ethernet-phy@209 {
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x9>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01009B: ethernet-phy@9 {
+				cavium,qlm-trim = "12,sgmii";
+				reg = <9>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy01010B: ethernet-phy@a {
+				cavium,qlm-trim = "12,sgmii";
+				reg = <0xa>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <14 8>; /* Pin 14, active low */
+			};
+			phy01011B: ethernet-phy@b {
+				cavium,qlm-trim = "12,sgmii";
+				reg = <0xb>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			phy01212B: ethernet-phy@20c {
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0xc>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01112B: ethernet-phy@10c {
+				cavium,qlm-trim = "13,xaui";
+				reg = <0xc>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy01012B: ethernet-phy@c {
+				cavium,qlm-trim = "13,sgmii";
+				reg = <0xc>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy01213B: ethernet-phy@20d {
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0xd>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy01013B: ethernet-phy@d {
+				cavium,qlm-trim = "13,sgmii";
+				reg = <0xd>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy01014B: ethernet-phy@e {
+				cavium,qlm-trim = "13,sgmii";
+				reg = <0xe>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy01015B: ethernet-phy@f {
+				cavium,qlm-trim = "13,sgmii";
+				reg = <0xf>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* SMI_2 -- Available on rev 2 and later boards */
+		mdio@1180000003900 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00003900 0x0 0x40>;
+			cavium,board-trim = "0,notrev1";
+
+			mphy02116B: ethernet-phy-nexus@10 {
+				reg = <0x10>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "14,xlaui","14,xfi","14,10G_KR","14,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy020160B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy020161B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "14,xfi","14,10G_KR";
+				};
+				phy020162B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "14,xfi","14,10G_KR";
+				};
+				phy020163B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "14,xfi","14,10G_KR";
+				};
+			};
+			phy02216B: ethernet-phy@210 {
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x10>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02116B: ethernet-phy@110 {
+				cavium,qlm-trim = "14,xaui";
+				reg = <0x10>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy02016B: ethernet-phy@10 {
+				cavium,qlm-trim = "14,sgmii";
+				reg = <0x10>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02217B: ethernet-phy@20d {
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x11>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02017B: ethernet-phy@11 {
+				cavium,qlm-trim = "14,sgmii";
+				reg = <0x11>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02018B: ethernet-phy@12 {
+				cavium,qlm-trim = "14,sgmii";
+				reg = <0x12>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02019B: ethernet-phy@13 {
+				cavium,qlm-trim = "14,sgmii";
+				reg = <0x13>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy02120B: ethernet-phy-nexus@14 {
+				reg = <0x14>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "15,xlaui","15,xfi","15,10G_KR","15,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy020200B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy020201B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "15,xfi","15,10G_KR";
+				};
+				phy020202B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "15,xfi","15,10G_KR";
+				};
+				phy020203B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "15,xfi","15,10G_KR";
+				};
+			};
+			phy02220B: ethernet-phy@214 {
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x14>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02120B: ethernet-phy@114 {
+				cavium,qlm-trim = "15,xaui";
+				reg = <0x14>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy02020B: ethernet-phy@14 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x14>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02221B: ethernet-phy@215 {
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x15>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy02021B: ethernet-phy@15 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x15>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02022B: ethernet-phy@16 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x16>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy02023B: ethernet-phy@17 {
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x17>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+
+		/* SMI_3 -- Available on rev 2 and later boards */
+		mdio@1180000003980 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cavium,board-trim = "0,notrev1";
+			reg = <0x11800 0x00003980 0x0 0x40>;
+
+			mphy3024B: ethernet-phy-nexus@18 {
+				reg = <0x18>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "16,xlaui","16,xfi","16,10G_KR","16,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy030240B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy030241B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "16,xfi","16,10G_KR";
+				};
+				phy030242B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "16,xfi","16,10G_KR";
+				};
+				phy030243B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "16,xfi","16,10G_KR";
+				};
+			};
+			phy03224B: ethernet-phy@218 {
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x18>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03124B: ethernet-phy@118 {
+				cavium,qlm-trim = "16,xaui";
+				reg = <0x18>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy03024B: ethernet-phy@18 {
+				cavium,qlm-trim = "16,sgmii";
+				reg = <0x18>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03225B: ethernet-phy@219 {
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x19>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03025B: ethernet-phy@19 {
+				cavium,qlm-trim = "16,sgmii";
+				reg = <0x19>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03026B: ethernet-phy@1a {
+				cavium,qlm-trim = "16,sgmii";
+				reg = <0x1a>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03027B: ethernet-phy@1b {
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1b>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+
+			mphy3028B: ethernet-phy-nexus@1c {
+				reg = <0x1c>;	/* MDIO address */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "cortina,cs4223", "ethernet-phy-nexus";
+				cavium,qlm-trim = "17,xlaui","17,xfi","17,10G_KR","17,40G_KR4";
+
+				/* The Cortina CS4223 can be used either as
+				 * XFI or XLAUI.  In XFI, four separate ports
+				 * are supported even though it's only a single
+				 * PHY device.
+				 */
+				phy030280B: ethernet-phy@0 {
+					compatible = "cortina,cs4223-slice";
+					reg = <0>;
+				};
+				phy030281B: ethernet-phy@1 {
+					compatible = "cortina,cs4223-slice";
+					reg = <1>;
+					cavium,qlm-trim = "17,xfi","17,10G_KR";
+				};
+				phy030282B: ethernet-phy@2 {
+					compatible = "cortina,cs4223-slice";
+					reg = <2>;
+					cavium,qlm-trim = "17,xfi","17,10G_KR";
+				};
+				phy030283B: ethernet-phy@3 {
+					compatible = "cortina,cs4223-slice";
+					reg = <3>;
+					cavium,qlm-trim = "17,xfi","17,10G_KR";
+				};
+			};
+			phy03228B: ethernet-phy@21c {
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1c>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03128B: ethernet-phy@11c {
+				cavium,qlm-trim = "17,xaui";
+				reg = <0x1c>;
+				compatible = "broadcom,bcm8706", "ethernet-phy-ieee802.3-c45";
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>;
+
+				/* Set PMD Digital Control Register for
+				 * GPIO[1] Tx/Rx
+				 * GPIO[0] R64 Sync Acquired
+				 */
+				broadcom,c45-reg-init = <1 0xc808 0xff8f 0x70>;
+			};
+			phy03028B: ethernet-phy@1c {
+				cavium,qlm-trim = "17,sgmii";
+				reg = <0x1c>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03229B: ethernet-phy@21d {
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1d>;
+				compatible = "marvell,88x3120", "ethernet-phy-ieee802.3-c45";
+				marvell,reg-init = <4 0xc003 0 5>;
+			};
+			phy03029B: ethernet-phy@1d {
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1d>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03030B: ethernet-phy@1e {
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1e>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+			phy03031B: ethernet-phy@1f {
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,notrev1";
+				reg = <0x1f>;
+				compatible = "marvell,88e1240", "ethernet-phy-ieee802.3-c22";
+
+				marvell,reg-init = <3 0x10 0 0x8665>,
+					<3 0x11 0 0x00aa>,
+					<3 0x12 0 0x4105>,
+					<3 0x13 0 0x8a08>;
+
+				interrupt-parent = <&gpio0>;
+				//interrupts = <12 8>; /* Pin 14, active low */
+			};
+		};
+		/* BGX definitions here must match sim_board.c settings. */
+		/* BGX 0*/
+		ethernet-mac-nexus@11800e0000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe0000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* SerDes 0 (RXAUI) */
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy200B>;
+				cavium,qlm-trim = "10,rxaui";
+			};
+			/* SerDes 0 (XAUI) */
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy100B>;
+				cavium,qlm-trim = "10,xaui", "10,dxaui";
+			};
+			/* SerDes 0, may differ from PCS Lane/LMAC */
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy0B>;
+				cavium,qlm-trim = "10,sgmii";
+			};
+			/* SerDes 1 (RXAUI) */
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy201B>;
+				cavium,qlm-trim = "10,rxaui";
+			};
+			/* SerDes 1, may differ from PCS Lane/LMAC */
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy1B>;
+				cavium,qlm-trim = "10,sgmii";
+			};
+			/* SerDes 2, may differ from PCS Lane/LMAC */
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy2B>;
+				cavium,qlm-trim = "10,sgmii";
+			};
+			/* SerDes 3, may differ from PCS Lane/LMAC */
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy3B>;
+				cavium,qlm-trim = "10,sgmii";
+			};
+			/* SerDes 4 (RXAUI) */
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy208B>;
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy8B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy108B>;
+				cavium,qlm-trim = "12,xaui", "2,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 5 (RXAUI) */
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy209B>;
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy9B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy11B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01008B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 4 (RXAUI) */
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01208B>;
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01108B>;
+				cavium,qlm-trim = "12,xaui", "12,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 5 (RXAUI) */
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01209B>;
+				cavium,qlm-trim = "12,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01009B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01010B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01011B>;
+				cavium,qlm-trim = "12,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 1*/
+		ethernet-mac-nexus@11800e1000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe1000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy204B>;
+				cavium,qlm-trim = "11,rxaui";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy104B>;
+				cavium,qlm-trim = "11,xaui", "11,dxaui";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy4B>;
+				cavium,qlm-trim = "11,sgmii";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy205B>;
+				cavium,qlm-trim = "11,rxaui";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				phy-handle = <&phy5B>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				cavium,qlm-trim = "11,sgmii";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				phy-handle = <&phy6B>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				cavium,qlm-trim = "11,sgmii";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				phy-handle = <&phy7B>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				cavium,qlm-trim = "11,sgmii";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy212B>;
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy12B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy112B>;
+				cavium,qlm-trim = "13,xaui", "13,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy213B>;
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy13B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy14B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy15B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			/* SerDes 4, may differ from PCS Lane/LMAC */
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01212B>;
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01012B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 4 (XAUI) */
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01112B>;
+				cavium,qlm-trim = "13,xaui", "13,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 5, may differ from PCS Lane/LMAC */
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01213B>;
+				cavium,qlm-trim = "13,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01013B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 6, may differ from PCS Lane/LMAC */
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01014B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			/* SerDes 7, may differ from PCS Lane/LMAC */
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy01015B>;
+				cavium,qlm-trim = "13,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 2 */
+		ethernet-mac-nexus@11800e2000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe2000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10160B>;
+				cavium,qlm-trim = "14,xlaui","14,xfi","14,10G_KR","14,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy216B>;
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy116B>;
+				cavium,qlm-trim = "14,xaui","14,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy16B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy217B>;
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10161B>;
+				cavium,qlm-trim = "14,xfi","14,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy17B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10162B>;
+				cavium,qlm-trim = "14,xfi","14,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy18B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10163B>;
+				cavium,qlm-trim = "14,xfi","14,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy19B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020160B>;
+				cavium,qlm-trim = "14,xlaui","14,xfi","14,10G_KR","14,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02216B>;
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02116B>;
+				cavium,qlm-trim = "14,xaui","14,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02016B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02217B>;
+				cavium,qlm-trim = "14,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020161B>;
+				cavium,qlm-trim = "14,xfi","14,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02017B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020162B>;
+				cavium,qlm-trim = "14,xfi","14,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02018B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020163B>;
+				cavium,qlm-trim = "14,xfi","14,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02019B>;
+				cavium,qlm-trim = "14,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 3 */
+		ethernet-mac-nexus@11800e3000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe3000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10200B>;
+				cavium,qlm-trim = "15,xlaui","15,xfi","15,10G_KR","15,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy220B>;
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy120B>;
+				cavium,qlm-trim = "15,xaui", "15,dxaui","15,10G_KR","15,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy20B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10201B>;
+				cavium,qlm-trim = "15,xfi","15,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy221B>;
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy21B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10202B>;
+				cavium,qlm-trim = "15,xfi","15,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy22B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10203B>;
+				cavium,qlm-trim = "15,xfi","15,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy23B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020200B>;
+				cavium,qlm-trim = "15,xfi","15,xlaui","15,10G_KR","15,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02120B>;
+				cavium,qlm-trim = "15,xaui", "15,dxaui","15,10G_KR","15,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02220B>;
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02020B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020201B>;
+				cavium,qlm-trim = "15,xfi","15,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02221B>;
+				cavium,qlm-trim = "15,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02021B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020202B>;
+				cavium,qlm-trim = "15,xfi","15,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02022B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy020203B>;
+				cavium,qlm-trim = "15,xfi","15,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy02023B>;
+				cavium,qlm-trim = "15,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 4*/
+		ethernet-mac-nexus@11800e4000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe4000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10240B>;
+				cavium,qlm-trim = "16,xlaui","16,xfi","16,10G_KR","16,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy224B>;
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy124B>;
+				cavium,qlm-trim = "16,xaui", "16,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy24B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10241B>;
+				cavium,qlm-trim = "16,xfi","16,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy225B>;
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy25B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10242B>;
+				cavium,qlm-trim = "16,xfi","16,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy26B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10243B>;
+				cavium,qlm-trim = "16,xfi","16,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy27B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030240B>;
+				cavium,qlm-trim = "16,xlaui","16,xfi","16,10G_KR","16,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03224B>;
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03124B>;
+				cavium,qlm-trim = "16,xaui", "16,dxaui","16,10G_KR","16,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03024B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030241B>;
+				cavium,qlm-trim = "16,xfi","16,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03225B>;
+				cavium,qlm-trim = "16,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03025B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030242B>;
+				cavium,qlm-trim = "16,xfi","16,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03026B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030243B>;
+				cavium,qlm-trim = "16,xfi","16,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03027B>;
+				cavium,qlm-trim = "16,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		/* BGX 5*/
+		ethernet-mac-nexus@11800e5000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe5000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ethernet-mac@A {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10280B>;
+				cavium,qlm-trim = "17,xlaui","17,xfi","17,10G_KR","17,40G_KR4";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@B {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy228B>;
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@C {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy128B>;
+				cavium,qlm-trim = "17,xaui", "17,dxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@D {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy28B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@E {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10281B>;
+				cavium,qlm-trim = "17,xfi","17,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@F {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy229B>;
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@G {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy29B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@H {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10282B>;
+				cavium,qlm-trim = "17,xfi","17,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@I {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy30B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@J {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy10283B>;
+				cavium,qlm-trim = "17,xfi","17,10G_KR";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@K {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy31B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,rev1";
+			};
+			ethernet-mac@L {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030280B>;
+				cavium,qlm-trim = "17,xlaui","17,xfi","17,10G_KR","17,40G_KR4";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@M {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03228B>;
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@N {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03128B>;
+				cavium,qlm-trim = "17,xaui", "17,dxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@O {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03028B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@P {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030281B>;
+				cavium,qlm-trim = "17,xfi","17,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@Q {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03229B>;
+				cavium,qlm-trim = "17,rxaui";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@R {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03029B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@S {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030282B>;
+				cavium,qlm-trim = "17,xfi","17,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@T {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03030B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@U {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy030283B>;
+				cavium,qlm-trim = "17,xfi","17,10G_KR";
+				cavium,board-trim = "0,notrev1";
+			};
+			ethernet-mac@V {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				phy-handle = <&phy03031B>;
+				cavium,qlm-trim = "17,sgmii";
+				cavium,board-trim = "0,notrev1";
+			};
+		};
+
+		mix0@1070000100000 {
+			compatible = "cavium,octeon-7890-mix";
+			reg = <0x10700 0x00100000 0x0 0x100>;
+			interrupts = <0x10000 1>, /* ODBLOVF */
+				     <0x10001 1>, /* IDBLOVF */
+				     <0x10002 1>, /* ORTHRESH */
+				     <0x10003 1>, /* IRTHRESH */
+				     <0x10004 1>, /* DATA_DRP */
+				     <0x10005 1>, /* IRUN */
+				     <0x10006 1>, /* ORUN */
+				     <0x10007 1>; /* TS */
+			local-mac-address = [ 00 00 00 00 00 00 ];
+			cavium,mac-handle = <0xffff>;
+		};
+		mix1@1070000100800 {
+			compatible = "cavium,octeon-7890-mix";
+			reg = <0x10700 0x00100800 0x0 0x100>;
+			interrupts = <0x10010 1>, /* ODBLOVF */
+				     <0x10011 1>, /* IDBLOVF */
+				     <0x10012 1>, /* ORTHRESH */
+				     <0x10013 1>, /* IRTHRESH */
+				     <0x10014 1>, /* DATA_DRP */
+				     <0x10015 1>, /* IRUN */
+				     <0x10016 1>, /* ORUN */
+				     <0x10017 1>; /* TS */
+			local-mac-address = [ 00 00 00 00 00 00 ];
+			cavium,mac-handle = <0xffff>;
+		};
+	};
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		d30 {
+			label = "D30";
+			gpios = <&gpio0 1 0>;
+			default-state = "keep";
+		};
+		d29 {
+			label = "D29";
+			gpios = <&gpio0 4 0>;
+			default-state = "keep";
+		};
+		d28 {
+			label = "D28";
+			gpios = <&gpio0 5 0>;
+			default-state = "keep";
+		};
+	};
+};

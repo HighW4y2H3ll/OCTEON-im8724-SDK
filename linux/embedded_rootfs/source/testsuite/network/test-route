@@ -1,0 +1,9 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert route add 1.2.3.4 lo
+assert route -n | grep -q "1.2.3.4"
+assert route del 1.2.3.4
+assert [ ! `route -n | grep -q "1.2.3.4"` ]
+

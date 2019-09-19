@@ -1,0 +1,3181 @@
+##########################################################################
+##
+##  MON Command Language help file:
+##
+##  DO NOT USE TABS IN THIS FILE!!!!!!!!!!!!!!!!!!
+##  When merging, make sure you don't merge in tabs again.
+##
+##  - Comments and #if/#ifall/#endif/#else(s) can be used anywhere, but the
+##    line must start with a # ( in column 1 ).
+##  - Nested #if statements are permitted.
+##  - #if has the form   #if { [!]keyword }...
+##        where keyword is one of the words listed below.
+##  - If more than one keyword is specified, they will be logically or'ed
+##    together on a #if line and and'ed together on a #ifall line.
+##  - To make sure the help file has all the correct syntax, invoke
+##      mon and do a 'h [gen]' command.
+##  - The CURRENT LEGAL KEYWORDS ARE :     NOTE --** CASE SENSITIVE **--
+##
+##    CPU family:       ARM      MIPS     
+##
+##    CPU Attributes:   HAS_TLB  FPU_EVEN  FPU_SINGLE  FPU_DOUBLE
+##
+##    MIPS CPU groups:  MIPS_3051 MIPS_3081 MIPS_3041  MIPS_36100 MIPS_33K
+##                      MIPS_3K   MIPS_4K
+##    MIPS CPU's:       R(each processor number)
+##
+##    Host OS's:        HP9000   SUN3_3   SUN3_4    SUN4_4 DOS386 DOS WIN32
+##
+##    Target Vehicals:  ICE      SIM       RSS
+##    TV sub-types:     ICE_DS ICE_ICE ICE_SYS ICE_ICEMAN ICE_HP ICE_MAJIC
+##
+##    Debuggers:        MON      CDB       API
+##
+##  - To add a new keyword to the list - see procedure init_keywords in
+##         dbg\lib\cmn\moncmds3.c
+##  - If you have problems reading the help file, a help file preprocessor
+##    tool has been created to generate a readable text file with no
+##    preprocessor commands using specified keywords.  See filter.exe.
+##    This preprocessor should also be run to check your changes to
+##    the help file.
+##  - Color is intended to indicate 1) that the user can get a help screen
+##      on the colored word and 2) general emphasis (header on group screen).
+##   - COLOR SUPPORT: When trying to align columns that contain tildes, be
+##     aware that even though you see them, they do not print (see
+##     'H FMT_OPTIONS').
+##
+##########################################################################
+#
+#if MON API
+.  b
+                        ~Breakpoint commands~
+
+   BC   Clears all Breakpoints, or clears breakpoints at specified addresses
+   BL   Lists the status of all Breakpoints
+   BS   Sets Software Breakpoints at specified addresses, with optional pass
+        counts
+   BS2  Sets MIPS16/Thumb Software Breakpoints at specified addresses, with
+        optional pass counts
+   BSH  Sets a Hardware Breakpoint with specified conditions and optional
+        pass counts
+
+   +B   Enables all Breakpoints, or enables breakpoint at specified addresses
+   -B   Disables all Breakpoints, or disables breakpoint at specified addresses
+
+.  bc
+Syntax :  BC [ * | { # ~number~ | ~addr~ }... ]
+
+Description :  The Breakpoint Clear command clears one or more breakpoints
+    previously set with the BS command.  BC with no arguments will clear
+    the software breakpoint at the current execution address.
+
+    *  indicates that ALL breakpoints are to be cleared.
+        Otherwise, only the specified breakpoints are cleared.
+
+    ~addr~ gives the address of a specific software breakpoint to be
+        enabled or disabled. ~addr~ must be an address in a valid code address
+        space.  See "H ADDR" or "H EXPR" for valid address forms.
+
+    ~number~ gives the breakpoint ID number (as shown by BL) of a specific
+        software or breakpoint to be enabled or disabled.
+
+.  bl
+Syntax :  BL
+
+Description :  The Breakpoint List command displays a list of all breakpoints
+    currently set, showing the break address, remaining pass count, initial
+    pass count, active/inactive,  and the associated command list.  If a
+    non-empty command list has been specified on a previous Go or Step
+    command, it will also be displayed.
+
+.  bs bs2
+Syntax :  BS[2] [ ~addr~ [ , [-]~number~ ] ] ...  [ "{" ~cmd_list~ "}" ]
+
+Description : The Breakpoint Set command sets one or more software breakpoints
+    with optional pass counts and an optional command list.  BS sets normal
+    breakpoints and BS2 sets MIPS16/Thumb mode breakpoints.  If no pass count
+    is specified, a value of one is assumed.  If a negative pass count is
+    specified, the breakpoint is temporary: it will be removed automatically
+    when it is taken.  The program will be interrupted each time the break
+    address is reached <number> times.  At that time, the command list will be
+    executed.  There is no limit on the number of active breakpoints.
+
+    ~addr~ must be an address in a valid code address space.
+        See "H ADDR" or "H EXPR" for valid address forms.
+
+    ~number~ is by default decimal.  See "H NUM" for available number forms.
+
+    ~cmd_list~ is any valid command list, with G or S being last if present.
+.  bsh
+Syntax :  BSH ~options~ [ ~size~ ] [ ~asid~ ] ~arange~ [ # ~mask~ ]
+              [ = ~vrange~ [ # ~mask ]] [ , [-]~number~ ]  [ "{" ~cmd_list~ "}" ]
+
+Description :  The Breakpoint Set, Hardware command sets a hardware breakpoint
+    with an optional pass count and an optional command list.  If no pass
+    count is specified, a value of one is assumed.  If a negative pass count
+    is specified, the breakpoint is temporary: it will be removed automatically
+    when it is taken.  The program will be interrupted each time the break
+    address is reached ~number~ times.  At that time, the command list will be
+    executed.  The actual number of hardware breakpoints available, and the
+    options which can actually be used to condition them, is dependent on the
+    target CPU's capabilities.
+
+    ~options~   { I | R | W | S | A | T | B }...
+        Flag word consisting of one or more of the following letters:
+           I - Break on matching instruction fetch
+           R - Break on Data Read
+           W - Break on Data Write
+           S - Size qualifier present, break only if access matches
+           A - ASID qualifier present, break only if access matches
+           T - Generate a Tracepoint signal without stopping.
+           B - Break on Tracepoint (redundant unless T also given)
+    ~size~      { 8 | 16 | 32 | 64 }
+        access size, required if ~options~ has 'S', else invalid
+    ~asid~      ~number~
+        ASID value, required if ~options~ has 'A', else invalid
+
+    ~arange~    [ ~addr~ [ ~addr~ ] | ~addr~ L ~number~ ] (See "H RANGE")
+        Memory address or address range which will trigger the breakpoint.
+        See "H ADDR" or "H EXPR" for valid address forms.  If the
+        "~addr~ L ~number~" syntax is used, ~number~ is scaled by ~size~ if
+        specified, else it is taken as a byte count.  This parameter is
+        required, but a mask of 0 can be applied if the break should not
+        be conditioned on the address (e.g. fetching a certain value from
+        any address).  
+
+    ~vrange~    [ ~value~ [ ~value~ ] | ~value~ L ~number~ ] (See "H RANGE")
+        Value or range of values which will trigger the breakpoint when
+        accessed.  See "H VALUE" for valid value forms.  If the
+        "~addr~ L ~number~" syntax is used, ~number~ is taken as a byte count.
+
+    ~mask~ is by default hexadecimal.  See "H NUM" for available number forms.
+        Bitmask applied to the address or value range as part of the
+        breakpoint condition.  Zero bits in ~mask~ are don't care bits when
+        testing the address or value.
+
+    ~number~ is by default decimal.  See "H NUM" for available number forms.
+
+    ~cmd_list~ is any valid command list, with G or S being last if present.
+#endif /* MON */
+#if MON
+.  c
+Syntax :  C [ ~max_levels~ ]
+
+Description :  The Call summary command causes a traceback of the current
+    function call chain to be displayed.  It assumes that the program
+#if ARM
+    under test follows the ARM calling conventions.
+#endif  /* ARM */
+#if MIPS
+    under test follows the calling convention specified by the
+    "calling_convention" EO option.
+#endif  /* MIPS */
+    This will be true for C programs, but adherence to the standard
+    calling convention is the responsibility of the programmer for
+    assembly language programs.
+
+    For each function in the call chain, the call summary contains the
+    address of the next instruction to be executed, in hex and symbolically,
+    and the current contents of the local registers that contain the
+    function's arguments, if any.  For static (non-global) functions, the
+    name of the function may not be known, in which case the closest preceding
+    global symbol will be displayed along with an offset.  This command is
+    useful, not only to see how control got to its current location, but also
+    as a convenient way to find where to set a breakpoint to interrupt
+    execution when a function returns to its caller.
+
+    ~max_levels~ is a number giving the maximum number of stack levels to be
+       listed (default 15).
+#endif  /* MON */
+#if TV_CACHEOPS
+.  cf ci cfi
+Syntax :  CF [ D ]
+          CI [ I | D ]
+          CFI [ I | D ]
+
+
+Description :  The Cache commands perform basic operations on the processor's
+    main caches.  Cache Flush (CF) flushes the cache by causing all "dirty"
+    entries to be written back to main memory.  It is meaningful only for data
+    caches that support write-back mode.  Cache Invalidate (CI) marks all
+    entries in the cache(s) invalid, discarding any modified data in a write-
+    back data cache.  Cache Flush & Invalidate (CFI) invalidates the cache(s)
+    after flushing any modified data to main memory.
+
+    I | D   specifies that the operation should be applied to the Instruction
+        or Data cache.  If neither is specified, both Instruction and Data
+        caches are affected.
+#endif
+.  d
+                        ~Display commands~
+
+   DA   Display currently defined command Aliases
+   DI   Display sign-on message and Initialization information
+   DV   Display Values according to format specifications
+   DO   Display configuration Options
+#if !CDB
+   DN   Display Names (symbols)
+#endif
+
+#if MIPS
+   DR   Display Registers (alias)
+#endif
+   DB   Display/Find Byte size objects in specified range
+   DH   Display/Find Half-word size objects in specified range
+   DW   Display/Find Word size objects in specified range
+   DD   Display/Find Double size objects in specified range
+
+#if TV_TCIM
+   DTR  Display Trace Ranges
+#endif
+#if TV_TC3D
+   DS   Display State trace control specifications
+   DC   Display Condition trace control specifications
+   DE   Display Event trace control specifications
+   DTS  Display Trace Spec (alias)
+#endif
+#if TV_PROFILER
+   DP   Display Profiler spec and data
+#endif
+#if TV_TRACE
+
+   DT   Display captured Trace data
+   DTN  Display Trace Name
+   DTF  Display Trace display format information
+   DF   Display defined Filters (used in displaying trace data)
+#endif
+.  da
+Syntax :  DA [ * | ~alias~ ]
+
+Description :  The Display Alias command shows the name and replacement text
+    for one or all currently defined Aliases.  See "H EA" for more information
+    about aliases.
+
+    * means display all aliases.  This is the default.
+
+    ~alias~ is the name of a specific command alias
+
+.  di
+Syntax :  DI
+
+Description :  The Display Initialization command shows the version number
+    and the setup and configuration information stored in the Initialization
+    file associated with the target.
+
+
+.  dv
+Syntax :  DV ~format_string~  [ , ~addr_expr~ ]...
+
+Description :  The Display Value command allows the user to generate formatted
+    output.  The format_string controls the operation of DV much like the
+    format string in a C printf() statement.
+
+    ~format_string~ is a string literal, enclosed in quotation marks, containing
+      characters to be displayed (including C-style escape sequences) and
+      conversion specifiers.  Conversion specifiers follow C conventions
+      EXCEPT: the size of the object to be displayed can be specified using
+      the 'B', 'H', and 'W' (or 'L') qualifiers, and the use of '*' to specify
+      a dynamic field width is not supported.
+
+      The size and conversion format specifiers combine to determine whether
+      the value of the ~addr_expr~ or its content will be displayed:
+        s, e, f, g : always display data stored at address addr_expr
+        all others : display the value of the addr_expr UNLESS an object size
+                     is supplied, then they display the object at addr_expr.
+Examples:
+#if ARM
+    BS printf { DV "In printf, args = \"%s\", %d, %ld\n",@r1,@r2,r3 ; G }
+#endif  /* ARM */
+#if MIPS
+    BS printf { DV "In printf, args = \"%s\", %d, %ld\n", @a0, @a1, a2 ; G }
+#endif  /* MIPS */
+    DV "Byte at %x is %02bx\n", global_char_var, global_char_var
+
+.  db  dd  dh  dw find search
+Syntax :  D[ ~type~ ][ R ] ~range~ [ ,~fmt~ ]  [= ~value~[#~mask~] [, ~value~[#~mask~]]...]
+
+Description :  The Display command displays the contents of the specified
+    registers or memory locations.  If a value list is given, Display searches
+    memory for those values.  Once a Display command has been entered, it may
+    be repeated (for successive addresses) simply by hitting the <enter> key,
+    UNTIL another command is entered or, when searching, UNTIL end of ~range~.
+
+    ~type~, which defines object size, has the form : { B | H | W | D }
+        default is type in previous Display ( or W on first Display ).
+
+    R   causes reverse searching ( search starts at the end of the range ).
+
+    ~range~ has the form : [ [ ~addr~ ] L ~number~ | ~addr~ [ ~addr~ ] ] (See "H RANGE")
+
+    ~fmt~ has the form : { d | u | o | x | X | f | e | E | g | G | c | s | i }
+        Default is "X" (hex).  See "H FMT" for description of choices.
+    Valid ~type~/~fmt~ combinations are listed in the manual.  See "H TYPE".
+
+    ~mask~ is a hex value that specifies which bits of value should be compared
+        with memory.  If mask is supplied only for the last value in the list,
+        it will apply to all values in the list.
+#if TV_TC3D
+.  dc
+Syntax :  DC [ * | { ~cond_list~ [ L{ * | ~n~ } ] } ]
+
+Description :  The Display Conditions command displays the currently
+    defined conditions.  The user may also request that conditions
+    referenced in the displayed conditions be displayed in turn, for
+    some or all levels of displayed conditions.
+
+    *  means all conditions.  This is the default.
+
+    ~cond_list~ has the form : { C~id~[:~id~] } ...     (See "H LIST" for details)
+    ~id~ has the form : { 1..50 | ~label~ }
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...    (15 character limit)
+
+    *  means show referenced conditions for all levels
+    ~n~  is the number of levels of referenced conditions to display
+
+.  de
+Syntax :  DE [ { * | event_list } [ C ] ]
+
+Description :  The Display Events command displays the currently
+    defined events and indicates their selected/deselected status.
+    The user may also request that conditions referenced in the specified
+    events be displayed in turn.
+
+    *  means all events.  This is the default.
+
+    ~event_list~ has the form : { E~id~[:~id~] } ...     (See "H LIST" for details)
+    ~id~ has the form : { 1..50 | ~label~ }
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...    (15 character limit)
+
+    C  means display the conditions referenced in the specified events
+
+.  df
+Syntax :  DF  [ { * | filter_list } ]
+
+Description :  The Display Filters command displays the trace display filters,
+     and indicates their active/inactive status.
+
+    *  means all filters.  This is the default.
+
+    ~filter_list~ has the form : { F~id~[:~id~] } ...     (See "H LIST" for details)
+    ~id~ has the form : { 1..50 | ~label~ }
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...    (15 character limit)
+
+.  ds
+Syntax :  DS [ * | ~state_list~ ]
+
+Description :  The Display States command displays the currently
+    defined states.
+
+    *  means all states.  This is the default.
+
+    ~state_list~ has the form : { S~id~[:~id~] } ...     (See "H LIST" for details)
+    ~id~ has the form : { 0..15 | ~label~ }
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...  (15 character limit)
+
+#endif  /* TV_TC3D */
+#if TV_TCIM
+.  dtr
+Syntax :  DTR [ * | ~range~ ]
+
+Description :  The Display Trace Ranges command displays the address ranges
+    where tracing is currently enabled.  By default DTR displays all currently
+    active Trace Ranges, or it can display only those within a specified range.
+    Each range will be displayed as originally entered, and the resulting
+    actual traceable regions (after widening, see "H ETR") are also shown.
+
+    *  means all current Trace Ranges.  This is the default.
+
+    ~range~ has the form : [ [ ~addr~ ] L ~number~ | ~addr~ [ ~addr~ ] ] (See "H RANGE")
+
+#endif  /* TV_TCIM */
+.  do  doq dov
+Syntax : DO[Q|V] [ * | ~pattern~ | ~option~ ]
+
+Description : The Display Options command displays the name, _current_ value,
+    and description of one or more of the options that control the appearance
+    and default actions of the debug monitor.  In verbose mode, DO also 
+    displays the default value and the range of valid values for each option.
+    Verbose mode also displayed the expanded version of the option's 
+    description.  Quiet mode displays just the name and value.
+
+    Q            means Quiet mode.
+    V            means Verbose mode.
+
+    *            means all options.  This is the default.
+
+    ~pattern~      has the form  : { { A-Z | a-z | _ }...}*
+                 All of the options whose long_name matches this pattern
+                 will be displayed.
+
+    ~option~       is a valid debugger configuration option.  It can be
+                 referenced by either its ~long_name~ or ~short_name~.
+
+         ~long_name~    is the entire option name
+         ~short_name~   is the abbreviated option name.  Options may be
+                      abbreviated by their initials.
+
+                      Examples: dp_color_err_msg      ->   dcem
+                                om_169_second         ->   o1s
+
+#if TV_TRACE
+.  dt
+Syntax :  DT [ ? | { {+|-}[~count~] } | ~span~ ] [,{R|I|D|M}[A|R|D|N]]
+
+Description :  The Display Trace command allows the user to request a list
+    of the available frames and the current pointer, to display frames
+    relative to the current pointer or to display specific frames by number.
+    Once a Display Trace command has been entered, hitting the <enter> key
+    will display the next screenfull of frames in the current direction,
+    UNTIL some other command is entered. The display mode remains in effect
+    until changed.
+
+    ?  means report available frames and the current pointer
+
+    { + | - } [ ~count~ ]  sets the default paging direction and displays the
+         next screenfull of frames or one starting "count" displayable frames
+         away.
+    ~span~ has the form:  { ~start~ [~end~] } | { [ ~start~ ] L ~count~ }
+         ~start~ ~end~  displays frames start to end, inclusive,
+         ~start~ L ~count~  displays "count" frames forward from start,
+         L ~count~  displays "count" frames in the current paging direction.
+         '$' specified for ~start~ or ~end~ means last frame.
+    R | I | D | M  sets the display mode: Raw | Instruction | Data | Mixed
+    A | R | D | N  sets the timestamp display mode:
+         Absolute | Relative (to first frame) | Delta (between frames) | None
+         The default is Relative for Raw mode, None for the rest.
+.  dtn
+Syntax : DTN [ * | ~pattern~ | ~f_name~ ] [ L ~n~ ]
+
+Description : The Display Trace Name command displays the f_names.
+
+    *            means all f_names.  This is the default.
+
+    ~pattern~    has the form  : {{ A-Z | a-z }...}*
+                 All the f_names which match this pattern will be displayed.
+
+    ~f_name~     is one of the defined f_names.
+
+    ~n~    specifies the number of trace names to include in this display. The
+           default is to display all the f_names which match the pattern
+           specified.
+
+           Note that an '*' displayed next to an f_name indicates that it
+           is user-defined.
+
+.  dtf
+Syntax :  DTF [ * | ~pattern~ | ~f_name~  | ~s_name~ ] [ L ~n~ ] [ ~m~={R|F} ]
+
+Description : The Display Trace Format command displays the current trace
+    format definitions.
+
+    *    means all formats.  This is the default.
+
+    ~pattern~ has the form  : {{ A-Z | a-z }...}*
+              All the formats which match this pattern will be displayed.
+
+    ~f_name~  is one of the defined f_names.
+
+    ~s_name~ is one of the special names defined by MON on startup.
+     (See "H S_NAME" for more info)
+
+    ~n~    specifies the number of formats to include in this display. The
+     default is to display all the formats which match the pattern specified.
+
+    ~m~ is the mode indicator.  The formats will be displayed for RAW or
+     FORMATTED mode depending on this indicator.  Default is based on the
+     current trace display mode.
+
+     Note that the '+' or '-' displayed next to each format indicates if
+     it is enabled or not.
+#endif
+#if TV_PROFILER
+.  dp
+Syntax :  DP [ ~range~ | * ]
+          DP { ~range~ | * },S
+          DP ?
+
+Description :  The Display Profiler command displays the current profiler
+    specification and its data.
+
+    range specifies the profiler range(s) of interest, or
+#if TV_PROF_ICOVER
+    *  means all ranges (or instructions in coverage mode).  If ~range~ is
+       specified as "~addr~ L ~number~", "~number~" ranges (or instructions)
+       starting at "addr" are displayed.
+#else
+    *  means all ranges.  If ~range~ is specified as "addr L num", num ranges
+       starting at addr are displayed.
+#endif
+
+    ,S means sorted display (Histogrammer only).  The specified ranges are
+       sorted by data value with the highest value first.
+
+    ?  means display useful profiling information.
+
+    If just "dp" is entered, the display is restarted from the beginning
+    of the most recently specified range.  If just the <enter> key is
+    pressed, the next group of ranges (instructions) will be displayed.
+
+#if TV_PROF_BCOVER
+    For Branch Coverage mode, an 'S' indicates the instruction was executed
+    sequentially, a 'B' indicates a branch was taken, a '*' means that
+    both have occurred, and a '.' signifies the instruction was not executed.
+#endif
+#if TV_PROF_ICOVER
+    For Instruction Coverage mode, a '*' indicates the instruction was
+    executed and a '.' signifies the instruction was not executed.
+#endif
+#endif  /* TV_PROFILER */
+.  e
+                        ~Enter commands~
+
+   EA   Enter a command Alias
+   EO   Enter configuration Options
+#if !CDB
+   EN   Enter Name (symbol)
+#endif
+
+   EB   Enter/Fill Byte size objects in specified range
+   EH   Enter/Fill Half-word size objects in specified range
+   EW   Enter/Fill Word size objects in specified range
+   ED   Enter/Fill Double size objects in specified range
+
+#if TV_TC3D
+   ES   Enter State trace control specification
+   EC   Enter Condition trace control specification
+   EE   Enter Event trace control specification
+#endif
+#if TV_TCIM
+   ETR  Enter Trace Ranges
+#endif
+#if TV_PROFILER
+   EP   Enter Profiler range specification (histogrammer)
+   EPD  Enter Profiler display format.
+   EPM  Enter Profiler mode.
+#endif
+#if TV_TRACE
+
+   ETN  Enter Trace Name (used in trace format)
+   ETF  Enter Trace display format information
+   EF   Enter Filter (for display of trace data)
+#endif
+
+.  ea alias
+Syntax :  EA ~alias~ ~cmd_list~
+
+Description :  The Enter Alias command enters a new alias in the alias table.
+    Aliases allows you to create your own custom commands from combinations
+    of existing commands.  After an alias has been created with EA, the alias
+    name can be used as if it were a built-in command.  When an alias command
+    is executed, the alias name is replaced with the command list specified
+    on the EA command.  The replacement text will be followed by whatever
+    followed the original alias command.  Alias commands may be nested, but
+    recursion is not allowed.
+
+    ~alias~ is the name of the new composite command.
+
+    ~cmd_list~ is one or more commands separated by semicolons.
+
+    For example, to build and use a shorthand command for reading command
+    files, you might do:
+             "EA RC FR C "
+             "RC foo.cmd"
+
+.  eb  ed   eh   ew  ebk  edk   ehk   ewk  fill
+Syntax :  E[ ~type~ ][ K ] [~range~] [ ,~fmt~ ] [= ~value~ [, ~value~]...]
+
+Description :  The Enter command allows the contents of the specified
+    registers or memory locations to be altered.  If a value list is given,
+    Enter immediately writes the values, repeating them if necessary to fill
+    the range.  Otherwise, Enter displays the current value of each object in
+    turn, prompting for a new value.  If range is not supplied, Enter picks up
+    where the last Enter left off. Enter with "i" fmt invokes a mini-assembler
+
+    ~type~, which defines object size, has the form : { B | H | W | D }
+        default is type in previous Enter ( or W on first Enter )
+
+    K   causes input to be read directly from the Keyboard, even when reading
+        commands from a ~command~ file.  It is ignored if "= ~value~..." is given.
+
+    ~range~ has the form : [ [ ~addr~ ] L ~number~ | ~addr~ [ ~addr~ ] ]
+        See "H ADDR" or "H EXPR" for valid address forms.
+
+    ~fmt~ has the form : { d | u | o | x | X | f | e | E | g | G | c | s | i }
+        Default is "X" (hex).  See "H FMT" for description of choices.
+        Valid ~type~/~fmt~ combinations are listed in the manual. See "H TYPE".
+#if TV_TC3D
+.  ec
+Syntax :  EC[ ~id~ ] [ ~label~ ] { ~f_spec~ | ~cond_list~ }
+
+Description :  The Enter Condition command allows the user to define
+    conditions.  A condition is a list of the desired states of one or more of
+    the signals being watched by the trace control system, possibly including
+    values or ranges for the instruction, data, and address buses.  Signals
+    not included in the condition are don't-cares.   Conditions are used to
+    identify bus cycles of interest.
+
+    ~id~ has the form : { 1..50 | ~label~ }
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...    (15 character limit)
+
+    NOTE!!!  If a numeric id is not specified, the next available condition
+    number will be assigned.
+
+    ~f_spec~ defines the state of the CPU buses (See "H FSPEC" for more info)
+
+    ~cond_list~ has the form : { C~id~[:~id~] }...     (See "H LIST" for details)
+      id has the form : { 1..50 | ~label~ }
+
+.  ee
+Syntax :  EE[ ~id~ ]  [ ~label~ ]
+          [ [WHILE] ~state_list~ ]
+            [ [FOR] ~count~ ]  [IF] ~cond_list~  [ [DO] ~actions~ ]
+              [ [THEN]  S~id~ ]
+Description : The Enter Event command is used to define Trace Control events.
+    Events specify one or more conditions of interest (IF), when to watch for
+    them (WHILE) (default all states), how many times we want to see any of
+    them before changing state (FOR), what actions to do each time any of them
+    are seen (DO), and what state to transition to when they have been seen
+    for count frames (THEN). If Sid is omitted, count is not allowed.  If Sid
+    is entered, the default for count is 1.
+
+    ~id~ has the form : { 1..50 | ~label~ } (default is next available)
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...    (15 character limit)
+
+    ~state_list~ has the form : { S~id~[:~id~] } ...     (See "H LIST" for details)
+      ~id~ has the form : { 0..15 | ~label~ }    and label is as above
+
+    ~count~ is a value from 2 to 4,294,967,295
+    ~cond_list~ has the form : { C~id~[:~id~] }...       (See "H LIST" for details)
+      ~id~ has the form : { 1..50 | ~label~ }
+      The conditions are logically or'ed together.  That is, when any
+      condition is satisfied the cond_list resolves to true.
+    See "H actions" for action types and descriptions.
+.  es
+Syntax :  ES[ ~id~ ] [ ~label~ ]
+                { [FOR] ~cycles~ | [DO] ~actions~ | [THEN] S~id~ }...
+
+Description :  The Enter State command allows the user to define the action
+   that is to be on-going in a particular state.
+
+    ~id~ has the form : { 0..15 | ~label~ }
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...    (15 character limit)
+
+    NOTE!!!  If a numeric id is not specified, the next available state number
+    will be assigned.
+
+    ~cycles~ is a value from 2 to 4,294,967,295 representing clock cycles.
+
+    See "H actions" for action types and descriptions.
+
+.  actions action
+                        TRACE ACTIONS (see "H EE" and "H ES")
+
+Action Name      *  Description
+--------------     - ------------------------------------------------------
+#if !ICE_DS
+#if ICE_ICE
+BREAK[1..7]        * Stop execution (default is BREAK1)
+#else
+BREAK              * Stop execution
+#endif
+#endif
+MARK                 Marks frames of interest for display purposes
+                     (Use the "+tf tmark" command to view this column)
+NOTHING              Do nothing (cannot be used with any other actions)
+TRIGGER              Drive emulator's External Trigger output low
+TRACE                Capture current frame in the trace buffer
+#if MIPS_3K
+FICM                 Assert processor's Force Instruction Cache Miss signal
+CLEAR_CPC_ALL      * Clear all BrCond and SBrCond signals
+SET_CPC_ALL        * Set all BrCond and SBrCond signals
+TARGET_CPC_ALL     * Pass target values for all BrCond and SBrCond signals
+CLEAR_CPC{0..3}    * Clear specified BrCond or SBrCond signal
+SET_CPC{0..3}      * Set specified BrCond or SBrCond signal
+TARGET_CPC{0..3}   * Pass target value for specified BrCond or SBrCond signal
+FORCE_INT_ALL      * Force all interrupt lines active
+TARGET_INT_ALL     * Pass target values for all interrupt lines
+FORCE_INT_PAT      * Force interrupts specified in tc_interrupt pattern
+TARGET_INT_PAT     * Pass target interrupts specified in tc_interrupt pattern
+FORCE_INT{0..5}    * Force specified interrupt
+TARGET_INT{0..5}   * Pass target value for specified interrupt
+#endif /* MIPS_3K */
+#if ICE_DS
+SET_BREAK          * Assert Break flying lead signal (abbreviated SB)
+RELEASE_BREAK      * Deassert Break flying lead signal (abbreviated RB)
+#endif /* ICE_DS */
+
+If an action is marked with a * it means that the action cannot be specified
+at the same time another * marked action is specified.
+#endif /* TV_TC3D */
+#if TV_TRACE
+.  ef  filter  filters  clause
+Syntax :  EF[ ~id~ ] [ ~label~ ]  ~filter_clause~ [ & ~filter_clause~ ]... 
+
+Description : The Enter Filter command allows the user to define filters.
+   A filter is a set of clauses that define states, values or ranges of values
+   for particular Trace Names.  Multiple filters may be active at the same
+   time.  When filtering is enabled, only those frames which satisfy all of
+   the clauses of any active filter will be displayed.  This can be very useful
+   in finding a particular frame of interest in the trace buffer.  Once the
+   frame is located, filtering can be disabled (using -F) or modified to allow
+   the surrounding frames to be seen.
+
+    ~id~ has the form : { 1..50 | ~label~ }
+    ~label~ has the form : ${ A-Z | a-z | 0-9 | _ }...    (15 character limit)
+
+    NOTE!!!  If a numeric id is not specified, the next available filter
+    number will be assigned.
+
+    ~filter_clause~ has the same basic form as an f_spec.
+
+          for "single bit" Trace Names       [ ! ]TN 
+          for "grouped signal" Trace Names   [ ! ]TN = ~value~
+          for "field" Trace Names            [ ! ]TN = ~range~[ #~mask~ ]
+          for ~s_names~ location & value       [ ! ]SN = ~range~[ #~mask~ ]
+
+    For any "single bit" Trace Name, we assume that it is active high, unless
+    the Trace Format separator associated with it is a minus sign ('-').
+#endif  /* TV_TRACE */
+#if TV_TCIM
+.  etr
+Syntax : ETR { * | { ~range~ [ , ~range~ ]... } }
+
+Description : The Enter Trace Ranges command enables tracing while the target
+     processor is executing code or accessing data in the specified ranges.
+     Any number of Trace Ranges can be specified with one or more ETR commands.
+     Trace Ranges can be displayed with the DTR command, and deleted with the
+     KTR command.
+
+     Ranges may be specified without regard to alignment, but the actual ranges
+     traced will be widened as required by the ICEMAN hardware.  Ranges within
+     the two 512KB high resolution trace pages (invoke "DOV trace_hi*") will
+     be widened to quadword boundaries, while all other ranges will be widened
+     to 32KB boundaries.
+
+    *  means the entire address space
+
+    ~range~ has the form : [ [ ~addr~ ] L ~number~ | ~addr~ [ ~addr~ ] ] (See "H RANGE")
+#endif  /* TV_TCIM */
+.  eo
+Syntax : EO ~option~ = ~value~
+
+Description : The Enter Options command allows configuration of various
+     debugger options, which control the appearance and default actions
+     of the debug monitor.
+
+    ~option~       is a valid debugger configuration option.  It can be
+                 referenced by either its ~long_name~ or ~short_name~.
+
+         ~long_name~    is the entire option name.
+         ~short_name~   is the abbreviated option name.  Options may be
+                      abbreviated by their initials.
+
+                      Examples: dp_color_err_msg      ->   dcem
+                                trgt_little_endian    ->   tle
+
+     For a list of configuration options, invoke the DO command.
+     For information on the standard default and valid values of a 
+     particular option, invoke the DOV command followed by the option name.
+#if TV_PROFILER
+.  ep epd epm
+Syntax :  EP ~range~ [, ~number~ ]
+          EP { ~range~ | * },F
+          EPD
+          EPM ~type~
+
+Description :  The Enter Profile command defines one or more address ranges
+    for profiling.  Any existing overlapped ranges will be adjusted, split
+    or deleted.
+
+    The first form divides the range into "number" ranges (default is 1).
+    The second form automatically divides the specified range
+    on function boundaries. "*" means all instruction memory.
+#if TV_PROF_ICOVER
+    Only one range may be defined for Coverage modes.
+    Only instruction memory is profiled in Coverage and Histogrammer modes.
+#else
+    Only instruction memory is profiled in Histogrammer mode.
+#endif
+
+    The EPD (Enter Profiler Display format) command is used to set the
+    profiler display format. (Valid for Histogram and Count modes only)
+
+    The EPM (Enter Profiler Mode) command is used to set the type of
+    profiling desired.  Valid types are IC for Instruction Coverage,
+    BC for Branch Coverage, H for Histogrammer, CI for Count Instruction,
+    and CD for Count Data.  Not all modes are supported by all emulators.
+    NOTE: Changing modes will cause any existing profiler specification to
+          be deleted.
+#endif  /* TV_PROFILER */
+#if TV_TRACE
+.  etm
+Syntax :  ETM  { R | I | D | M }
+
+Description :  The Enter Trace Mode command changes the current trace
+    display mode.  This command can be used instead of specifying a mode with
+    the 'DT' command.  The trace display mode affects not only display trace 
+    command but also the trace format ('DTF') command.  The 'M', 'I', and 'D'
+    parameters will the change the mode of the 'DTF' command to 'formatted'.
+
+    parameter    trace display mode     trace format mode
+
+       R               Raw                    Raw
+       I            Instruction             Formatted   
+       D               Data                 Formatted   
+       M              Mixed                 Formatted   
+
+.  etn
+Syntax :  ETN ~f_name~  ~f_list~
+
+Description :  The Enter Trace Name command is used to define trace names.
+    Trace names are used when defining Trace Formats with the ETF command
+    and when defining trace display Filters.
+
+    ~f_name~ specifies a new or existing trace name to be defined.  This can
+             not be one of the default f_names - those can not be overwritten.
+             A user-defined f_name is treated as a pin, field or group based on
+             its f_list.  If the f_name is more than 15 characters, it will be
+             truncated.
+
+    ~f_list~ has the form : { f_atom | f_name } [ [&] f_list ]
+             The f_list cannot be more than 32 bits wide.  All the f_names
+             specified in the f_list will get concatenated together when used
+             in trace display.  The result will be treated as a single value.
+             Note that an f_name being re-defined can be part of an f_list.
+
+    ~f_atom~ is a pin,field,field range,field_bit,group,group range,group bit.
+#if MIPS_3K
+             examples (in order) : ALE, A, A3:0, A0, TSTATE, TSTATE1:2, TSTATE3
+#endif
+#if MIPS_4K
+             examples (in order) : RDRDY,AD,AD3:0,AD0,TSTATE,TSTATE1:2,TSTATE3
+#endif
+.  etf
+Syntax :  ETF { ~f_name~ | ~s_name~ } [ ~fmt_options~ ]
+
+Description :  The Enter Trace Format command is used to define trace formats.
+    Trace formats allow the user to customize the trace display for specific
+    needs.  Each format specifies all the attributes of a particular trace
+    display column.
+
+    ~f_name~ must exist before using this command.  F_names can be defined
+     using the 'ETN' command.
+
+    ~s_name~ is one of the special names defined by MON on startup.
+     (See "H S_NAME" for more info)
+
+    ~fmt_options~ take the form [key = value ] and are all optional.  Those
+     options which are not specified will remain unchanged for existing
+     formats, and will be calculated by MON for new formats.
+     (See "H FMT_OPTIONS" for more info)
+
+#endif /* TV_TRACE */
+.  f  fr  fw
+#ifall TV_TC3D TV_TRACE TV_PROFILER
+Syntax: FR {C|RD|M|PD|TS|TD|TF|C} ~file_name~ [~addr~] [~p_value~]...
+        FW[A|O] {O|C|M|PD|TS|TD|TF} {~file_name~|-|+} [~range~]
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER
+Syntax: FR {C|RD|M|TS|TD|TF} ~file_name~ [~addr~] [~p_value~]...
+        FW[A|O] {O|C|M|TS|TD|TF} {~file_name~|-|+} [~range~]
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER
+Syntax: FR {C|RD|M|PD|TD|TF} ~file_name~ [~addr~] [~p_value~]...
+        FW[A|O] {O|C|M|PD|TD|TF} {~file_name~|-|+} [~range~]
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER
+Syntax: FR {C|RD|M|TD|TF} ~file_name~ [~addr~] [~p_value~]...
+        FW[A|O] {O|C|M|TD|TF} {~file_name~|-|+} [~range~]
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER
+Syntax: FR {C|RD|M|PD} ~file_name~ [~addr~] [~p_value~]...
+        FW[A|O] {O|C|M|PD} {~file_name~|-|+} [~range~]
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER
+Syntax: FR {C|RD|M} ~file_name~ [~addr~] [~p_value~]...
+        FW[A|O] {O|C|M} {~file_name~|-|+} [~range~]
+#endif
+#if ARM
+        FW[A|O] {MDI|RDI} {~file_name~} 
+#else
+        FW[A|O] {MDI} {~file_name~} 
+#endif
+
+Description :  The File command allows the user to read or write a file.
+
+    FR  means read the indicated file
+    FW  means write the indicated file
+    A|O means append to | overwrite indicated file unconditionally
+                                                  Default file name extension:
+    O   means an Output capture file (write only; see "H FWO")        ".out"
+    C   means a Command file (read or write; see "H FRC" or "H FWC")  ".cmd"
+    RD  means a Register Definition file (read only)                  ".rd"
+    M   means a Memory image file (binary or Motorola s-record file)  ".mem"
+#if TV_PROFILER
+    PD  means a Profiler Display file                                 ".pd"
+#endif
+#if TV_TC3D
+    TS  means a Trace Specification file                              ".ts"
+#endif
+#if TV_TRACE
+    TD  means a Trace Display file                                    ".td"
+    TF  means a Trace Format file                                     ".tf"
+#endif
+    MDI means a MDI Configuration file				      ".cfg"
+#if ARM
+    RDI means a RDI Configuration file				      ".cfg"
+#endif
+    ~file_name~ is pathname of the file to be read or written.  The default
+        file name extension listed above will be added if none is supplied.
+    -/+   means to suspend/restart writing to file ( O and C only )
+
+    ~range~ and ~addr~ specify the range of data to be written to (FW M), or
+        the address to store data read from (FR M), a Memory image file.
+
+    ~p_value~ is a parameter value (valid only with "FR C")
+.  frc
+Syntax :  FR  C  ~file_name~  [ ~p_value~ ]....
+
+Description :  This subcommand causes the debug monitor to read ~commands~
+    from the specified file.  When all the commands in the file have been
+    processed, the monitor resumes reading commands from its previous
+    input source, ultimately returning control back to the console.  This is
+    an easy way to input a standard set of commands or to quickly recreate an
+    earlier session.  The file can be created manually or can be the result
+    of the File Write (FW C) command.  If the FR C command is part of a
+    multi-command line, the remaining commands on the line will be executed
+    after all commands in the new file have been executed.
+
+    ~file_name~ is pathname of the file to be read.
+
+    ~p_value~ is a string which will be substituted for a parameter in the
+       command file.  A parameter is of the form : $$n, with 1 <= n <= 99.
+       See "H PARAM" and "H SHIFT" for more details.
+
+    Command files may be nested up to 20 levels deep.
+
+.  fwc
+Syntax :  FW[ A | O ]  C  { ~file_name~ | + | - }
+
+Description :  This subcommand copies the user's commands into
+    the specified file.
+
+    A  means append to specified file, unconditionally.
+    O  means overwrite specified file, unconditionally.
+
+    ~file_name~ is the pathname of the file to be written to. Copying starts
+    immediately.
+
+    -  causes copying to stop temporarily and the file to be closed.
+    +  causes copying to start again, after being interrupted by a "FW C -".
+
+    If the specified file already exists, you will be given the opportunity
+    to overwrite or append to the file, or to cancel the File Write command,
+    unless A or O has been specified.
+
+.  fwo
+Syntax :  FW[ A | O ]  O  { ~file_name~ | + | - }
+
+Description : This subcommand causes each line printed to the
+    console to be echoed in the specified file.
+
+    A  means append to specified file, unconditionally.
+    O  means overwrite specified file, unconditionally.
+
+    ~file_name~ is the pathname of the file to be written to. Echoing starts
+    immediately.
+
+    -  causes echoing to stop and the file to be closed.
+    +  causes echoing to start again, after being interrupted by a "FW O -".
+
+    If the specified file already exists, you will be given the opportunity
+    to overwrite or append to the file, or to cancel the File Write command,
+    unless A or O has been specified.
+
+#if MON
+.  g gi
+#if TV_CONCURRENT
+Syntax :  G[I] [ =~addr~ ] [ ~addr~ ... ] [ "{" ~cmd_list~ "}" ]
+#else
+Syntax :  G [ =~addr~ ] [ ~addr~ ... ] [ "{" ~cmd_list~ "}" ]
+#endif
+
+Description :  The Go command starts the execution of the program.  Execution
+    continues until a breakpoint or the end of the program is encountered.
+    If a command list is given, it is executed every time execution stops.  It
+    remains in effect until cancelled by a Step or Go command with an empty
+#if !TV_CONCURRENT
+    command list (e.g. "S {}").
+#else
+    command list (e.g. "S {}").  The I option starts execution in interactive
+    mode.  This mode changes MON's prompt to "MON(r)>" and allows 
+    debugger commands to be entered while the program is executing. The SP 
+    (stop) command interrupts the running program and returns MON to normal 
+    debug mode (prompt = "MON>").  See "H INTERACTIVE" for more details on
+    this mode.
+#endif
+
+    If =~addr~ is specified, execution begins at that address.
+        Otherwise it begins at the current Program Counter location.
+
+    The other addresses on the command line specify temporary breakpoints,
+        which will disappear when execution stops.
+
+    ~addr~ must be an address in a valid code address space.
+        See "H ADDR" or "H EXPR" for valid address forms.
+
+    ~cmd_list~ is any valid command list.
+#endif  /* MON */
+.  goto  label  labels
+Syntax :  :~label~                                          ( label definition )
+          GOTO ~label~                                      ( label reference  )
+
+Description :  The GOTO command implements non-sequential reading of a
+    ~command~ file.  It repositions the file pointer to the command immediately
+    following the referenced label.
+
+    ~label~ is a C-type identifier.  A label is defined by entering
+    ":~label~" on a line by itself.  Syntax for a C-type identifier is
+           { A-Z | a-z | $ | _ } [ { A-Z | a-z | 0-9 | $ | _ | . } ]...
+
+    Example :
+
+#if MIPS_4K
+      ED $loop = 0                      /* initialize debugger variable */
+      :TOP
+      S 1000 ; DD x                     /* look at variable every so often */
+      IF (@x > 0xffff) { GOTO BOOM }    /* Has it been trashed yet? */
+      ED $loop = @$loop + 1             /* Update loop count */
+      IF ( @$loop < 1000 ) { GOTO TOP } /* Loop, but don't go forever */
+      GOTO DONE                         /* Is working, exit cmd file */
+      :BOOM                             /* "x" got trashed */
+      DW $loop                          /* loop count when we noticed trash */
+      DW x
+      :DONE
+#else
+      EW $loop = 0                      /* initialize debugger variable */
+      :TOP
+      S 1000 ; DW x                     /* look at variable every so often */
+      IF (@x > 0xffff) { GOTO BOOM }    /* Has it been trashed yet? */
+      EW $loop = @$loop + 1             /* Update loop count */
+      IF ( @$loop < 1000 ) { GOTO TOP } /* Loop, but don't go forever */
+      GOTO DONE                         /* Is working, exit cmd file */
+      :BOOM                             /* "x" got trashed */
+      DW $loop                          /* loop count when we noticed trash */
+#if MIPS
+      DW x
+#endif
+      :DONE
+#endif  /* MIPS_4K */
+.  h
+Syntax :  H [ ~command~ | OPS | ~op_key~ | CONTROL ]
+
+Description :  The Help commands displays general or specific information
+    about the debug monitor commands and operands.
+
+    If no parameter is not supplied, a brief summary of each command
+        is displayed.
+
+    If ~command~ is specified, the syntax and description of that command is
+        displayed, along with basic information about its operands.
+
+    If OPS is supplied, a list of operands for which help screens exist
+        is displayed, along with their op_keys.
+
+    If an ~op_key~ is supplied, the syntax and description of the specified
+        operand is displayed.
+
+    If CONTROL is supplied, a list of flow control features for command
+        files is displayed.
+
+.  if
+Syntax :  IF  ~addr_expr~  "{" ~cmd_list~ "}"   [ "{" ~cmd_list~ "}" ]
+
+Description :  The IF command implements conditional execution of monitor
+    commands, in a ~command~ file.  The ~addr_expr~ is evaluated and if
+    it is true, the first command list is executed.  If it is not true and
+    a second command list is present, the second command list is executed.
+
+    In the evaluation of ~addr_expr~,  a symbol evaluates to its address UNLESS
+       preceded by an indirection operator ('@'), in which case it evaluates
+       to its contents.  True is defined as non-zero.  See "H EXPR" for more
+       information on address expressions.
+
+    ~cmd_list~ is any valid command list.
+
+.  k
+                        ~Kill commands~
+
+   KA   Kill Aliases
+#if !CDB
+   KN   Kill Names (symbols)
+#endif /* !CDB */
+
+#if TV_TCIM
+   KTR  Kill Trace Ranges
+#endif
+#if TV_TC3D
+   KS   Kill States
+   KC   Kill Conditions
+   KE   Kill Events
+   KTS  Kill Trace Specification
+#endif
+#if TV_PROFILER
+
+   KP   Kill Profiler Specification and Data
+   KPD  Kill Profiler Data
+   KPS  Kill Profiler Specification
+#endif
+#if TV_TRACE
+
+#if TV_TCIM
+   KT   Kill Trace data
+#else
+   KT   Kill Trace Specification and Trace Display
+   KTD  Kill Trace Display
+#endif
+   KTF  Kill Trace Format
+   KF   Kill Filters
+#endif
+#if TV_OM
+
+   KOM  Kill Overlay Memory mappings
+#endif
+
+.  ka
+Syntax :  KA { ~alias~ | * }
+
+Description :  The Kill Alias command deletes the name and replacement text
+    for one or all currently defined Aliases.  See "H EA" for more information
+    about aliases.
+
+    ~alias~ is the name of a specific command alias
+
+    * means kill all aliases
+
+#if TV_OM
+.  kom
+Syntax :  KOM { * | ~bank_list~ }
+
+Description :  The Kill Overlay Map command deletes the control list for one
+    or more banks of overlay memory.  It also deletes all references in the
+    MC table for the given banks (See "H MC").
+
+#endif
+#if TV_TCIM
+.  ktr kts
+Syntax :  KTR { * | { ~range~ [ , ~range~ ]... } }
+
+Description :  The Kill Trace Ranges command deletes some or all of a trace
+    control setup.  KTR deletes all current Trace Ranges in the specified
+    address range(s)
+
+#endif
+#if TV_TC3D
+.  kc  ke  ks kts
+Syntax :  K{ S | C | E } { * | ~list~ }
+          KTS
+
+Description :  These Kill commands delete some or all of a trace control setup.
+    KTS deletes the entire Trace Specification, while KS, KC, and KE delete 
+    the specified States, Conditions, or Events.
+
+    S  indicates states are to be deleted
+    C  indicates conditions are to be deleted
+    E  indicates events are to be deleted
+
+    *  indicates that all states, conditions or events are to be deleted.
+    ~list~ is a state_list, cond_list or event_list, specifying states,
+       conditions or events to be deleted.  (See "H LIST")
+
+#endif
+#if TV_TRACE
+#if TV_TC3D
+.  kt kts ktd
+Syntax :  KT[ S | D ] [ Y ]
+
+Description :  The Kill Trace commands delete the trace spec,
+    trace display, or both.
+
+    These commands will normally prompt you to verify the desired action.
+    Press 'Y' to proceed or 'N' to abort.  Or you can avoid the prompt by
+    supplying a confirming "Y" as a parameter in the Kill command.  This is
+    useful in ~command~ files.
+
+     KT  means delete the trace spec and display.
+     KTD means delete the trace display only.
+     KTS means delete the trace spec only.
+#else
+.  kt ktd
+Syntax :  KT[D] [ Y ]
+
+Description :  The Kill Trace command deletes the captured trace data.
+
+    KT and KTD have the same effect.  These commands will normally prompt you
+    to verify the deletion. Press 'Y' to proceed or 'N' to abort.  Or you can
+    avoid the prompt by supplying a confirming "Y" as a parameter in the Kill
+    command.  This is useful in ~command~ files.
+
+#endif
+.  kf
+Syntax :  KF { * | ~list~ }
+
+Description :  The Kill Filter command deletes some or all of the current trace
+    display filters.
+
+    *  indicates that all filters are to be deleted.
+    ~list~ is a filter_list, specifying filters to be deleted.  (See "H LIST")
+
+.  ktn
+Syntax :  KTN { ~f_name~ | * } [Y]
+
+Description :  The Kill Trace Name command deletes user-defined trace
+    names and their associated trace formats.
+
+    ~f_name~ must be user-defined.  The f_name will be removed as well as
+     ALL of its associated trace formats.
+
+    Y auto respond yes to questions.
+
+.  ktf
+Syntax :  KTF { ~f_name~ | ~s_name~ | * } [m={R|F|RF}] [Y]
+
+Description :  The Kill Trace Format command deletes individual trace
+    display columns from the format or all columns.  Only user defined
+    formats can be killed.  If this command is used with a permanent ~f_name~,
+    it will restore the format's original settings and position.
+
+    ~f_name~ must exist before using this command.
+
+    ~s_name~ is one of the special names defined by MON on startup.
+     (See "H S_NAME" for more info)
+
+    *    specifies that all user-defined formats will be deleted, and the
+         default formats will be restored.
+
+    ~m~ is the mode indicator.  The formats will be deleted for RAW, FORMATTED
+     or both modes depending on this indicator.  Default is based on the
+     current trace display mode.
+
+    Y auto respond yes to any questions.
+
+#endif
+#if TV_PROFILER
+.  kp  kps  kpd
+Syntax :  KP[ S | D ] [ ~range~ | Y ]
+
+Description :  The Kill Profiler commands delete the profiler spec,
+    profiler data, or both.
+
+    KP  means delete the profiler spec and data.
+    KPD means delete the profiler data only.
+    KPS means delete the profiler spec only.
+
+    If ~range~ is specified, only the profiler ranges which match
+    will be deleted.  If specified as "~addr~ L ~number~", "number" ranges
+    starting at ~addr~ will be deleted.
+
+    If ~range~ is not specified, all profiler ranges will be deleted.  Normally
+    you will be prompted to verify the desired action.  Press 'Y' to proceed
+    or 'N' to abort.  Or you can avoid the prompt by supplying a confirming
+    "Y" in the Kill command (i.e. "KP[S|D] Y").  This is useful in ~command~
+    files.
+#endif /* TV_PROFILER */
+#if !CDB
+.  l
+Syntax :  L [[-[n]o ~scn_types~] ~filename~]... [-c ~cmd_line~]
+
+Description :  The Load command reloads the current program, or loads a new
+    program if filename(s) are specified.  The desired executable files are
+    downloaded to the target and the target is reinitialized.
+
+    ~scn_types~ specifies which section types to load for subsequent files:
+                 t = text(code), d = data(initialized data),
+                 b = bss(uninitialized data), l = literals(read-only data),
+                 s = symbols
+               "-no" means load all except the specified section types.
+    ~filename~ is the name of an executable file.
+    ~cmd_line~ is the arguments to be passed to the target program.
+
+    If no "-[n]o" option is given, the default is equivalent to "-no b".  That
+    is, all but bss sections are loaded.
+
+Examples : L -o db  (reload only data and bss sections of current program)
+           L -o ts myprog            //load text and symbols of myprog
+           L myboot -no s myprog1 myprog2 -o tdbls mymain -c prog arg1 arg2
+             (load all sections and symbols of myboot, load all but
+             symbols of myprog1 and myprog2, load all of mymain and pass it
+             the arguments "prog", "arg1", and "arg2")
+.  ln ls
+Syntax :  LN[A|O] [ ~filename~ ]...
+
+Description :  The Load Names command reloads symbols for the current
+    program, or loads symbols for the specified files.  The new symbols will
+    replace any existing symbols by default, or they can be added to the
+    existing symbols.
+
+    LN,LNO   Load Names, Overwriting the existing symbol table
+    LNA      Load Names, Adding to the existing symbol table
+
+    ~filename~ the name of an executable file whose symbols are to be loaded
+
+    See also "H L"
+.  ls
+    This command has been replaced by the "ln" command.  See "H LN".
+#endif  /* !CDB */
+.  m mr mb mh mw md mrb mrh mrw mrd
+Syntax : M[R][~type~] ~range~, ~addr~
+
+Description : The Move command moves all data in the specified range to the
+    specified destination.  The move normally proceeds from the first location
+    in range to the first destination location, one type(width) at a time,
+    with the predictable destructive consequences if the destination start
+    address is within the source range.  The move will be done in reverse
+    (starting from the last source and destination locations) if "R" is
+    specified, allowing image moves of overlapping ranges.
+
+    ~type~, which defines object size, has the form : { B | H | W | D }
+
+    ~range~ has the form : [ [ ~addr~ ] L ~number~ | ~addr~ [ ~addr~ ] ]
+        See "H RANGE" for more details.
+
+    ~addr~ must not be a register address
+        See "H ADDR" or "H EXPR" for valid address forms.
+#ifall ICE !ICE_HP
+.  mc
+Syntax : MC [~range~ [,~mc_options~ ]...]
+
+Description : The Memory Configuration command provides the emulator
+    with details about your memory system.  It defines a physical memory
+    map describing the characteristics of each address range.  The MC
+    command controls how the emulator accesses various memory areas.
+    It also controls emulator features such as overlay memory and access
+    protection alarms.
+    Please refer to the manual for a complete description of these options.
+
+    MC with no ~range~ and no ~mc_options~ will display the entire configuration
+    table.  MC with just a ~range~ displays the configuration for that ~range~.
+    If ~mc_options~ are given, only the entered ~mc_options~ are changed -- all
+#if ICE_MAJIC
+    others remain unaffected.
+#else
+    others remain unaffected.  The ~range~ for certain ~mc_options~ is stretched
+    to meet block alignment constraints.
+#endif
+
+#if TV_OM
+    See OM, DO, and EO for additional information on emulator configuration.
+#else
+    See DO and EO for additional information on emulator configuration.
+#endif
+
+    ~mc_options~ have the form:
+
+#if TV_OM
+#if MIPS 
+    { TM | IPM | OM ~bank_list~ }          - map to Target, IcePort or Overlay
+                                           Memory
+#else
+    { TM | OM ~bank_list~ [ RO | RW ] }    - map to target or overlay
+                                           (default OM qualifier is RW)
+#endif /* MIPS */
+#endif /* TV_OM */
+#if ICE_MAJIC
+    { DW = [ 8 | 16 | 32 ] }             - Bus/Data Width
+#endif
+#ifall MIPS ICE_ICEMAN
+    { PS = [ 8 | 16 | 32 ] }             - Port Size
+#else
+#if MIPS 
+#if !ICE_MAJIC
+    { DM | IM }                          - range is Data or Instruction Memory
+                                           (automatically set during download)
+#endif
+#endif /* MIPS */
+#endif /* all MIPS ICE_ICEMAN else */
+#ifall MIPS !ICE_MAJIC
+#if !ICE_ICEMAN
+    { AUTO | JAM }                       - use AUTO or instruction JAMming to 
+                                           access memory range
+#endif
+    { ZW | MW }                          - zero or multi-wait state memory
+#endif
+#if ICE_MAJIC
+#if ARM
+    { JAM | INV }                        - access memory range via instruction
+                                           jamming (JAM), or prevent access to
+                                           memory range (INV).
+#endif
+#if MIPS
+    { DMA | JAM | INV }                  - use DMA or instruction jamming (JAM)
+                                           to access memory range. INV prevents
+                                           access to memory range.
+#endif
+#endif
+#if ICE_MAJIC
+    { RO | RW }                          - Read only or read/write memory range
+#else
+    { WP | RP | AP | NP }                - Write, Read, Access, No protection
+#endif
+    { PWE | PWD }                        - Partial Word access Enable/Disable
+#if !ICE_MAJIC 
+    INV                                  - Invalid memory, do not access
+#endif
+#endif /* all ICE !ICE_HP */
+#ifall ICE !ICE_HP !ICE_DS
+.  mt
+Syntax : MT ~range~ [,~test~[,~delay~]] [,{H|V|Q|S}...] [,~repeat~]
+    or   MT ~range~, ~loop~ [,~data~] [,~repeat~]
+
+Description : The Memory Test command initiates a test of the target's
+    memory system, or one of three "scope loops".
+
+    ~range~ has form : { [ ~addr~ ] L ~number~ } | { ~addr~ [ ~addr~ ] } (See "H RANGE")
+
+    ~test~ is a decimal number specifying the test type; available tests are
+        1 - Basic patterns         2 - Walking 1's and 0's
+        3 - Rotating address       4 - Inverted rotating address
+        5 - Partial word
+        8 - Refresh                9 - Default. Each of 1,2,3,4 and 5 in turn.
+
+    ~loop~ is a loop type: 10 = read-only, 11 = Write only, 12 = Write/Read
+
+    ~delay~ is a decimal number specifying the delay time in msec, between
+    writes and reads.  It is required only for test 8 (the refresh test).
+
+    ~data~ is a data value to be written (required if loop = 11 or 12)
+
+    H, V, Q, or S specify Halt-on-error, Verbose, Quiet or Silent mode.
+
+    ~repeat~ specifies how many times to run the test.  Default is forever.
+#endif /* all ICE !ICE_HP !ICE_DS */
+#if TV_OM
+.  om
+#if MIPS 
+Syntax :  OM [~bank_list~] [, [~i_wait_state~ [~b_wait_state~] [[,] ~state~]... ] ]
+Description :  The Overlay Memory command sets and displays the configuration
+    of each of bank of overlay memory.  With just a bank list or no option, OM
+    displays information about the current configuration.
+
+    ~bank_list~ has the form : { * | [B]number[:number]... }   (See "H LIST")
+    ~number~ is a digit in the range 1..2 specifying a bank number.
+
+    ~i_wait_state~ and ~b_wait_state~ are initial and burst wait states.  Legal
+    values depend on the target system clock rate, and overlay memory speed.
+#if ICE_ICEMAN
+        range for ~i_wait_state~ is: 1..4, ~b_wait_state~ is: 0..3.
+#else
+#if MIPS_4K
+        range for ~i_wait_state~ is: 1..8, ~b_wait_state~ is: 0..3.
+#else
+        range for ~i_wait_state~ is: 1..4, ~b_wait_state~ is: 0..1.
+#endif
+#endif
+
+    ~state~ comprises several option words as follows:
+        NORMAL_ACK/NA, TGT_ACK/TA, ICE_ACK/IA.        (Default is NORMAL_ACK)
+            Determines whether overlay memory provides its own acknowledge
+        signal (ICE_ACK) or uses the target's own signal for this purpose
+        (TGT_ACK).  NORMAL_ACK causes the ICE to use ICE_ACK for emulator
+        accesses, and TGT_ACK for target (program) accesses.
+        ENABLE/E or DISABLE/D.  (Default is ENABLE)
+            Bank is currently enabled or disabled.  This allows each bank
+            to be enabled or disabled without affecting the mapping specified
+            with the memory configuration (MC) command.
+
+    Also see the MC, DO/EO, KOM, and {+|-}OM commands.
+#endif /* MIPS */
+#endif  /* TV_OM */
+#if MON
+.  q
+Syntax :  Q [ Y ]
+
+Description :  The Quit command terminates execution of the debug monitor
+    and returns control to the host operating system.  Because of the
+    possibility of mistyping a "+Q" or "-Q" command, the Quit command
+    prompts for confirmation before actually exiting the program.  This
+    prompt can be avoided by supplying the confirming "Y" on the command line.
+#endif  /* MON */
+
+#if TV_XRESET
+.  r rt rp
+Syntax :  R[ T | P ]
+
+Description :  The Reset Processor command causes the target to perform its
+#else
+.  r
+Syntax :  R
+
+Description :  The Reset command causes the target to perform its
+#endif
+    nearest equivalent to a hard processor reset.  For the ICE, this
+    means a real, physical reset of the target CPU.
+
+#if TV_XRESET
+    The Reset Target command asserts the ICE Reset Out signal.  If connected
+    to the target's Reset logic, this provides a way to reset the entire
+    target system (as opposed to just the processor) from the debugger.
+
+    The "plain" Reset command resets the target processor, and may also
+    assert the ICE Reset Out signal, depending on the state of the 
+    Ice_Reset_Output EO option (see "H EO" and "DOV iro").
+#endif
+#if MON
+.  s  so sf sv  sq sfq  soq  sfv  sov
+Syntax :  S[ O | F ][ Q | V ] [ =~addr~ ] [ ~number~ ]  [ "{" ~cmd_list~ "}" ]
+
+Description :  The Step command executes <number> instructions (default is 1)
+    starting from <addr> (default is the current execute address). Execution
+    terminates after <number> instructions or when a breakpoint is encount-
+    ered.  If a command list is given, it is executed every time execution or
+    stepping stops.  It remains in effect until cancelled by a Step or Go
+    command with an empty command list (e.g. "S {}").  A Step command may be
+    repeated by hitting the <enter> key, UNTIL some other command is entered.
+
+    O - Step Over - steps over trap handlers and function calls.
+    F - Step Forward - allow pending interrupts to complete and then step.
+
+    V - Verbose mode - each instruction is displayed before it is executed.
+    Q - Quiet mode - instructions are not displayed before execution.
+        Q/V default is the mode of prior Step (with Q the initial default)
+
+    ~addr~ must be an address in a valid code address space.
+        See "H ADDR" or "H EXPR" for valid address forms.
+
+    ~number~ is decimal by default.     See "H NUM" for available number forms.
+
+    ~cmd_list~ is any valid command list.
+#endif
+.  shift
+Syntax :  SHIFT [ ~n~ ]
+
+Description :  The SHIFT command alters the normal correspondence between
+   p_values supplied on an FR C command and the parameters for which they are
+   substituted.  Normally, p_value1 is substituted for $$1 and so forth.  The
+   SHIFT command in effect increments a "cumulative shift count", which is
+   added to the parameter number before any substitution is done.  Thus if
+   "SHIFT 2" has incremented the "cumulative shift count" to 4, p_value5 is
+   substituted for $$1 (instead of p_value1) and so forth.
+
+   ~n~   is the amount by which to increment the "cumulative shift count".
+         Default is 1.
+
+   SHIFT also impacts the evaluation of the special parameter $$0, by causing
+   it to count remaining p_values starting with the p_value which will be
+   substituted for $$1.
+#if !API
+#if TV_CONCURRENT
+.  sp
+Syntax :  SP
+
+Description :  The Stop Program command halts a currently executing program in
+    interactive mode.  Interactive mode is entered via the go interactive
+    (GI) command.  This mode allows a subset of debugger commands to used
+    while the program is still running.
+
+    See "H INTERACTIVE" for more details.
+#endif
+#endif
+.  unshift
+Syntax :  UNSHIFT [ ~n~ | * ]
+
+Description :  The UNSHIFT command decrements the "cumulative shift count".
+    See "H SHIFT" for details of parameter shifting.
+
+    ~n~   is the amount by which to decrement the "cumulative shift count".
+          Default is 1.
+
+    *   is a special argument which cancels any shifting currently in effect.
+          It resets the "cumulative shift count" to zero.
+#if !CDB
+.  v vl
+Syntax :  VL [[-[n]o ~scn_types~] ~filename~]...
+
+Description : The Verify command is used to verify a program load.
+
+    When no arguments are specified the section types previously downloaded
+    are uploaded and checked against the original COFF files.  Otherwise,
+    specific section types of specific files can be verified.
+
+    ~scn_types~ specifies which section types to verify for subsequent files:
+                 t = text(code), d = data(initialized data),
+                 b = bss(uninitialized data), l = literals(read-only data)
+               "-no" means verify all except the specified section types.
+    ~filename~ is the name of an executable file.
+
+    If no "-[n]o" option is given, the default is equivalent to "-no b".  That
+    is, all but bss sections are verified.
+
+Examples : VL         // Verify that a download was successfull
+           VL -o tl   // Verify that code and read-only data have not been
+                      // corrupted by program execution
+#endif
+#if !API
+#if CDB LX8000
+.  vc
+#ifall CDB !LX8000
+Syntax :  VC [ EXEC | <thread_name> ]
+
+Description : The View Context command is used to either set the debugger's
+    view to a particular thread context or display current 
+    context information (no args).  The keyword EXEC causes the executing 
+    cpu context to be selected (if any), or your executing rtos thread to 
+    be selected. Note that this command is only supported if if a
+    suitable rtos_api.dll has been setup to match your operating system.
+
+    ~thread_name~ is the name of a particular thread whose context is to
+    be selected. Please note that ~thread_name~'s is only supported if a
+    suitable rtos_api.dll has been setup to match your operating system.
+
+    Changing the context effects the display of the general (r0 - r31) and
+    pc registers.  This generally results in a different call stack walk-back
+    (C command).  Note that this command only effects the view context
+    and does not change the actual execution context.  A Step or Go command
+    following a context change does not start from the location display
+    by the PC register.  Instead it starts from the execution contexts
+    PC register.
+#endif
+#ifall CDB LX8000
+Syntax :  VC [ 0 .. 7 | EXEC | <thread_name> ]
+
+Description : The View Context command is used to either set the debugger's
+    view to a particular CPU context, thread context, or display current 
+    context information (no args).  The keyword EXEC causes the executing 
+    cpu context to be selected (if any), or your executing rtos thread to 
+    be selected. 
+
+    ~thread_name~ is the name of a particular thread whose context is to
+    be selected. Please note that ~thread_name~'s is only supported if a
+    suitable rtos_api.dll has been setup to match your operating system.
+
+    Changing the context effects the display of the general (r0 - r31) and
+    pc registers.  This generally results in a different call stack walk-back
+    (C command).  Note that this command only effects the view context
+    and does not change the actual execution context.  A Step or Go command
+    following a context change does not start from the location display
+    by the PC register.  Instead it starts from the execution contexts
+    PC register.
+#endif
+#ifall !CDB LX8000
+Syntax :  VC [ 0 .. 7 | EXEC ]
+
+Description : The View Context command is used to either set the debugger's
+    view to a particular CPU context, or display current context information.
+    The keyword EXEC causes the executing cpu context to be selected.
+#endif
+
+    Changing the context effects the display of the general (r0 - r31) and
+    pc registers.  This generally results in a different call stack walk-back
+    (C command).  Note that this command only effects the view context
+    and does not change the actual execution context.  A Step or Go command
+    following a context change does not start from the location display
+    by the PC register.  Instead it starts from the execution contexts
+    PC register.
+
+#endif
+#endif /* !API */
+#if TV_TC3D
+.  vt
+Syntax :  VT
+
+Description : The Verify Trace command is used to verify a Trace Control
+    specification. The current Trace Control specification is checked
+    for internal consistency.  It makes sure that all referenced states,
+    events and conditions have been defined.
+
+#endif  /* TV_TC3D */
+.  w
+Syntax :  W [ ~n~ ]
+
+Description :  The Wait command waits for ~n~ milliseconds before continuing
+    command processing.  If ~n~ is not specified, the default is 100
+    milleseconds.  Wait can be used to introduce delays in the playback of
+    debugger command files.
+
+#if TV_TRACE
+.  + +h +q +t +te +tf +cdb +edb +mon enable activate
+#else
+.  + +h +q +tf +cdb +edb +mon enable activate
+#endif
+#if MON
+Syntax :  + Q                             + B [ * | ~addr~... ]
+#else
+Syntax :  + Q
+#endif
+          + EDB                           + MON
+#if TV_TC3D
+          + E { * | ~event_list~ }
+#endif
+#if TV_TRACE
+#if ICE_HP ICE_MAJIC
+          + TE                            + F [ * | ~filter_list~ ]
+#else
+          + T[ E ]                        + F [ * | ~filter_list~ ]
+#endif
+          + TF { ~f_name~ | ~s_name~ } [ m={R|F|RF} ]
+#endif
+#if TV_OM
+          + OM ~bank_list~
+#endif
+#if TV_PROFILER
+          + P
+#endif
+#if MIPS
+          + H
+#endif
+
+Description :  The Enable command enables the entity or operating mode
+    specified by the first keyword:
+
+    Q   indicates Quiet mode of command file playback is to be enabled.
+#if MON
+    B   indicates breakpoints are to be enabled. ( See "H +B" ).
+#endif
+    EDB enables the source-level debugger command parser regardless of the
+           current mode.  A later -EDB command will restore the current mode.
+           In MONICE, commands are ignored while in "EDB parser" mode.
+    MON enables the MON command parser regardless of the current mode.
+           A later -MON command will restore the current mode.
+#if TV_TC3D
+    E   indicates events are to be enabled
+#endif
+#if TV_TRACE
+#if ICE_HP ICE_MAJIC
+    TE  indicates Tracing is to be enabled during execution.
+#else
+    T   indicates Tracing is to be enabled immediately (Logic Analyzer mode).
+    TE  indicates Tracing is to be enabled during execution. (See "H +T")
+#endif
+    F   indicates Filtering is to be enabled or particular Filters are
+           to be activated for Display Trace commands.  ( See "H +F" )
+    TF  enables the specified Trace format for the current or specified
+           trace display mode
+#endif
+#if TV_OM
+    OM  enables overlay memory. (See "H -OM" and "H OM")
+#endif
+#if TV_PROFILER
+    P   indicates Profiling is to be enabled during execution.
+#endif
+#if MIPS
+    H   enables display of hardware register names rather than software names.
+#endif
+#if TV_TRACE
+#if TV_TC3D TV_TCIM
+.  +t  +te
+Syntax :  + T[ E ]
+
+Description :  The Enable Tracing command enables tracing either
+    immediately or ONLY during execution.
+
+    T  indicates Tracing is to be enabled immediately (Logic Analyzer mode).
+       Note that a Trace Control specification (e.g. trace only if DREQ or
+       DRDY is active) is required.  Tracing will remain enabled until a DT
+       command or a -T command disables it.  An explicit +T command is
+       needed to re-enable tracing after a -T or DT command, or to download
+       a modified Trace specification.
+
+    TE indicates Tracing is to be enabled during execution.  In this mode,
+       tracing will be turned on and off, and modified Trace specifications
+       will be downloaded automatically in response to Go and Step commands.
+
+#endif /* TV_TC3D TV_TCIM */
+#endif /* ICE */
+.  - -h -t -q -tf -cdb -edb -mon disable
+#if MON
+Syntax :  - Q                             - B [ * | ~addr~... ]
+#else
+Syntax :  - Q
+#endif
+          - EDB                           - MON
+#if TV_TC3D
+          - E { * | ~event_list~ }
+#endif
+#if TV_TRACE
+#if ICE_HP ICE_MAJIC
+          - TE                            - F [ * | ~filter_list~ ]
+#else
+          - T                             - F [ * | ~filter_list~ ]
+#endif
+          - TF { ~f_name~ | ~s_name~ } [ m={R|F|RF} ]
+#endif
+#if TV_OM
+          - OM ~bank_list~                
+#endif
+#if TV_PROFILER
+#if MIPS
+          - P                             - H
+#else
+          - P
+#endif
+#else
+#if MIPS
+          - H
+#endif
+#endif
+
+Description :  The Disable command disables entity or operating mode
+    specified by the first keyword:
+
+    Q   indicates Quiet mode of command file playback is to be disabled.
+#if MON
+    B   indicates breakpoints are to be disabled.  ( See "H -B" )
+#endif
+    EDB if the source-level debugger command mode is curently active, it is 
+           disabled by restoring the mode saved by the previous +EDB command.
+    MON if the MON command mode is curently active, it is disabled by 
+           restoring the mode saved by the previous +MON command.
+#if TV_TC3D
+    E   indicates events are to be disabled
+#endif
+#if TV_TRACE
+#if ICE_HP ICE_MAJIC
+    TE  indicates that Tracing mode is to be disabled
+#else
+    T   indicates that the current Tracing mode is to be disabled
+#endif
+    F   indicates Filtering is to be disabled or particular Filters are
+           to be deactivated for Display Trace commands. ( See "H -F" )
+    TF  disables the specified Trace format for the current or specified
+           trace display mode
+#endif
+#if TV_OM
+    OM  disable overlay memory. (See "H -OM" and "H OM")
+#endif
+#if TV_PROFILER
+    P   indicates that the current Profiling mode is to be disabled
+#endif
+#if MIPS
+    H   disable displaying hardware register names rather than software names.
+#endif
+#if TV_TC3D
+.  +e -e
+Syntax : {+|-}E  { * | ~event_list~... }
+
+Description : Enable(+) or disable(-) a list of events.
+
+    *  indicates that all events are to be enabled or disabled.
+    ~event_list~ specifies specific events to be enabled or disabled.
+         (See "H LIST")
+
+#endif
+#if TV_TRACE
+.  +f -f
+Syntax : {+|-}F  [ * | ~filter_list~ ]
+
+Description : Enable(+) or disable(-) Filtering  or
+              activate(+) or deactivate(-) a list of Filters.
+
+    When invoked with no operand(s), Filtering is enabled or disabled.
+
+    *  indicates that all filters are to be activated or deactivated.
+    ~filter_list~ specifies specific filters to be activated or deactivated.
+        (See "H LIST")
+
+#endif /* TV_TRACE */
+#if MON API
+.  -b +b
+Syntax : {+|-}B  [ * | { # ~number~ | ~addr~ }... ]
+
+Description : Enable or disable a list of breakpoints.
+
+    When invoked with no operand(s), the software breakpoint at the current
+    PC will be enabled or disabled.
+
+    *  indicates that all breakpoints are to be enabled or disabled.
+    ~addr~ gives the address of a specific software breakpoint to be
+        enabled or disabled.
+    ~number~ gives the breakpoint ID number (as shown by BL) of a specific
+        software or hardware breakpoint to be enabled or disabled.
+
+#endif /* MON */
+#if TV_OM
+.  +om -om
+Syntax : {+|-}OM ~bank_list~
+
+Description : OM enables or disables one or more banks of Overlay Memory.
+
+    ~bank_list~ has the form : { * | [B]~number~[:~number~]... } (See "H LIST")
+#if MIPS
+        where ~number~ is a digit in the range 1..2 specifying a bank number.
+#else
+        where ~number~ is a digit in the range 1..4 specifying a bank number.
+#endif
+
+#endif /* TV_OM */
+#if MON
+.  !
+Syntax :  ![ os_command ]
+
+Description :  The Execute OS shell command allows the user to execute a
+    host operating system command without having to exit the debug monitor.
+    ! must be either last or alone in a multi-command cmd_list.  Also,
+    attempts to insert debug monitor comments within the os_command will result
+    in them being sent to and interpreted by the operating system with the rest
+    of the os_command text.
+
+    os_command is any valid operating system command.  If it is not supplied,
+        a command shell is started up and you can execute any number of
+        host commands, finally returning to the debugger by executing the
+        "exit" OS command.
+
+#endif  /* MON */
+#if !CDB
+.  dn en kn
+Syntax :  [D|K]N { * | symbol | partial_symbol* }
+              EN symbol = ~addr_expr~
+
+Description :
+   Display, Kill, or Enter Names (symbols).  '*' is a wildcard character and
+   can be given alone or at the end of a partial_symbol.
+
+   symbol is a global data, function, or entered (with EN) symbol.
+
+   partial_symbol is the starting characters of global data, function, or
+   entered (with EN) symbol.
+
+#endif /* !CDB */
+.  addr address register registers
+Syntax :
+    memory:   {{~number~|(~addr_expr~)}[:~space~] | @[.~digit~]~addr~[:~space~] | ~sym_name~}
+    register : [.]{~register_name~[.]<~field~>}
+    other :    {$~ident~}
+
+Description :  The ~addr~ operand is used to specify a register or memory
+    address.  The address will be aligned to a word boundary for word or
+    double word objects, and to a half-word  boundary for half-word objects.
+    ~number~ or (~addr_expr~) provides the offset portion of the address
+    including an optional space qualifier.  If ~space~ is supplied, it must be
+    valid for the command being invoked. @~addr~ causes an address to be fetched
+    from the location specified by ~addr~. @.~digit~ ~addr~ causes ~digit~ bytes
+    (1,2,4, or 8) to be fetched from ~addr~. ~sym_name~ is a global or static
+    symbol, and implies both address space and offset.
+
+#if ARM
+    ~register_name~ may be preceded by a dot to avoid ambiguity with symbolic
+    names, which normally take precedence.  Registers shown below that end
+    with ~abort~, ~undef~ or ~user~ can be abbreviated as show in the ARM Arch. Ref
+    Manual as ~abt~, ~und~, and ~usr~ respectively.  Note that ~r8~ - ~r14~, ~sp~, ~lr~, 
+    and ~spsr~ are mode specific registers.  This means they can refer to 
+    different banks of registers depending on the current execution mode.
+
+        ~r0~-~r15~, ~sp~ (r13), ~lr~ (r14), ~pc~ (r15), ~cpsr~, ~spsr~ 
+        ~r8_user~-~r14_user~, ~r8_fiq~-~r14_fiq~
+        ~r13_svc~, ~r13_abort~, ~r13_undef~, ~r13_irq~
+        ~r14_svc~, ~r14_abort~, ~r14_undef~, ~r14_irq~
+        ~spsr_svc~, ~spsr_abort~, ~spsr_undef~, ~spsr_irq~, ~spsr_fiq~
+
+    The following generic names for Coprocessor registers are also valid:
+        cC_R, cC_R_oO_M
+    where C is the CP number (0-15), R is the register number (0-15, the CRn
+    field of the CP move instructions), O is the Op2 field (0-7), and M is the
+    CRm field (0-15).
+#endif
+#if MIPS
+    ~register_name~ may be preceded by a dot to avoid ambiguity with symbolic
+    names, which normally take precedence.  Some registers also conflict with
+    addresses (a0 for example). In this case, register names take precedence,
+    and the address must be entered as 0xA0.  Valid general and coprocessor
+    register names are: (hi-lighted)
+        ~r0~-~31~, ~zero~, ~at~, ~v0~-~1~, ~a0~-~3~, ~t0~-~9~, ~s0~-~8~, ~k0~-~1~, ~gp~, ~sp~, ~ra~, ~mdhi~, ~mdlo~.
+#if R3000 R3010 MIPS_3051 
+        badvaddr(~badv~), ~sr~, ~cause~, ~epc~, ~prid~
+#endif
+#if MIPS_3081 MIPS_36100
+        badvaddr(~badv~), ~sr~, ~cause~, ~epc~, ~prid~, config(~cnfig~)
+#endif
+#if MIPS_3041
+        badvaddr(~badv~), ~sr~, ~cause~, ~epc~, ~prid~, config(~cnfig~), busctrl(~busct~),
+        ~count~, portsize(~prtsz~), compare(~comp~)
+#endif
+#if MIPS_33K
+        badvaddr(~badv~), ~sr~, ~cause~, ~epc~, ~prid~, ~bda~, ~bpc~, ~dcic~
+#endif
+#if MIPS_MR300
+        badvaddr(~badv~), ~sr~, ~cause~, ~epc~, ~prid~, config(~cnfig~), ~ccr~
+#endif
+#if HAS_TLB
+        context(~ctxt~), ~index~, random(~rand~), entrylo(~tlblo~), entryhi(~tlbhi~),
+#if MIPS_3K
+        ~tl~#, ~th~#  (TLB "registers", where # is entry number (0-N))
+#else
+        ~tle~#, ~tlo~#, ~th~#, ~tm~#  (TLB "registers", where # is entry number)
+#endif
+#endif
+#if ICACHE_TAGS DCACHE_TAGS
+        ~ict~#, ~dct~#  (I&Dcache tags, where # is entry number (0-N))
+#if ICACHE_PARITY DCACHE_PARITY
+        ~icp~#, ~dcp~#  (I&Dcache parity bits, where # is entry number (0-N))
+#endif
+#endif
+        ~c~#~_0~ - ~c~#~_31~, ~g~#~_0~ - ~g~#~_31~ (where # is ~0~..~3~).
+#if FPU_SINGLE FPU_DOUBLE
+        ~fcr0~, ~fcr31~  (floating point control registers)
+    The floating point data register ~g1_0~ - ~g1_31~ can also be referred to by
+#if FPU_SINGLE
+        ~f0~-~f31~ (single precision).
+#else
+#if FPU_EVEN
+        ~f0~-~f30~ (single precision), ~d0~-~d30~ (double precision) -- even # only.
+#else
+        ~f0~-~f31~ (single precision), ~d0~-~d31~ (double precision).
+#endif
+#endif
+#endif
+    ~field~ refers to registers that have fields. (See "H FIELD" for details)
+#endif  /* MIPS */
+
+    $~ident~ is a debugger local variable. (See "H VAR" for details)
+.  cmd  cmds cmd_list command commands
+Syntax :  ~command~ [ ; ~command~ ] ...
+
+Description :  The ~cmd_list~ operand specifies one or more commands to be
+    executed.  The debugger accepts command lists, as well as simple commands,
+    in response to the main prompt or when playing back a command file.  In
+    this case the commands are executed immediately.  Some commands also
+    accept a cmd_list enclosed in curly-braces as an operand (See "H BS",
+    "H S", or "H G").  In this case, the list of commands is stored and
+    executed later.
+
+    ~cmd_list~ may also contain "C" style comments.  See "H COMMENT".
+
+    The "L" and "!" commands MUST be either last or alone in a cmd_list.
+
+.  expr  addr_expr  value  op  operator
+Syntax :  ~addr~ [ ~op~ ~addr~ ]
+
+Description :  An ~addr_expr~ is an expression that evaluates to an address,
+    consisting of addrs, operators and other addr_exprs.
+    A ~value~ is an ~addr_expr~ without address space information.
+
+    Supported operators(~op~) are (in precedence order):
+
+                ()              Parenthesized sub-expressions
+                + - ~~ !         Unary plus and minus, complement, logical NOT
+                * / %           Multiply, Divide, Modulo
+                + -             Add, Subtract
+                << >>           Left shift, Right shift
+                < <= > >=       Relationals
+                == !=           Equals, Not equals (operands can be strings)
+                &               Bitwise AND
+                ^               Bitwise XOR
+                |               Bitwise OR
+                &&              Logical AND
+                ||              Logical OR
+
+    Note that no symbol type information is available.  All numeric operands
+    must be integer, all arithmetic is performed unsigned long, and symbols
+    evaluate to their address (unless preceded with an '@', as always).
+#if MIPS
+.  field
+Syntax :
+    field : {~field name~}
+
+Description :
+    Most control registers have ~field names~ (e.g. sr.bev) that may be
+    referenced directly on Display and Enter commands.  In expressions, field
+    names are only meaningfull when used with the '@' operator to get the
+    field value.  Also, Enter commands referencing field names must
+    be immediate, not interactive (e.g. e sr.bev = 1).
+
+#endif  /* MIPS */
+.  fmt  format
+Syntax :  { d | u | o | x | X | f | e | E | g | G | c | s | i }
+
+Description :  The ~fmt~ operand specifies the format for display and
+    entry with the Display and Enter commands, as follows :
+
+    d     Signed decimal integer
+    u     Unsigned decimal integer
+    o     Unsigned octal integer
+  x | X   Unsigned hexadecimal integer                     Default is "X"
+    f     Signed floating point value in decimal notation,
+             with six decimal places
+  e | E   Signed floating point value in scientific notation,
+             with six decimal places
+  g | G   Signed floating point value in either decimal or scientific
+             notation, whichever is more compact
+    c     Single ASCII character
+    s     Character string, terminated by the first null character
+    i     Assembled/disassembled instruction
+
+    The case of the x, e, and g formats determines whether alphabetic
+    characters in the formatted data will be in upper or lower case.
+    The fmt operand is the sole exception to the rule that keywords are not
+    case-sensitive in monitor commands.
+#if TV_TRACE
+.  fmt_options
+Syntax :  [key = value]
+
+Description:  ~fmt_options~ are used to modify the trace format.  The options
+    with an '*' next to them are changeable for default formats.  Be aware
+    that default formats in one list, may be user-defined in the other list.
+
+---KEY = VALUE--------------FULL NAME--------------DEFAULTS-----------
+  hs = string               Header String     Its ~f_name~ or ~s_name~
+ *ib = ~f_name~ or ~s_name~      Insert Before     The end of the format list
+ *ia = ~f_name~ or ~s_name~      Insert After      The end of the format list
+   s = any character        Separator         '=', or same polarity as ~f_list~
+                                              if ~f_list~ is an f_atom
+ * r = {2|8|10|16}          Radix             16 (The radix can only be
+                                              changed for an ~f_name~, not an
+                                              ~s_name~)
+ * e = {t|f|y|n|+|-}        Enabled           Active
+ * m = {r|f}                Mode              Based on the current trace
+                                              display mode: RAW if raw mode,
+                                              FORMATTED if inst, data, or mixed
+                                              modes
+ *va = ~color~                Video Attributes  DEFAULT
+  ho = {h|v}                Header Orientaion MON will determine this based on
+                                              the column width and header size
+ *bb = ~number~               Blanks Before     0 if column width = 1, 1 if
+                                              multi-column
+ *ba = ~number~               Blanks After      0
+ *cw = ~number~              Column Width      As calculated for the f_name.
+NOTE: All the options must be correct in order for the command to be
+      processed.
+#endif
+#if TV_TC3D
+.  f_spec  fspec f-spec
+Syntax :  [ ! ]~field~ = ~range~[ #~mask~ ]  [ & ~f_spec~ ]
+          ~field~ = ~value~  [ & ~f_spec~ ]
+          [ ! ]~field~{ ~bit_num~ }  [ & ~f_spec~ ]
+          [ ! ]~pin_name~ [ & ~f_spec~ ]
+
+Definition :  The ~f_spec~ operand is used to specify the state of specific
+    CPU buses and control signals, which is to trigger an event.  These
+    signals are, with a few exceptions, as defined in the CPU's data book.
+
+#if MIPS
+#if MIPS_3K
+    These four fields may be referenced as single entities :
+        A (address), AD | D (data), DBADDR (debug address), and
+        U (user bits 0 to 15 only).
+    These names may be used to reference grouped signals as entities :
+#if MIPS_3041
+        INT, DIAG51, ADDR, BE ( range and/or mask not allowed )
+#else
+        INT, DIAG, ADDR, CPC, BE ( range and/or mask not allowed )
+#endif
+#else
+#if R4300 R4640
+    This fields may be referenced as single entities :
+        SYSAD | AD | D (address/data bus), and
+#else
+    These three fields may be referenced as single entities :
+        SYSADL | ADL | AD | D (address/data bus, low 32 bits),
+        SYSADH | ADH (address/data bus, high 32 bits), and
+#endif
+        U (user bits 0 to 15 only).
+    These names may be used to reference grouped signals as entities :
+#if R4300
+        DIVMODE, INT, SYSCMD (range and/or mask not allowed)
+#else
+        SYSADC | ADC, INT, SYSCMD (range and/or mask not allowed)
+#endif
+#endif
+    The Mini Probes are referenced as U, with valid values from 0 to 0xffff.
+    These signals are NOT available to the user :
+        CLOCK, POWER, GROUND
+
+    "!" preceding a ~pin_name~ or a ~field~ with ~bit_num~ means that the inactive
+        state is the state of interest.
+    "!" preceding fields A, AD, D, DBADDR, or U means all values except the
+        value or range specified ( not allowed for grouped signals ).
+#endif  /* MIPS */
+    See "H MASK" for a complete description of masks.
+#endif
+.  mask
+Syntax :   { ~number~ }
+Definition :  Selects the bits of the field or number to be evaluted.  A mask
+    bit with a value of one means the corresponding bit of the field is
+    selected.  A mask bit with a value of zero means the corresponding bit
+    of the field is ignored.  If mask is omitted, all bits of the field
+    are selected. Default base for mask is hexidecimal.
+
+#if TV_TRACE TV_OM
+.  list  cond_list  state_list  event_list filter_list  bank_list
+Syntax:    { ~number~[:~number~] }...
+#if TV_OM
+           { [B]~number~[:~number~] }...
+#endif
+#if TV_TC3D
+           { {S|C|E|F}~id~[:~id~] }...
+#else
+#if TV_TRACE
+           { F~id~[:~id~] }...
+#endif
+#endif
+
+#if TV_TC3D
+Definition :  The list operand is used to define a group of states,
+#if TV_OM
+              conditions, events, filters or banks to a command.
+#else
+              conditions, events or filters to a command.
+#endif
+
+    {S|C|E|F}~id1~[:~id2~] is a shorthand form denoting all the entities
+        starting with entity ~id1~ and concluding with entity ~id2~.
+
+        e.g.  C2:6 expands to  C2 C3 C4 C5 C6
+#else
+#if TV_TRACE
+Definition :  The list operand is used to define a group of filters
+#if TV_OM
+              or overlay memory banks to a command.
+#else
+              to a command.
+#endif
+#endif
+#endif
+#if TV_TRACE
+
+    F~id1~[:~id2~] is a shorthand form denoting all the filters
+        starting with entity ~id1~ and concluding with entity ~id2~.
+
+        e.g.  F2:6 expands to  F2 F3 F4 F5 F6
+#endif
+#if TV_OM
+
+    [B]~number1~[:~number2~] is a shorthand form denoting all the banks
+        starting with banks ~number1~ and concluding with bank ~number2~.
+
+        e.g.  B1:2 expands to  B1 B2
+#endif
+
+    ~number~[:~number~] may ONLY be used when there is absolutely no
+    ambiguity about what type of entity is being referenced, as in the KILL
+#if !TV_OM
+    command.  There, the shorthand expansion works similarly on 2:6.
+#else
+    and the OM command.  There, the shorthand expansion works similar to the
+    examples above.
+#endif
+#endif /* TV_TRACE TV_OM */
+.  num  number
+Syntax :   [ 0{ o|O } | 0{ n|N } | 0{ x|X } ]~dddddddd~
+
+Description :  The number operand is used to indicate a count or the offset
+    portion of an address to a command.
+
+    ~dddddddd~  is a series of digits in the current default number base,
+              or in an explicit number base, determined by the first
+              one or two characters preceding the digits.
+
+    0{ o|O }  Octal
+    0{ n|N }  Decimal
+    0{ x|X }  Hexadecimal
+
+    Default number base in ~addr~ or ~addr_expr~ is usually hexadecimal.
+    Default number base elsewhere is usually decimal.
+
+.  param  parameter  parameters  p_value
+Syntax :  $${ ~n~ | 0 | * }
+
+Description :  The parameter is a place-holding token in a ~command~ file.
+    When SHIFT is not in effect, p_value1 is substituted for $1, p_value2
+    is substituted for $2 and so on.  If there is no p_value corresponding
+    to a particular parameter, the parameter will simply be removed from
+    the command line during parameter substitution.
+
+
+    $$~n~   is the user-definable form of parameter.  n may range from 1 to 99.
+             See "H FRC" and "H SHIFT".
+
+    $$0   is a special parameter and evaluates to the number of p_values
+            remaining to be processed.  This evaluation reflects any shift
+            that may be in effect.
+
+    $$*   is a special parameter and evaluates to the entire list of p_values
+            as supplied on the File Read ( FR C ) command.  This evaluation is
+            NOT affected by SHIFT.
+
+    If you wish to use a parameter as part of a larger token, you must "paste"
+    it to the non-parameter part of the token.  This "pasting" is done with
+    the backslash character.
+    Examples are:  $$1\3     MY\$$2\IDENT    temp\$$3
+
+.  range
+Syntax : [ *[:~space~] | { [ ~addr_expr~ ] L ~number~ | ~addr_expr~ [ ~addr_expr~ ] } ]
+
+Description :  The range operand specifies the location of one or more
+    objects in the memory address spaces or the registers for the Display
+    and Enter commands.
+
+    The range begins at the first ~addr_expr~. If no ~addr_expr~ is supplied, the
+    range begins where the range of the previous Display or Enter command
+#if MIPS
+    left off, or at 0 if it is the first Display or Enter command.
+#else
+    left off, or at 0:D if it is the first Display or Enter command.
+#endif
+
+    If L ~number~ is specified, the range continues for number objects.
+
+    If ~addr_expr~ ~addr_expr~ is specified, the range continues through to the
+    object at the second addr_expr.
+
+    If neither L ~number~ nor second ~addr_expr~ is supplied, the range consists
+    of a default number of objects.
+
+    *[:~space~] is a special way of matching all addresses. Generally, this
+    translates to the range 0 - FFFFFFFF in the default or given space.
+
+#if TV_TRACE
+.  s_name sname
+Syntax : {frame | timestamp | rw_flag | label | location | value | description}
+
+Description :  ~s_name~ specifies one of the special names used by trace format.
+
+       frame        The frame number
+       timestamp    Timestamp indicator
+       rw_flag      Data direction indicator
+       label        Code symbolic information
+       location     Synthesized address value (data or inst)
+       value        Contents of the inst or data bus - whichever is valid
+#if MIPS_3K
+       valid        Valid, Invalid, or Not sure for each cache block read.
+#endif
+       description  More information about the access, depending on the
+                    trace display mode. Examples are disassembled instructions,
+                    and data access descriptions
+
+#endif /* TV_TRACE */
+.  space 
+Syntax :
+#if ARM
+    ~space~ : default            -- Instruction/Data 
+#ifall TV_DASPACE ICACHE DCACHE
+    ~space~ : { P | D | I | DA } -- Real Address Spaces
+#endif
+#ifall TV_DASPACE ICACHE !DCACHE
+    ~space~ : { P | I | DA }     -- Real Address Spaces
+#endif
+#ifall TV_DASPACE !ICACHE DCACHE
+    ~space~ : { P | D | DA }     -- Real Address Spaces
+#endif
+#ifall TV_DASPACE !ICACHE !DCACHE
+    ~space~ : { P | DA }         -- Real Address Spaces
+#endif
+    ~space~ : LP                 -- Address Translation Space  
+
+Description : ~space~ tells the debugger to use the given real space.
+    An address given with no space defaults to normal instruction/ 
+    data space.  
+
+            P  = Physical Memory
+#if DCACHE
+            D  = Data Cache
+#endif
+#if ICACHE
+            I  = Instruction Cache
+#endif
+#endif /* ARM */
+#if MIPS
+    ~space~ : { 0 | 1 | 2 | 3 | R | S | U }   -- 32 bit Virtual Address Segments
+    ~space~ : { XU | XS | XP | XK }           -- 64 bit Virtual Address Segments
+#ifall TV_DASPACE ICACHE DCACHE
+    ~space~ : { P | D | I | DA }              -- Real Spaces
+#endif
+#ifall TV_DASPACE ICACHE !DCACHE
+    ~space~ : { P | I | DA }                  -- Real Spaces
+#endif
+#ifall TV_DASPACE !ICACHE DCACHE
+    ~space~ : { P | D | DA }                  -- Real Spaces
+#endif
+#ifall TV_DASPACE !ICACHE !DCACHE
+    ~space~ : { P | DA }                      -- Real Spaces
+#endif
+#ifall !TV_DASPACE ICACHE DCACHE
+    ~space~ : { P | D | I }                   -- Real Spaces
+#endif
+#ifall !TV_DASPACE ICACHE !DCACHE
+    ~space~ : { P | I }                       -- Real Spaces
+#endif
+#ifall !TV_DASPACE !ICACHE DCACHE
+    ~space~ : { P | D }                       -- Real Spaces
+#endif
+#ifall !TV_DASPACE !ICACHE !DCACHE
+    ~space~ : { P }                           -- Real Spaces
+#endif
+
+Description : ~space~ tells the debugger to use the given real space or to
+    modify the given address by adding the base address associated with the
+    specified virtual segment (~space~).  The base addresses shown below for
+    32 bit virtual segments are sign-extended when used with a 64-bit target.
+    An address given with no space defaults to an offset in Kuseg. The real
+#if ICACHE DCACHE
+    spaces allow for reading directly to physcial memory and caches.
+#else
+    space allows for reading directly to physcial memory.
+#endif
+
+            U  = kuseg  (0 - default)        0  = kseg0  (0x80000000)
+            1  = kseg1 (0xA0000000)          2  = kseg2  (0xC0000000)
+            S  = ksseg (0xC0000000)          3  = kseg3  (0xE0000000)
+            R  = ROM (0xBFC00000)            P  = Physical Memory
+            XU = xuseg  (0)                  XS = xsseg (0x4000000000000000)
+            XP = xkphys (0x8000000000000000) XK = xkseg (0xc000000000000000)
+#if DCACHE
+            D  = Data Cache
+#endif
+#if ICACHE
+            I  = Instruction Cache
+#endif
+#endif  /* MIPS */
+#if TV_DASPACE
+            DA = Debug Agent memory
+
+    The DA space does not correspond to actual target memory.  It is
+    an address space that allows arbitrary data to be passed to or from the
+    "debug agent" (the ICE firmware or debug kernel).
+#endif
+            LP = Logical to Physical address translation
+
+    The LP space does not correspond to actual target memory.  It is
+    an address space that allows a virtual to physical address translation
+    to be performed.  When a word is read from a :LP address, the MAJIC
+    looks up the virtual address in the targets TLB/MMU tables and if the
+    lookup is successfull it returns the resulting physical address as the
+    data.
+.  type
+Syntax :  { B | H | W | D }
+
+Description :  The type operand specifies the size of objects to be
+    displayed, entered or moved, as follows :
+
+                         Valid Formats (~fmt~)
+    ~type~   Size          Enter Format           Display Format
+    ----   -----------   ------------------     ------------------
+      B    Byte          d, u, o, x|X, c, s     d, u, o, x|X, c, s
+      H    Half-word     d, u, o, x|X           d, u, o, x|X
+      W    Word          any except c or s      any except c or s
+      D    Double word   any except c or s      any except c or s
+
+    If ~type~ is omitted from a Display or Enter command, the ~type~ from the
+    previous execution of the command is used.  If this is the first
+    execution, the default is Word.
+
+    ~type~ on a Move command is used only to scale the object count and to
+    round up the source range to include an integral number of objects.
+
+.  var  vars  variable  variables  local  ident
+Syntax :  ${ A-Z | a-z | $ | _ }[{ A-Z | a-z | 0-9 | $ | _ | . }]...
+
+Description :  The monitor local variables provide temporary storage which
+   does not impact the target memory.  A monitor local variable may appear
+   anywhere an addr operand is required.
+
+.  color
+Syntax :
+    color : { color_keyword | DEFAULT }
+
+Description :  The monitor's color display is implemented using ANSI escape
+    sequences as defined in the MS-DOS ANSI.SYS documentation.  The color
+    names are also taken from this documentation except that the "B_" names
+    are the color given plus the bold attribute is applied.  The REVERSE
+    option has the effect of black on white background.
+
+    The selection of DEFAULT will apply the color specified for the
+    dp_color_output option.  Invoke "DOV dco" for default and color_keywords.
+
+#if DOS DOS386
+    NOTE: Color support requires ANSI.SYS or an equivalent to be loaded
+    on your system.
+#else
+#if WIN32
+    NOTE: Due to bugs in the Win32 Console API in Windows 95/98, it is
+    recommended to use ANSI.SYS for color support on these systems.
+    on your system.  Invoke "DOV dcua" for more information.
+#else
+    NOTE: Color support requires an ANSI-compatible display or
+    terminal emulation, like VT220.
+#endif
+#endif
+
+.  comment comments
+Syntax :  { /* [*/] | // }
+
+Description:
+   Comment syntax and rules loosely match "C" comment conventions with
+   the following exceptions:  Comments cannot span multiple lines (e.g.
+   a new comment opener must be used for each line).  The ending */
+   is optional, and one is assumed if not found.  Note that /* */ can
+   enclose a semicolon (command separator).  // causes the rest of the
+   line to be ignored.
+
+#if !CDB
+.  edit line cursor  buffer
+Command line editing and history keys:
+
+    ~KEY~         ~FUNCTION DESCRIPTION~
+    <Ins><C-T>   (Insert) Toggles between Insert and Overtype modes.  In 
+                 Insert mode, normal characters are inserted at the current 
+                 cursor position.  In Overtype mode, normal characters 
+                 replace the character at the current cursor position.
+                 On MS-DOS systems, the cursor size reflects the mode. Insert
+                 mode is a half-field block, overtype mode is an underline.
+                 Unix systems do not support cursor size changes. Insert mode
+                 is also controllable via the EO option edit_insert_mode.
+    <Del><C-P>   (Delete) Deletes the character at the current cursor position.
+    <BS>         (Backspace) Deletes the character in front of the current 
+                 cursor position.
+    <Up><C-K>    (Up Arrow) Replaces the current line (if any) with the 
+                 previous line in the circular buffer.
+    <Down><C-J>  (Down Arrow) Replaces the current line (if any) with the 
+                 next line in the circular buffer.
+    <Left><C-N>  (Left Arrow) Moves the cursor to the left one character.
+    <Right><C-L> (Right Arrow) Moves the cursor to the right one character.
+    <Home><C-W>  Moves the cursor to the beginning of the current line.
+    <End><C-E>   Moves the cursor to the end of the current line.
+    <PgUp><C-V>  (Page Up)  Replaces the current line (if any) with the first 
+                 (oldest) line in the circular buffer.
+    <PgDn><C-B>  (Page Down)  Replaces the current line (if any) with the last 
+                 (youngest) line in the circular buffer.
+    <C-PgUp>     (Control-Page Up) Deletes the entire contents of the circular 
+                 buffer.
+    <C-PgDn>     (Control-Page Down) Deletes the currently selected line (if 
+                 any) from the circular buffer.
+    <Esc><C-C>   (Escape) Deletes all text from the current line.  The circular
+                 buffer is not affected.
+    <Enter>      (Return) Enters the current line as input to MON.  The 
+                 cursor does not have to be at the end of the line.
+    <F1><C-F>    (Function key F1) Entered once, searches the circular buffer 
+                 for a line whose beginning matches the text typed so far. The
+                 search starts from the last (youngest) entry in the buffer.  
+                 If a match is found, the matching line replaces the current 
+                 line.  If a match is found, <F1> can be hit again to find the 
+                 next match for the original text.
+    See "H STARTEDB.HST" for help on the debugger's history file.
+    Note that on Unix consoles, some of the keys require you to be in a
+    specific shell mode.  See "H UNIX" for details.
+.  history startedb startedb.hst hst
+~Debugger History/History File:~
+    The debuggers maintain a history file called ~startedb.hst~ that 
+    contains the current command history from your last debug session.  This
+    file is read in at debugger startup time, and written out upon exiting.
+    Any new command input line (from the keyboard) longer than two characters
+    is added to the history buffer, pushing out the oldest command (if 
+    necessary).
+
+    The history file is searched, like any other file the debuggers operate on,
+    via the following method. First, the current directory is searched, 
+    followed by each directory in the path environment variable. For each 
+    directory searched (assuming file not found) we also search the be or le
+    (big/little endian) subdirectory.  If a history file is not found a new 
+    one is created in the current directory upon exit.  A default (empty) 
+    history file is provided in the bin directory with the debuggers.  
+    Typically this is sufficent for most users, but if you're using a shared 
+    bin directory you might want to create your own history file in a 
+    private directory.  The private directory must be in the search path for
+    the debugger to find it.  DOS Users: The history file will not be updated,
+    if during your MON session you changed the current directory and the, 
+    orignal current directory was the load location for the history file.
+    
+    Note that if your setup involves referencing the history file from a 
+    shared directory and that directory is read-only or the default history 
+    file is read-only you will error at exit time like "ERROR: removing old
+    history file..." or, "ERROR: Cannot create temporary history file...".
+    To resolve this case, place the history somewhere in your path prior
+    to the shared read-only directory.    (See "H EDIT" for command keys)
+. hp  sun3  sun4  sun unix
+~Command line editing and history keys on UNIX consoles:~
+
+    Many UNIX consoles have different shell modes which can alter or filter
+    out the keyboard codes used for command line editing and history recall.
+    If these keys seem not to perform their function try swithing to a 
+    different mode.  Specifically on SUN machines be sure to use a "shell tool"
+    and rather than a "cmd tool".  "cmd tool" does not work properly even with 
+    scrolling disabled.
+
+#if TV_CONCURRENT
+. inter interactive concurrent
+~INTERACTIVE DEBUG:~
+    
+    Interactive debug mode is a feature which allows for the concurrent debug
+    and execution of a target program.  For example: one could sample the 
+    programs execution behaviour by issuing a "DW PC" command many
+    times and examining the changes.
+
+    The two commands that effect interactive mode are GI (go interactive)
+    and SP (stop). The SP command is much like hitting CTRL-C on a
+    working target.  While in interactive debug mode, some commands are
+    not allowed.  Namely, step (S) and calls (C) command.
+
+    MON can also be started up in interactive mode (assuming a target which
+    is left running in interactive mode) via the -ni (non-intrusive) command
+    line option.
+
+    Note that in interactive mode target program messages that normally go
+    to the debug screen will still do so, temporarily interrupting any user
+    input that may be in progress.
+#endif /* TV_CONCURRENT
+#endif /* !CDB */
+.  ops  operand  operands
+                        ~DEBUG MONITOR OPERANDS~
+
+   operand     op_key
+
+   addr        ADDR       specifies a register or memory address
+   addr_expr   EXPR       numeric part of an addr, which may be an expression
+   cmd_list    CMD        colon-separated list of commands
+#if MIPS
+   field       FIELD      register field qualifiers
+#endif  /* MIPS */
+   fmt         FMT        indicates which format for enter or display
+   f_spec      FSPEC      state of the CPU busses and control signals
+   label       LABEL      identifies location in a command file
+   list        LIST       defines group of states, conditions, events or banks
+   mask        MASK       identifies bits of a field or number to be evaluated
+#ifall ICE !MIPS 
+   mc_options  MC_OPTIONS Memory Configuration options
+#endif /* all ICE !MIPS */
+   number      NUM        octal, decimal or hexadecimal digits
+   p_value     PARAM      value to be substituted for a parameter
+   range       RANGE      location of object(s) in memory or registers
+#if MIPS
+   space       SPACE      space qualifier to addresses
+#endif
+   t_fmt       TFMT       trace format specifier name
+   type        TYPE       size of objects the command is to manipulate
+   $ident      VAR        monitor local variable
+
+.  control  cntrl  file  files
+                  ~COMMAND FILE FLOW CONTROL FEATURES~
+
+   GOTO        provides non-sequential reading of a command file.
+
+   [UN]SHIFT   alters processing of parameter substitution in commands.
+                 Also see "H FRC" and "H PARAM"
+
+
+
+   $ident      monitor local variable, provides temporary storage and
+                 does not use any target memory.  See "H VAR".
+
+   $$n         parameter to be replaced with p_value, which is specified
+                 via the FR C command.  See "H PARAM".
+
+   $$0         special parameter which evaluates to the number of p_values
+                 remaining to be processed.  See "H PARAM".
+
+   $$*         special parameter which evaluates to all p_values supplied
+                 via the FR C command.  See "H PARAM".
+#if !CDB
+
+~For details on MON's command line edit and history facility - See "H HISTORY"~
+~& "H EDIT"~
+#endif
+#if MIPS
+#if TV_CACHEOPS
+.  aliases alias dr hb
+#else
+.  aliases alias dr cf hb
+#endif
+~STANDARD ALIASES~
+
+#if !TV_CACHEOPS
+    CF [ D | I ]                        Cache Flush         (Invoke "CF -H")
+#endif
+#if MIPS
+    DR [ * | CP0 | 0 | G | S | D ]      Display Registers   (Invoke "DR -H")
+#endif
+#if TV_TC3D
+    DTS                                 Display Trace Spec  (See "DA DTS")
+#endif
+
+    ~NOTE~ that these commands are implemented as aliases in the default
+#if ICE
+    startup file startice.cmd.  If you find these commands are not available,
+#endif
+#if RSS
+    startup file startrss.cmd.  If you find these commands are not available,
+#endif
+#if SIM
+    startup file startsim.cmd.  If you find these commands are not available,
+#endif
+    please make sure that your startup file is setup correctly and in your
+    path.
+#endif /* MIPS */
+.  gen
+                        ~DEBUG MONITOR COMMANDS~
+#if MON API
+  Bx   Breakpoint commands (BC, BL, BS, BS2, BSH)
+#endif
+#if MON
+  C    Call summary.  Displays a summary of current Call stack
+#endif
+#if MIPS_3K
+  CF   Cache Flush.  Flushes the processor's caches
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER !CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DP,DT[N|F|S],DN,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DP,DT[N|F|S],DN)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,E{C|E|S|F},ET{N|F|M},EP[D|M],EN)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DP,DT[N|F],DN,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DP,DT[N|F],DN)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,EF,ET{N|F|M},EP[D|M],EN)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER !CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DP,DN,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DP,DN)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,EP[D|M],EN)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER !CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DT[N|F|S],DN,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DT[N|F|S],DN)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,E{C|E|S|F},ET{N|F|M},EN)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DT[N|F],DN,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DT[N|F],DN)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,EF,ET{N|F|M},EN)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DN,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DN)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,EN)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DP,DT[N|F|S],DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DP,DT[N|F|S])
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,E{C|E|S|F},ET{N|F|M},EP[D|M])
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DP,DT[N|F],DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DP,DT[N|F])
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,EF,ET{N|F|M},EP[D|M])
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DP,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DP)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,EP[D|M])
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DT[N|F|S],DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,D{C|E|S|F},DT[N|F|S])
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,E{C|E|S|F},ET{N|F|M})
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DT[N|F],DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DF,DT[N|F])
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO,EF,ET{N|F|M})
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER CDB
+#if MIPS
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI,DR)
+#else
+  Dx   Display/Find cmds (D[B|H|W|D],DV,DA,DO,DI)
+#endif
+  Ex   Enter/Fill cmds (E[B|H|W|D],EA,EO)
+#endif
+  Fx   File Read/Write commands (F, FR, FW)
+#if MON
+#if !TV_CONCURRENT
+  G    Go. Begins execution with optional non-sticky breakpoints
+#else
+  Gx   Go. (G,GI) Begins execution with optional non-sticky breakpoints
+#endif
+#endif  /* MON */
+  H    Help.  Details selected command or operand (See "H OPS" & "H CONTROL")
+#ifall MON MIPS ICE !ICE_ICEMAN
+  HB   Hardware Breakpoint.
+#endif /* all MON MIPS ICE !ICE_ICEMAN */
+  IF   If.  Implements conditional execution of monitor commands
+#ifall TV_TC3D TV_TRACE TV_PROFILER TV_OM !CDB
+  Kx   Kill commands (KA, KN, KC, KE, KS, KF, KT, KTN, KTF, KP, KOM)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER TV_OM !CDB
+  Kx   Kill commands (KA, KN, KF, KT, KTN, KTF, KP, KOM)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER TV_OM !CDB
+  Kx   Kill commands (KA, KN, KP, KOM)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER TV_OM !CDB
+  Kx   Kill commands (KA, KN, KC, KE, KS, KF, KT, KTN, KTF, KOM)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER TV_OM !CDB
+  Kx   Kill commands (KA, KN, KF, KT, KTN, KTF, KOM)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER TV_OM !CDB
+  Kx   Kill commands (KA, KN, KOM)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER !TV_OM !CDB
+  Kx   Kill commands (KA, KN, KC, KE, KS, KF, KT, KTN, KTF, KP)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM !CDB
+  Kx   Kill commands (KA, KN, KF, KT, KTN, KTF, KP)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER !TV_OM !CDB
+  Kx   Kill commands (KA, KN, KP)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !CDB
+  Kx   Kill commands (KA, KN, KC, KE, KS, KF, KT, KTN, KTF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !CDB
+  Kx   Kill commands (KA, KN, KF, KT, KTN, KTF)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM !CDB
+  Kx   Kill commands (KA, KN)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER TV_OM CDB
+  Kx   Kill commands (KA, KC, KE, KS, KF, KT, KTN, KTF, KP, KOM)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER TV_OM CDB
+  Kx   Kill commands (KA, KF, KT, KTN, KTF, KP, KOM)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER TV_OM CDB
+  Kx   Kill commands (KA, KP, KOM)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER TV_OM CDB
+  Kx   Kill commands (KA, KC, KE, KS, KF, KT, KTN, KTF, KOM)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER TV_OM CDB
+  Kx   Kill commands (KA, KF, KT, KTN, KTF, KOM)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER TV_OM CDB
+  Kx   Kill commands (KA, KOM)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER !TV_OM CDB
+  Kx   Kill commands (KA, KC, KE, KS, KF, KT, KTN, KTF, KP)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM CDB
+  Kx   Kill commands (KA, KF, KT, KTN, KTF, KP)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER !TV_OM CDB
+  Kx   Kill commands (KA, KP)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER !TV_OM CDB
+  Kx   Kill commands (KA, KC, KE, KS, KF, KT, KTN, KTF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM CDB
+  Kx   Kill commands (KA, KF, KT, KTN, KTF)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM CDB
+  K    Kill Alias command
+#endif
+#if !CDB
+  Lx   Load commands (L, LN)
+#endif  /* !CDB */
+#
+  Mx   Move commands (M, MB, MH, MW, MD, MR, MRB, MRH, MRW, MRD)
+#if ICE
+#if MIPS  
+  MC   Memory Configuration.  Setup/display of memory configuration.
+#endif
+#ifall !ICE_DS !ICE_HP
+  MT   Memory Test.  Runs a test of the target's memory.
+#endif
+#if TV_OM
+  OM   Overlay Map.  Controls configuration of overlay memory banks.
+#endif
+#endif  /* ICE */
+#if MON
+  Q    Quit.  Terminates execution of the Debug Monitor
+#endif  /* MON */
+#if !TV_XRESET
+  R    Reset.  Resets the target CPU
+#else
+  R    Reset.  Resets the target CPU or system (R, RT, RP)
+#endif
+#if MON
+  Sx   Step.  Executes one or more instructions (S, SF, SO, SQ, SV)
+#endif
+#ifall TV_CONCURRENT !API
+  SP   Stop Program.  Exit interactive mode (GI)
+#endif
+#if !CDB
+#if TV_TC3D
+  Vx   Verify commands  (VL, VT)
+#else
+  VL   Verify Load command
+#endif
+#else
+#if TV_TC3D
+  VT   Verify Trace specification command
+#endif
+#endif  /* !CDB */
+  W    Wait command.  Pauses command processing.
+#ifall TV_TC3D TV_TRACE TV_PROFILER TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +E, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -E, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -P, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +E, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -E, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER !TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +E, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -E, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM MIPS MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM MIPS MON ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +F, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -F, -TE, -TF, -P)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER !TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -P)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER !TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +E, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -E, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM MIPS MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM MIPS MON ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +F, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -F, -TE, -TF)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +E, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -E, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -P, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +E, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -E, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER !TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +E, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -E, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM !MIPS MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM !MIPS MON ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +F, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -F, -TE, -TF, -P)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER !TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -P)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +E, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -E, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !MIPS MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !MIPS MON ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +F, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -F, -TE, -TF)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM !MIPS MON
+  +x   Enable commands  (+Q, +MON, +EDB, +B)
+  -x   Disable commands (-Q, -MON, -EDB, -B)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +E, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -E, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -P, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +E, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -E, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER !TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +E, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -E, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM MIPS !MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM MIPS !MON ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +F, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -F, -TE, -TF, -P)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER !TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -P)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER !TV_OM MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +E, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -E, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM MIPS !MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM MIPS !MON ICE_MAJIC !API
+  +x   Enable commands  (+Q, +MON, +EDB, +H, +F, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -H, -F, -TE, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM MIPS !MON ICE_MAJIC API
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H, +F, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H, -F, -TE, -TF)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM MIPS !MON !API
+  +x   Enable commands  (+Q, +MON, +EDB, +H)
+  -x   Disable commands (-Q, -MON, -EDB, -H)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM MIPS !MON API
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +H)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -H)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +E, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -E, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +F, +T, +TE, +TF, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -F, -T, -TF, -P, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +P, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -P, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +E, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -E, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +F, +T, +TE, +TF, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -F, -T, -TF, -OM)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +OM)
+  -x   Disable commands (-Q, -MON, -EDB, -OM)
+#endif
+#ifall TV_TC3D TV_TRACE TV_PROFILER !TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +E, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -E, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM !MIPS !MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +F, +T, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -F, -T, -TF, -P)
+#endif
+#ifall !TV_TC3D TV_TRACE TV_PROFILER !TV_OM !MIPS !MON ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +F, +TE, +TF, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -F, -TE, -TF, -P)
+#endif
+#ifall !TV_TC3D !TV_TRACE TV_PROFILER !TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +P)
+  -x   Disable commands (-Q, -MON, -EDB, -P)
+#endif
+#ifall TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !MIPS !MON
+  +x   Enable commands  (+Q, +MON, +EDB, +E, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -E, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !MIPS !MON !ICE_MAJIC
+  +x   Enable commands  (+Q, +MON, +EDB, +F, +T, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -F, -T, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !MIPS !MON ICE_MAJIC !API
+  +x   Enable commands  (+Q, +MON, +EDB, +F, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -F, -TE, -TF)
+#endif
+#ifall !TV_TC3D TV_TRACE !TV_PROFILER !TV_OM !MIPS !MON ICE_MAJIC API
+  +x   Enable commands  (+Q, +MON, +EDB, +B, +F, +TE, +TF)
+  -x   Disable commands (-Q, -MON, -EDB, -B, -F, -TE, -TF)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM !MIPS !MON !API
+  +x   Enable commands  (+Q, +MON, +EDB)
+  -x   Disable commands (-Q, -MON, -EDB)
+#endif
+#ifall !TV_TC3D !TV_TRACE !TV_PROFILER !TV_OM !MIPS !MON API
+  +x   Enable commands  (+Q, +MON, +EDB, +B)
+  -x   Disable commands (-Q, -MON, -EDB, -B)
+#endif
+#if MON
+  !    Runs a host operating system command processor
+#endif
+. foo
+
+Dummy entry to make sure that extra new lines at the end of the file do
+not mess up any of the real help entries.

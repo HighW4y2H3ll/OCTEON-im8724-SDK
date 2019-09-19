@@ -1,0 +1,10 @@
+#!/bin/sh
+
+source ./functions.sh
+
+require [ -e /dev/mtd0 ]
+require grep -q phys_mapped_flash /proc/mtd
+
+assert ftl_check /dev/mtd0 2> /dev/null | grep -q "Region size ="
+assert ftl_check /dev/mtd0 2> /dev/null | grep -q "Erase block size ="
+

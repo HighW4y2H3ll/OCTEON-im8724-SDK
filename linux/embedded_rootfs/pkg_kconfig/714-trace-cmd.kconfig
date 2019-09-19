@@ -1,0 +1,9 @@
+config CONFIG_trace-cmd
+	bool "trace-cmd"
+	default y
+	requires TOOLCHAIN_BIG_ENDIAN
+	help
+	  From the trace-cmd man page:
+
+	  The trace-cmd(1) command interacts with the Ftrace tracer
+	  that is built inside the Linux kernel.

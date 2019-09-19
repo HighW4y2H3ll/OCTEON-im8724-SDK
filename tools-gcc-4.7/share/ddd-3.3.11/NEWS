@@ -1,0 +1,501 @@
+DDD News						-*- text -*-
+********
+
+DDD-3.3.11
+==========
+
+* New features and minor improvements
+- A bug in DBX mode introduced in release 3.3.10 has been fixed.
+- A bug which prevented DDD from properly displaying ISO-8859-1 characters
+  (and probably other character sets too) under Motif has been fixed (1)
+(1) Thanks to Ted Creedon for his patch.
+
+DDD-3.3.10
+==========
+
+* New features and minor improvements
+- More fixes for perl 5.8.x -- it's now a lot more usable.
+- Fixes for Sun's SunONE Studio dbx (1). Build with -DHAVE_SUNDBX is
+  necessary. Improvements for automatic detection of Sun DBX are welcome.
+- Fixes for MacOS X (mainly workarounds for bugs in gdb) (2).
+
+* Build fixes
+- automake 1.9 is now the minimum requirement. This affects only builds
+  from CVS repository.
+- A warning is emitted if a version of g++ older than 3.1 is used.
+- libiberty is neither linked nor bundled anymore.
+- GNU libtermcap is not bundled anymore. A termcap like library (such as
+  ncurses) is now required to build ddd.
+  configure has '--with-termlib=LIB' and '--with-termlib-libraries=DIR'
+  to offer a finer control on the choice of library.
+
+(1) Thanks to Ingo Dahm for this patch.
+(2) Thanks to Terry Teague.
+
+DDD-3.3.9
+=========
+
+* New features and minor improvements
+- Support for PHP debugger has been added (1).  This is essentially not
+  tested.
+- Source files in subdirectories should be located automatically
+  when using dbx (tested on Solaris' dbx) (2).
+- The perl version supported by DDD is now 5.8.x.  The perl debugger
+  changed between perl 5.6.x and perl 5.8.0, which made this update necessary.
+  This change is not backwards-compatible.  If it is not possible to upgrade
+  your perl version to 5.8.x or newer, then you can simply install the file
+  "perl5db.pl" from a recent perl distribution into your old perl tree.
+- Through the maintenance menu ("ddd --maintenance"), it now possible to get
+  a leak check of ddd if ddd is run under valgrind. This is only useful for
+  ddd developers (or anybody that wants to help making ddd better).
+- Several minor bugs fixed, some memory leaks plugged, more code clean-up
+  done.
+- A bug affecting platforms where the size of function pointers is 16 has
+  been fixed.
+- The settings window now starts at a larger, more reasonable size, and
+  allows the user to resize it.
+
+* Build fixes
+- The configure machinery has been updated to conform more closely to the
+  autoconf 2.5x requirements. Several bugs have been fixed.
+  Minimum requirements: autoconf 2.59, automake 1.7.9, libtool 1.5.
+- libiberty (which provides missing standard functions) is not linked by
+  default anymore. configure has a new option '--with-libiberty' that
+  enables the libiberty support if required.
+  If nobody complains, libiberty will be unbundled in a next version.
+- The libiberty distributed with ddd has been upgraded to the one included
+  in GCC 3.4 20040116. It fixes some configuration problems.
+- Builds with GCC 3.4, with IBM xlC on AIX, with Compaq/HP cxx on Tru64,
+  on X11R5 based systems, with SGI CC on IRIX should be OK.
+- Builds on HP-UX should now work out-of-the-box. Motif is linked statically
+  and the Athena libraries are now found by default.
+- Builds without Motif/Lesstif available abort with an adequate message.
+- Builds with readline support now work. readline is not bundled anymore.
+- Builds without -DNDEBUG (i.e. with "assert" enabled) now work.
+  Default build enables assertions (i.e. -DNDEBUG is not used).
+- Several missing files in the distribution are now included.
+- Cygwin is supported again.
+
+(1) Written by Dmitri Dmitrienko and integrated by Rocky Bernstein.
+(2) Thanks to Saurabh Tendulkar for his patch.
+
+DDD-3.3.8
+=========
+
+- The settings, signals, themes, and status-display windows are now resizable
+  (if your window-manager can resize transient dialog windows).
+- The settings are now read correctly when using gdb 5.x and 6.0.
+- A memory corruption has been fixed in strclass.h.
+- Several other memory management problems have been fixed.
+- configure options --enable-builtin-app-defaults and --enable-builtin-vsllib
+  should work again.
+- Speed improvements, partly by avoiding the creation of temporary objects.
+- Bug fixes in perl mode (1).
+- Builds on HPUX-10.20 now work OK (see the PROBLEMS file).
+- The libiberty distributed with ddd has been upgraded to the one released
+  with gcc-3.3.1.  This helps DDD to build on NetBSD.
+
+(1) Thanks to Christian Hattemer and Peter Ernst.
+
+DDD-3.3.7
+=========
+
+- libiberty was missing from the 3.3.6 release
+- libtermcap was built but not linked on systems which needed it
+  (suse-axp-linux 8.1; probably others too)
+
+DDD-3.3.6
+=========
+
+- Andreas Zeller handed the role of maintainter to
+  Andrew Gaylard <apg@users.sf.net>
+- The source tree was merged back from the bashdb project's CVS into the
+  original ddd CVS
+
+DDD 3.3.3-3.3.5
+===============
+
+- Major changes to get this to compile with modern auto-tools, Bison,
+  Flex, and C++ STL. (1)
+
+- Support for Bash debugging. (2)
+
+- Several memory leaks have been fixed. Less temporaries are generated (3).
+
+  This fork of the code put together by Daniel Schepler
+  <schepler@math.berkeley.edu> and Rocky Bernstein <rocky@panix.com>
+
+(1) Thanks to Daniel Schepler !
+(2) Thanks to Rocky Bernstein !
+(3) Thanks to Arnaud Desitter !
+
+
+DDD 3.3.2
+=========
+
+DDD 3.3.2 brings a few usage improvements and minor bug fixes:
+
+- Options are automatically saved when exiting DDD.
+- Temporary sessions in Gnome and KDE are now properly deleted.
+- The Tip of the Day comes with an option to turn it off.
+- Alias detection is now on by default.
+- The splash screen no longer bypasses all window controls.
+- Major code clean-up, including plugging several memory leaks (1).
+- GCC 3.0 should properly compile DDD.
+- ChangeLog files are back.
+
+(1) Thanks to Arnaud Desitter <arnaud.desitter@nag.co.uk>!
+
+
+DDD 3.3.1
+=========
+
+DDD 3.3.1 brings a couple of minor bug fixes:
+
+- The option to create new displays `left-to-right' is restored upon startup.
+- Fortran struct members are accessed as `A%B' instead of `A.B'.
+- Certain structure changes in plotted displays no longer crash DDD.
+- You can specify the top-level geometry via `-geometry'.
+- The `pydb' debugger has been fixed to work with recent Python releases.
+- Ornamented Perl debugger prompts are handled correctly.
+- DDD honors the TMPDIR environment variable for creating temporary files.
+- The `configure' script identifies recent hardware configurations.
+- Minor compilation problems with GCC 2.7.2 have been fixed.
+- Minor compilation problems with GCC 3.0 (prerelease) have been fixed.
+- Minor compilation problems with Sun CC have been fixed.
+- Minor potential problems with 64 bit pointers have been fixed.
+
+
+
+DDD 3.3
+=======
+
+DDD 3.3 brings data themes, debugger interaction while the program is
+running, support for JDB 1.2, and several bug fixes.
+
+
+Data Themes
+-----------
+
+- DDD supports _data themes_ - modifiers that change the appearance of 
+  program data.  Try `Data->Themes'.
+
+- Data themes included with this release are:
+  * Show specific expressions in a smaller font (useful for arrays).
+  * Show display titles in a smaller font.
+  * Suppress specific structure members or expressions.
+
+- New data themes can be defined by users and installed at run-time.
+
+- More themes are in preparation, such as rendering of C++ STL data structures.
+
+
+Debuggers and Languages
+-----------------------
+
+- JDB as of JDK 1.2 is supported.
+
+- GDB 5.0 is supported.
+
+- You can use `ddd --wdb' to have DDD startup with WDB.  
+
+- When choosing a debugger automatically, DDD will try `wdb' if `gdb'
+  is not available.
+
+- WindRiver's version of GDB (within the Tornado/vxworks environment)
+  is supported.  See the DDD Reference, Section `WindRiver GDB' for
+  details. (5)
+
+- SGI DBX, Sun DBX, other DBXes as well as Compaq Ladebug can now
+  attach to processes via DDD. (1)
+
+- Parsing of GDB breakpoint information has been improved. (2)
+
+- Parsing of Perl breakpoint information has been improved.
+
+- Perl hash keys containing spaces are supported. (8)
+
+- Using the separate execution window now improves parsing debugger
+  output.  See the DDD documentation for the new `bufferGDBOutput'
+  resource.
+
+
+Examining Data
+--------------
+
+- New displays can be created left-to-right.  
+  See `Edit => Preferences => Data => Placement'.  (6)
+
+- Handling of Ladebug array output has been improved.  (7)
+
+- Handling of multiple C++ base classes has been improved.
+
+- Names that are keywords in some programming languages (such as
+  `interface', `object', `class') should no longer impose problems when
+  occurring in programs of other languages.
+
+- Several memory leaks have been plugged. (1)
+
+
+User Interface
+--------------
+
+- The default DDD font has been changed from `helvetica-bold' to
+  `helvetica-medium', thus integrating better into KDE and GNOME
+  environments.
+
+- You can interact with the debugger while the program is running;
+  DDD automatically interrupts and resumes debuggee execution.  See the
+  `stopAndContinue' resource for details.
+
+- Undo and Redo now apply on logical groups of commands.  If an action
+  caused multiple commands, Undo will undo them with one click.
+
+- Interrupts (Ctrl+C) from the controlling TTY can be issued multiple times.
+
+- With LessTif, the source window no longer scrolls around when
+  setting or deleting breakpoints.
+
+- With LessTif, combo boxes (drop-down text boxes) no longer shrink.
+
+- With LessTif, Text selection works better.
+
+- With LessTif, typing in the debugger console works better.
+
+- With LessTif, switching the register set works.
+
+- Drag and Drop of breakpoints in the machine code is supported.
+
+- Names of debuggee files and directories may contain spaces.
+
+- Spin boxes (used to step values) have been slightly improved.
+
+- Forwarding of keyboard events from the source window into the
+  debugger console is now optional.  See the `consoleHasFocus' resource. (10)
+
+
+Printing
+--------
+
+- PostScript printing includes background colors (e.g. changed values)
+
+
+
+Installation
+------------
+
+- PLEASE NOTE: Several installation details have changed.  Be sure to
+  read the `INSTALL' file for new installation instructions.
+
+- Several DDD resources (such as the application defaults) now reside
+  in separate files, reducing DDD executable size and memory footprint 
+  by about 300k.
+
+- To run DDD from the build directory (i.e. before installing), you
+  must set the DDD_HOME and XUSERFILESEARCH environment variables.
+  See the `INSTALL' file for details.
+
+- The configure `--enable-rpath' option allows you to specify a path
+  to be searched for dynamic libraries at run-time.
+
+- DDD Makefiles are now GNU standards-compliant and generated by automake.
+
+- DDD Makefiles use libtool for generic shared library support.
+
+- A bad dependency on $(SHELL) in the Makefile has been fixed.  This
+  caused unnecessary calls of flex and bison in the distribution. (9)
+
+- A bad wildcard use in the Makefile has been fixed. (3)
+
+- A compilation problem in `PannedGE.C' with some GCC variants has been fixed.
+
+- DDD now compiles cleanly even with `gcc -Wwrite-strings'.  This
+  avoids several warnings/errors on C++ compilers other than GCC. (1)
+
+- The `--configuration' option now gives more information about the
+  compiler being used to compile DDD. (1)
+
+- ddd.texi rules in the Makefile have been fixed. (4)
+
+- The release includes the `libiberty' and `readline' packages as of GDB 5.0.
+
+
+License
+-------
+
+- All remaining parts of DDD that used the GNU Library Public General
+  License (LGPL) have been changed to use the GNU General Public 
+  License (GPL) instead.
+
+- The DDD Manual is released under the new GNU Free Documentation License.
+
+
+Tracking Code Changes
+---------------------
+
+- This release no longer includes `ChangeLog' files.  Instead, you can
+  directly access old and recent DDD versions (including a list of all
+  changes) via the public CVS interface at
+
+      http://sourceforge.net/projects/ddd/
+
+- You can also download most recent DDD versions from the public CVS
+  interface.  See the file `README-CVS' in the CVS archive for details.
+
+
+Acknowledgments
+---------------
+
+Thanks to: 
+    (1) Arnaud Desitter <arnaud@nag.co.uk>
+    (2) Hiro Sugawara <hiro@lynx.com>
+    (3) Yann Dirson <Yann.Dirson@france.sun.com>
+    (4) H. Nanosecond <aldomel@ix.netcom.com>
+    (5) Gary Cliff <gary.cliff@cdott.com>
+    (6) Danny Van Elsen <Danny_Van_Elsen@village.uunet.be>
+    (7) Philippe Midol-Monnet <Philippe.MIDOL-MONNET@airbus.aeromatra.com>
+    (8) Felipe Rivera <felipe@informador.com.mx>
+    (9) Thomas Anders <anders@hmi.de>
+   (10) Colin <cbyh@yahoo.com>
+
+
+DDD 3.2.1
+=========
+
+DDD 3.2.1 brings some minor bug fixes and major LessTif bug workarounds.
+
+- [LessTif] Helpers (such as uncompressing the DDD manual) work fine.
+- [LessTif] The `Print' dialog (esp. printing to file) works fine.
+- [LessTif] Restarting DDD (while saving settings) works fine.
+- [LessTif] Small fixes for building with LessTif on SGI.
+- [Perl] In the data display, Perl hash keys are properly quoted.
+- [Ladebug] More Ladebug variants are supported.
+- [Ladebug] `Edit -> Ladebug settings' should work.
+- A string pointer error on 64 bit machines has been fixed.
+- Minor bugs with clustered displays have been fixed.
+- DDD makes more attempts in locating the initial main function.
+- DDD PostScript documentation can be printed on multiple pages per sheet.
+
+
+DDD 3.2
+=======
+
+DDD 3.2 brings a new documentation and several minor improvements.
+
+
+DDD is now a GNU program
+------------------------
+
+- Starting with this release, DDD is an official GNU program,
+  distributed by the Free Software Foundation.  This brings a number of
+  administrative changes:
+
+  * DDD is distributed as source only using GNU FTP sites and mirrors.
+  
+  * The DDD WWW page is now `http://www.gnu.org/software/ddd/'.
+  
+  * The DDD mailing addresses are now `bug-ddd@gnu.org' (for bug reports) 
+    and `ddd@gnu.org' (for announcements, discussions, or anything else).
+  
+    You can subscribe to these lists by sending an e-mail to
+    `bug-ddd-request@gnu.org' and `ddd-request@gnu.org', respectively.
+
+  The old mailing list addresses are now just aliases for the new ones.
+
+
+Documentation
+-------------
+
+- There is a new DDD manual, generated from Texinfo source, and coming
+  in HTML, PDF, PostScript, Info, as well as plain text format.
+
+
+Debuggers and Languages
+-----------------------
+
+- This release contains partial support for the Compaq/DEC `Ladebug' debugger.
+  Please send in bug reports listing remaining problems.
+
+- Parsing of JDB data has been improved.
+
+- DBX prompts for object file names are recognized.
+
+
+User Interface
+--------------
+
+- `Breakpoint Properties', `Define Command', and `Debugger Settings'
+  have an `Apply' button that applies changes to text fields.
+
+- In TTY mode, you can edit and complete the command line as in GDB.
+  (Uses GNU readline library.)
+
+- Ctrl+E moves the cursor to the end of the line.  For a `Run'
+  shortcut, use F2/F3 or Shift+Ctrl+E.
+
+- DDD uses the locale as specified by the environment (such as $LANG).
+  This allows input of locale characters in DDD dialogs; error
+  messages may also come up in your locale.  If you experience any
+  problems, set LANG=C when invoking DDD.
+
+
+Plotting
+--------
+
+- If you have several indexed variables in a cluster (such as X[1],
+  X[3], and X[5]), DDD plots the cluster as 2-D plot, where the X axis
+  shows the index, and the Y axis shows the values.  This is useful for
+  plotting array slices (see below).
+
+
+Source Navigation
+-----------------
+
+- Using GDB, `Open Source' no longer automatically reads all shared
+  libraries of the debuggee; this took too much time with some programs.
+  There is an additional button that loads libraries.
+
+
+Data exploration
+----------------
+
+- You can rotate structs, saving space by omitting the member names.
+  A rotated struct looks very much like a horizontal array.
+
+- The last rotation setting is used for new displays and is saved
+  together with other DDD options.
+
+- Array slices `ARRAY[FROM..TO]' are much better supported:
+  * By default, the displayed values are clustered and displayed like an 
+    ordinary array.
+  * Array slices can be plotted, too (see `Plotting', above).
+
+- You can use the FROM..TO notation in arbitrary values, and also multiple
+  times; `graph display 1..5 * 1..5' creates a multiplication table.
+
+- To select multiple displays, it suffices that the selection rectangle
+  touches a display (rather than enclosing it entirely).
+
+- The Display Editor has buttons for clustering and unclustering displays.
+
+
+Running the Program
+-------------------
+
+- Breakpoint commands are also supported for DBX, Perl, and XDB.
+
+- In Perl, DDD supports temporary breakpoints.
+
+
+Settings
+--------
+
+- DDD saves the GDB source directory path with the current session.
+
+- DDD saves the JDB class path only with the current session.
+
+DDD 3.2 also incorporates all improvements and bug fixes from earlier releases.
+
+For older news, see the file `NEWS-OLD' in the DDD distribution.
+
+$Id: NEWS 14384 2006-04-11 21:46:04Z cchavva $

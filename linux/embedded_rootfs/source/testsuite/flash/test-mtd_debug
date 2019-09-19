@@ -1,0 +1,13 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert mtd_debug info /dev/mtd0 > $0.log
+assert grep -q "mtd.type = MTD_NORFLASH" $0.log
+assert grep -q "mtd.flags = " $0.log
+assert grep -q "mtd.size = " $0.log
+assert grep -q "mtd.erasesize = " $0.log
+assert grep -q "mtd.writesize = " $0.log
+assert grep -q "mtd.oobsize = " $0.log
+assert grep -q "regions = " $0.log
+

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+source ./functions.sh
+
+ftl_format > $0.log 2>&1
+assert grep -q "usage: ftl_format" $0.log
+

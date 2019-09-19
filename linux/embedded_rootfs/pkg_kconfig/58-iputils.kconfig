@@ -1,0 +1,28 @@
+config CONFIG_iputils
+	bool "iputils"
+	select CONFIG_openssl
+	default y
+	help
+		From the iputils homepage
+		(http://www.linux-foundation.org/en/Net:Iputils):
+
+		This package appeared as a desperate attempt to bring some life
+		to state of basic networking applets: ping, traceroute etc.
+		Though it was known that port of BSD ping to Linux was
+		basically broken, neither maintainers of well known
+		(and superb) Linux net-tools package nor maintainers of Linux
+		distributions worried about fixing well known bugs, which were
+		reported in linux-kernel and linux-net mail lists for ages,
+		were identified and nevertheless not repaired.  So, one day
+		1001th resuming of the subject happened to be the last straw
+		to break camel's back, I(Alexey Kuznetsov) just parsed my hard
+		disks and collected a set of utilities,  which shared the
+		following properties:
+
+		* Small
+		* Useful despite of this
+		* I never seen it was made right
+		* Not quite trivial
+		* Demonstrating some important feature of Linux
+		* The last but not the least, I use it more or less regularly
+

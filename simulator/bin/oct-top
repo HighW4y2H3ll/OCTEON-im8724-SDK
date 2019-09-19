@@ -1,0 +1,466 @@
+#!/usr/bin/python
+# Copyright (c) 2003-2005, Cavium Inc.. All rights reserved.
+#
+# This Software is the property of Cavium Inc..  The Software and all
+# accompanying documentation are copyrighted.  The Software made available
+# here constitutes the proprietary information of Cavium Inc..  You
+# agree to take reasonable steps to prevent the disclosure, unauthorized use
+# or unauthorized distribution of the Software.  You shall use this Software
+# solely with Cavium hardware.
+#
+# Except as expressly permitted in a separate Software License Agreement
+# between You and Cavium Inc., you shall not modify, decompile,
+# disassemble, extract, or otherwise reverse engineer this Software.  You
+# shall not make any copy of the Software or its accompanying documentation,
+# except for copying incident to the ordinary and intended use of the
+# Software and the Underlying Program and except for the making of a single
+# archival copy.
+#
+# This Software, including technical data, may be subject to U.S.  export
+# control laws, including the U.S.  Export Administration Act and its
+# associated regulations, and may be subject to export or import regulations
+# in other countries.  You warrant that You will comply strictly in all
+# respects with all such regulations and acknowledge that you have the
+# responsibility to obtain licenses to export, re-export or import the
+# Software.
+#
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.
+#
+
+import sys
+import os
+import gc
+import re
+import bisect
+from gdbstub import fromHex
+from gdbstub import toHex
+from debuglib import DebugInfo
+from debuglib import DebugLineInfo
+from debuglib import DebugObjectInfo
+from debuglib import getSdkVersion
+
+KEEP_TYPES = ["DW_TAG_inlined_subroutine", "DW_TAG_subprogram", "DW_TAG_lexical_block", "DW_TAG_compile_unit"]
+HEXDIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9','a', 'b', 'c', 'd', 'e', 'f', 
+                     'A', 'B', 'C', 'D', 'E', 'F']
+
+REGION_UNKNOWN = "Unknown"
+REGION_XKPHYS = "xkphys - 64bit Physical Memory"
+REGION_CACHED = "Cached Physical Memory"
+REGION_UNCAHCED = "Uncached Physical Memory"
+REGION_KERNEL64 = "64bit Kernel"
+REGION_KSEG0 = "kseg0 - 32bit Cached Kernel"
+REGION_KSEG1 = "kseg1 - 32bit Uncached Kernel"
+REGION_KSEG2 = "kseg2 - 32bit Mapped Kernel"
+REGION_KUSEG = "kuseg - 32bit User space"
+REGION_USER64 = "64bit User space"
+REGION_SUPER =  "Supervisor space"
+REGION_VECTOR = "Exception Vector Region"
+
+elfPassed = 0
+coreSel = 0
+inverse = 0
+stats = 0
+elfFilename = ""
+arguments = ""
+
+def banner():
+    if coreSel:
+        print '\033[31m' + "\t \t \t \t \t Function Name:      core#:%d (Total hits)" '\033[0m' % (core)
+    else:
+        print '\033[31m' + "\t \t \t \t \t Function Name:        Total hits" '\033[0m'
+    print "\t \t \t \t     --------------------------------------"
+
+class ProfileEntry:
+    def __init__(self, name):
+        self.name = name
+        self.count = [0 for core in xrange(64)]
+        self.children = {}
+
+class Profiler:
+    #
+    # Initialize global data structures
+    #
+    def __init__(self, show_line=0, show_address=0, arguments=""):
+        self.show_line=show_line
+        self.show_address=show_address
+        self.arguments = arguments
+        self.dbg = DebugInfo()
+        self.symbols = []
+        self.desc = []
+        self.linuxElf = 0
+        if elfPassed:
+            print "Reading line number information"
+            self.dbg.read(elfFilename)
+
+            self.validateElffile(elfFilename)
+            if self.linuxElf:
+                print "Reading symbol information"
+                self.loadElfSymbols(elfFilename)
+            else:
+                self.dbg.readObjectInfo(elfFilename)
+        elif not elfPassed and not stats:
+            print
+            print "Warning: Elf file not passed, printing PC values"
+        gc.collect()
+	self.profile_data = ProfileEntry(elfFilename)
+   
+    # Verify if the ELffile is vmlinux 
+    def validateElffile(self, filename):
+        exitStatus = os.system("mips64-octeon-linux-gnu-objdump -tf '%s' | grep kernel_entry &>/dev/null" %filename)
+        if not exitStatus:
+            self.linuxElf = "1"
+
+    # Load symbols from an ELF file
+    def loadElfSymbols(self, filename):
+        infile = os.popen("mips64-octeon-linux-gnu-objdump -t \"" + filename + "\"", "r", 0)
+        for line in infile:
+            if not line[0] in HEXDIGITS:
+                continue
+            parts = line.split()
+            if len(parts) != 6:
+                continue
+            try:
+                address = fromHex(parts[0])
+                if address == 0:
+                    continue
+                name = parts[5]
+                self.symbols.append((address, name))
+            except:
+                pass
+        infile.close()
+        self.symbols.sort()
+        #print self.symbols
+
+    # Lookup a symbol for an address
+    def getSymbol(self, find_address):
+        if len(self.symbols) == 0:
+            return None
+        loc = bisect.bisect_left(self.symbols, (find_address, None))
+        if loc == len(self.symbols):
+            loc -= 1
+        (address, name) = self.symbols[loc]
+        if address <= find_address and address > find_address - 65536:
+            return (address, name)
+        elif loc > 0:
+            (address, name) = self.symbols[loc-1]
+            if address <= find_address and address > find_address - 65536:
+                return (address, name)
+            else:
+                return None
+        else:
+            return None
+
+    def handleUnknownAddress(self, address):
+        # All the numbers below should be hex. Damn python and its broken
+        # hex conversion. It doesn't work for numbers that have the top bit
+        # set.
+        if address < -8070450532247928832: # 0x9000000000000000
+            return REGION_XKPHYS
+        elif address < -7493989779944505344: # 0x9800000000000000
+            return REGION_CACHED
+        elif address < -4611686018427387904: # 0xC000000000000000
+            return REGION_UNCAHCED
+        elif address < -4611684918915760129: # 0xC00000ffffffffff
+            return REGION_KERNEL64
+        elif address < -2147483648: # 0xffffffff80000000
+            return REGION_UNKNOWN
+        elif address < -2147414016: # 0xffffffff80011000
+            ebase = (address>>12) & 0x1f
+            offset = address & 0xfff
+            if offset < 0x100:
+                return "TLB Handler" 
+            elif offset < 0x180:
+                return "Cache Error Handler"
+            elif offset < 0x200:
+                return "Exception Handler"
+            elif offset < 0x280:
+                return "Interrupt Handler"
+            else:
+                return REGION_VECTOR
+        elif address < -1610612736: # 0xffffffffa0000000
+            return REGION_KSEG0
+        elif address < -1073741824: # 0xffffffffc0000000
+            return REGION_KSEG1
+        elif address < 0x0000000000000000:
+            return REGION_KSEG2
+        elif address < 0x0000000080000000:
+            return REGION_KUSEG
+        elif address < 0x000000ffffffffff:
+            return REGION_USER64
+        elif address < 0x4000000000000000:
+            return REGION_UNKNOWN
+        elif address < 0x400000ffffffffff:
+            return REGION_SUPER
+        else:
+            return REGION_UNKNOWN
+
+    #
+    # Recursively format the debugging information for display
+    #
+    def get_scope_info(self, address, node):
+        result = []
+        if node.object_type in ["DW_TAG_inlined_subroutine", "DW_TAG_subprogram"]:
+            result.append(node.get("DW_AT_name"))
+        for c in node.children():
+            if c.containsPC(address):
+                result.extend(self.get_scope_info(address, c))
+                break
+            elif c.object_type in ["DW_TAG_lexical_block", "DW_TAG_compile_unit"]:
+                r = self.get_scope_info(address, c)
+                if r:
+                    result.extend(r)
+                    break
+        return result
+
+    #
+    # Add a profile entry
+    #
+    def addProfileEntry(self, address, counts):
+        scope_info = []
+        if address:
+            if self.linuxElf:
+                symbol = self.getSymbol(address)
+                if symbol != None:
+                    scope_info.append(symbol[1])
+                else:
+                    scope_info.append(self.handleUnknownAddress(address))
+            else:
+                scope_info = self.get_scope_info(address, self.dbg.objectInfo)
+                if not scope_info:
+                    scope_info.append(self.handleUnknownAddress(address))
+        if self.show_line:
+            line_info = self.dbg.getDebugLineInfo(address)
+            if line_info:
+                scope_info.append(line_info.sourcefile + ":" + str(line_info.row))
+        if self.show_address:
+            scope_info.append("0x" + toHex(address, 16))
+        entry = self.profile_data
+        for s in scope_info:
+            if not s in entry.children:
+                entry.children[s] = ProfileEntry(s)
+            entry = entry.children[s]
+            for c in xrange(len(counts)):
+                entry.count[c] += counts[c]
+
+    def addProfileEntryHex(self, address, counts):
+        scope_info = []
+        if address:
+            scope_info.append("0x" + toHex(address, 16))
+        entry = self.profile_data
+        for s in scope_info:
+            if not s in entry.children:
+                entry.children[s] = ProfileEntry(s)
+            entry = entry.children[s]
+            for c in xrange(len(counts)):
+                entry.count[c] += counts[c]
+
+    def display(self, entry, indent=""):
+        if coreSel:
+            if core in profiledCores:
+                hitcount = entry.count[profiledCores.index(core)] 
+            else:
+                print "Error: Invalid cpu number passed, valid range %s" % (profiledCores) 
+                sys.exit(-1)
+        else: 
+                hitcount = sum(entry.count)
+        if indent:
+            self.desc.append((entry.name,hitcount))
+        keys = entry.children.keys()
+        keys.sort()
+        for c in keys:
+            self.display(entry.children[c], indent + "  ")
+
+    def sortSymbols(self, desc):
+        func_list = sorted(desc, key=lambda func: func[1], reverse=inverse)
+        return func_list
+
+    def sortList(self, desc):
+        finalList = []
+        funcList = []
+        if self.show_address:
+            list = self.desc
+            for sym in list:
+                if not sym[0].startswith("0x"):
+                    funcname = sym[0]
+                    funcList.append(sym)
+                    funcname = []
+                    funcname.append(sym)
+                    finalList.append(funcname)
+                elif sym[0].startswith("0x"):
+                    funcname.append(sym)
+
+            funcList = self.sortSymbols(funcList) 
+            for i in funcList: 
+                for j in finalList:
+                    sortTempList = sorted(j, key=lambda func: func[1], reverse=True)
+                    if i == sortTempList[0]:
+                        for k,v in sortTempList:
+                            if k.startswith("0x"):
+                                print "%55s:\t %d " % (k, v)
+                            else: 
+                                print '\033[94m' "%55s:\t %d " '\033[0m' % (k, v) 
+            self.desc = []
+        elif self.show_line:
+            list = self.desc
+            for sym in list:
+                if not sym[0].startswith("/"):
+                    funcname = sym[0]
+                    funcList.append(sym)
+                    funcname = []
+                    funcname.append(sym)
+                    finalList.append(funcname)
+                else:
+                    funcname.append(sym)
+
+            funcList = self.sortSymbols(funcList) 
+            for i in funcList: 
+                for j in finalList:
+                    sortTempList = sorted(j, key=lambda func: func[1], reverse=True)
+                    if i == sortTempList[0]:
+                        for k,v in sortTempList:
+                            if k.startswith("/"):
+                                print "%55s:\t %d " % (k, v)
+                            else: 
+                                print '\033[94m' "%55s:\t %d " '\033[0m' % (k, v) 
+            self.desc = []
+        else:
+            list = self.sortSymbols(desc)
+            for k,v in list:
+                if v: 
+                    print "%55s:\t %d " % (k, v)
+                #else:
+                #    print "%55s:\t %d  [0 Hits on core#:%d]" % (k, v, core)
+            self.desc = []
+
+    def parseSummary(self, line):
+        if line.startswith("L2"):
+            print ""
+            print '\033[94m' "%s" '\033[0m' % (line)
+        elif line.startswith("DRAM"):
+            print ""
+            print '\033[94m' "DRAM Statistics:" '\033[0m'
+            print line.split(',')[0]
+            print (line.split(',')[1]).strip()
+            print (line.split(',')[2]).strip()
+        elif line.startswith("FPA Pool stats"):
+            print ""
+            print '\033[94m' "FPA Pool statistics:" '\033[0m' 
+        elif line.startswith("SSO Qos"):
+            print ""
+            print '\033[94m' "POW/SSO Qos Input queue Statistics" '\033[0m'
+        else:
+            print line
+             
+    #
+    # Begin profiling
+    #
+    def profile(self):
+        global counts
+        global profiledCores	
+        infile = os.popen("oct-pci-profile" + self.arguments, "r", 0)
+        while infile:
+            line = infile.readline()
+            if not line:
+                break
+            line = line.strip()
+            if line == "":
+                if stats:
+                    continue
+                else:
+                    self.display(self.profile_data)
+                    self.profile_data.children = {}
+                    if self.desc:
+                        os.system('clear')
+                        banner()
+                        self.sortList(self.desc)
+            elif line.startswith("0x"):
+                address = fromHex(line[2:18])
+                parts = line.split()
+                counts = [int(x) for x in parts[1:]]
+                if elfPassed:
+                    self.addProfileEntry(address, counts)
+                else:    
+                    self.addProfileEntryHex(address, counts)
+                    self.show_address = 0 # Should be disabled as elf file isn't passed
+                    self.show_line = 0
+            elif line.startswith("core#"):
+                cores = line.split()
+                profiledCores = [int(x) for x in cores[1:]]
+                if stats:
+                    os.system('clear')
+                    print '\033[94m' "Core Counters:" '\033[0m'
+                else:
+                    continue
+            elif stats:
+                self.parseSummary(line)   
+        retStatus = infile.close()   
+        if retStatus is not None:
+            print; print "Invalid arguments with oct-pci-profile encountered" 
+            usage()
+
+
+#
+# Main entry point
+def usage():
+    print
+    print "Usage: oct-top [--line] [--address] <elf>"
+    print "    <elf file>               Mips ELF file to load debugging information from."
+    print "    [--line]                 Show line number information."
+    print "    [--address]              Show exact PC addresses."
+    print "    [--perf1=<Core counter>] Setup Core performance counter 1"
+    print "    [--perf2=<Core counter>] Setup Core performance counter 2"
+    print "    [--perf3=<Core counter>] Setup Core performance counter 3 (Available from CN7XXX onwards)"
+    print "    [--perf4=<Core counter>] Setup Core performance counter 4 (Available from CN7XXX onwards)"
+    print "    [--l2perf1=<L2 counter>] Setup L2 performance counter 1"
+    print "    [--l2perf2=<L2 counter>] Setup L2 performance counter 2"
+    print "    [--l2perf3=<L2 counter>] Setup L2 performance counter 3"
+    print "    [--l2perf4=<L2 counter>] Setup L2 performance counter 4"
+    print "    [--dwell=<seconds>]      Number of seconds between printing"
+    print "    [--core_mask=<mask>]     Mask which specifies the cores to sample"
+    print "    [--cpu=<core no>]        Per cpu 'top' information, [0-n cores]"
+    print "    [--events=<event name>:<count>] Enable profiling based on event and threshold count"
+    print "    [-r]                     reverse the results of the output"
+    print "    [-s]                     Octeon Memory, Perf Counter Statistics"
+    print
+    print "Version: " + getSdkVersion()
+    print
+    sys.exit(2)
+
+validArgs = [ "--line", "--address", "--perf1", "--perf2", "--perf3", "--perf4", "--l2perf1" , "--l2perf2", "--l2perf3", "--l2perf4", "--dwell", "--core_mask", "--cpu", "-s", "-r"]
+
+options = sys.argv[1:]
+for arg in options:
+    if os.path.exists(arg):
+        elfPassed = 1
+        elfFilename = arg
+    elif arg.startswith("--perf") or arg.startswith("--l2perf") or arg.startswith("--dwell") or arg.startswith("--core_mask") or arg.startswith("--events"):
+        arguments += " " + arg
+    elif arg.startswith("--cpu"):
+        coreSel = 1
+        try:
+            core = int(re.split('=', arg)[1])
+        except:
+            print "Invalid --cpu option"
+            usage()
+    elif arg in ("-h", "--help"):
+        usage()
+    elif arg in ("-r"):
+        inverse = 1
+    elif arg in ("-s"):
+        stats = 1
+        arguments += " " + "--perfonly"		# --perfonly option with profiler collects perf counter info
+    elif not arg in validArgs:
+        print "Invalid option %s entered" % (arg)
+        usage()
+ 
+p = Profiler(("--line" in sys.argv), ("--address" in sys.argv), arguments)
+p.profile()

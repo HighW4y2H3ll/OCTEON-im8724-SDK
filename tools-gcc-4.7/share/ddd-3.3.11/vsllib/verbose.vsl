@@ -1,0 +1,79 @@
+// $Id: verbose.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Create term instead of boxes
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "builtin.vsl"
+#include "linebreak.vsl"
+
+_verbose_list(sep) = 0;
+_verbose_list(sep, head) = head;
+_verbose_list(sep, head, ...) = (head & sep) ~ _verbose_list(sep, ...);
+
+verbose_list(sep, ...) = "(" & _verbose_list(sep, ...) & ")";
+
+verbose_call(fcn, ...) = fcn & verbose_list(",", ...);
+
+
+#pragma override (&), (|), (^), (~), (+), (*), (::), (-), (/)
+#pragma override (%), (=), (<>), (>), (>=), (<), (<=), (not)
+
+(&)(...) = verbose_list(" & ", ...);
+(|)(...) = verbose_list(" | ", ...);
+(^)(...) = verbose_list(" ^ ", ...);
+(~)(...) = verbose_list(" ~ ", ...);
+(+)(...) = verbose_list(" + ", ...);
+(*)(...) = verbose_list(" * ", ...);
+(::)(...) = verbose_list(" :: ", ...);
+(-)(...) = verbose_list(" - ", ...);
+(/)(...) = verbose_list(" / ", ...);
+(%)(...) = verbose_list(" % ", ...);
+(=)(...) = verbose_list(" = ", ...);
+(<>)(...) = verbose_list(" <> ", ...);
+(>=)(...) = verbose_list(" >= ", ...);
+(<)(...) = verbose_list(" < ", ...);
+(<=)(...) = verbose_list(" <= ", ...);
+(not)(...) = verbose_list(" not ", ...);
+
+
+#pragma override hspace, vspace, hfix, vfix, rise, fall, arc
+#pragma override square, tag, font, fontfix, fill, rule, diag, fail
+
+hspace(...) = verbose_call("hspace", ...);
+vspace(...) = verbose_call("vspace", ...);
+hfix(...) = verbose_call("hfix", ...);
+vfix(...) = verbose_call("vfix", ...);
+rise(...) = verbose_call("rise", ...);
+fall(...) = verbose_call("fall", ...);
+arc(...) = verbose_call("arc", ...);
+square(...) = verbose_call("square", ...);
+tag(...) = verbose_call("tag", ...);
+font(...) = verbose_call("font", ...);
+fontfix(...) = verbose_call("fontfix", ...);
+fill(...) = verbose_call("fill", ...);
+rule(...) = verbose_call("rule", ...);
+diag(...) = verbose_call("diag", ...);
+fail(...) = verbose_call("fail", ...);

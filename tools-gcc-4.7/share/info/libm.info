@@ -1,0 +1,2783 @@
+This is
+/usr/local/Cavium_Networks/octsw/toolchain/scripts/../src/newlib/libm/libm.info,
+produced by makeinfo version 4.8 from
+/usr/local/Cavium_Networks/octsw/toolchain/scripts/../src/newlib/libm/libm.texinfo.
+
+START-INFO-DIR-ENTRY
+* libm::                        An ANSI-C conforming mathematical library.
+END-INFO-DIR-ENTRY
+
+   This file documents an ANSI-C conforming mathematical subroutine
+library.
+
+   Copyright (C) 1992, 1993, 1995, 1996-2010 Red Hat, Inc.
+
+   `libm' includes software developed at SunPro, a Sun Microsystems,
+Inc. business.  Permission to use, copy, modify, and distribute this
+software is freely granted, provided that this notice is preserved.
+
+   Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+   Permission is granted to copy and distribute modified versions of
+this manual under the conditions for verbatim copying, subject to the
+terms of the GNU General Public License, which includes the provision
+that the entire resulting derived work is distributed under the terms
+of a permission notice identical to this one.
+
+   Permission is granted to copy and distribute translations of this
+manual into another language, under the above conditions for modified
+versions.
+
+
+File: libm.info,  Node: Top,  Next: Math,  Up: (dir)
+
+LIBM
+****
+
+* Menu:
+
+* Math::           The mathematical functions (`math.h').
+* Complex::        The mathematical complex functions (`complex.h').
+* Reentrancy::     The functions in libm are not reentrant by default.
+* Long Double Functions:: The long double function support of libm.
+* Index::
+
+
+File: libm.info,  Node: Math,  Next: Complex,  Prev: Top,  Up: Top
+
+1 Mathematical Functions (`math.h')
+***********************************
+
+This chapter groups a wide variety of mathematical functions.  The
+corresponding definitions and declarations are in `math.h'.  Two
+definitions from `math.h' are of particular interest.
+
+  1. The representation of infinity as a `double' is defined as
+     `HUGE_VAL'; this number is returned on overflow by many functions.
+     The macro `HUGE_VALF' is a corresponding value for `float'.
+
+  2. The structure `exception' is used when you write customized error
+     handlers for the mathematical functions.  You can customize error
+     handling for most of these functions by defining your own version
+     of `matherr'; see the section on `matherr' for details.
+
+   Since the error handling code calls `fputs', the mathematical
+subroutines require stubs or minimal implementations for the same list
+of OS subroutines as `fputs': `close', `fstat', `isatty', `lseek',
+`read', `sbrk', `write'.  *Note System Calls: (libc.info)syscalls, for
+a discussion and for sample minimal implementations of these support
+subroutines.
+
+   Alternative declarations of the mathematical functions, which exploit
+specific machine capabilities to operate faster--but generally have
+less error checking and may reflect additional limitations on some
+machines--are available when you include `fastmath.h' instead of
+`math.h'.
+
+* Menu:
+
+* version::	Version of library
+* acos::	Arccosine
+* acosh::	Inverse hyperbolic cosine
+* asin::	Arcsine
+* asinh::	Inverse hyperbolic sine
+* atan::	Arctangent
+* atan2::	Arctangent of y/x
+* atanh::	Inverse hyperbolic tangent
+* jN::	        Bessel functions (jN, yN)
+* cbrt::	Cube root
+* copysign::	Sign of Y, magnitude of X
+* cosh::	Hyperbolic cosine
+* erf::		Error function (erf, erfc)
+* exp::		Exponential, base e
+* exp2::	Exponential, base 2
+* expm1::	Exponential, base e, of x - 1
+* fabs::	Absolute value (magnitude)
+* fdim::	Positive difference
+* floor::	Floor and ceiling (floor, ceil)
+* fma::		Floating multiply add
+* fmax::	Maximum
+* fmin::	Minimum
+* fmod::	Floating-point remainder (modulo)
+* fpclassify::	Floating-point classification macro
+* frexp::	Split floating-point number
+* gamma::	Logarithmic gamma function
+* hypot::	Distance from origin
+* ilogb::	Get exponent
+* infinity::	Floating infinity
+* isgreater::	Comparison macros
+* ldexp::	Scale by a power of 2
+* log::		Natural logarithms
+* log10::	Base 10 logarithms
+* log1p::	Log of 1 + X
+* log2::	Base 2 logarithms
+* logb::	Get exponent
+* lrint::	Round to integer
+* lround::	Round to integer, away from zero (lround, llround)
+* matherr::	Modifiable math error handler
+* modf::	Split fractional and integer parts
+* nan::		Floating Not a Number
+* nearbyint::	Round to integer
+* nextafter::	Get next representable number
+* pow::		X to the power Y
+* remainder::	remainder of X divided by Y
+* remquo::	Remainder and part of quotient
+* rint::	Round to integer
+* round::	Round to integer, away from zero
+* scalbn::	Scale by a power of FLT_RADIX (2)
+* signbit::	Does floating-point number have negative sign?
+* sin::		Sine or cosine (sin, cos)
+* sinh::	Hyperbolic sine
+* sqrt::	Positive square root
+* tan::		Tangent
+* tanh::	Hyperbolic tangent
+* trunc::	Round to integer, towards zero
+
+
+File: libm.info,  Node: version,  Next: acos,  Up: Math
+
+1.1 Error Handling
+==================
+
+There are four different versions of the math library routines: IEEE,
+POSIX, X/Open, or SVID.  The version may be selected at runtime by
+setting the global variable `_LIB_VERSION', defined in `math.h'.  It
+may be set to one of the following constants defined in `math.h':
+`_IEEE_', `_POSIX_', `_XOPEN_', or `_SVID_'.  The `_LIB_VERSION'
+variable is not specific to any thread, and changing it will affect all
+threads.
+
+   The versions of the library differ only in how errors are handled.
+
+   In IEEE mode, the `matherr' function is never called, no warning
+messages are printed, and `errno' is never set.
+
+   In POSIX mode, `errno' is set correctly, but the `matherr' function
+is never called and no warning messages are printed.
+
+   In X/Open mode, `errno' is set correctly, and `matherr' is called,
+but warning message are not printed.
+
+   In SVID mode, functions which overflow return
+3.40282346638528860e+38, the maximum single-precision floating-point
+value, rather than infinity.  Also, `errno' is set correctly, `matherr'
+is called, and, if `matherr' returns 0, warning messages are printed
+for some errors.  For example, by default `log(-1.0)' writes this
+message on standard error output:
+
+     log: DOMAIN error
+
+   The library is set to X/Open mode by default.
+
+   The aforementioned error reporting is the supported Newlib libm error
+handling method.  However, the majority of the functions are written so
+as to produce the floating-point exceptions (e.g. "invalid",
+"divide-by-zero") as required by the C and POSIX standards, for
+floating-point implementations that support them.  Newlib does not
+provide the floating-point exception access routines defined in the
+standards for fenv.h, though, which is why they are considered
+unsupported.  It is mentioned in case you have separately-provided
+access routines so that you are aware that they can be caused.
+
+1.2 Standards Compliance And Portability
+========================================
+
+Most of the individual function descriptions describe the standards to
+which each function complies.  However, these descriptions are mostly
+out of date, having been written before C99 was released.  One of these
+days we'll get around to updating the rest of them.  (If you'd like to
+help, please let us know.)
+
+   "C99" refers to ISO/IEC 9899:1999, "Programming languages-C".
+"POSIX" refers to IEEE Standard 1003.1.  POSIX(R) is a registered
+trademark of The IEEE.
+
+
+File: libm.info,  Node: acos,  Next: acosh,  Prev: version,  Up: Math
+
+1.3 `acos', `acosf'--arc cosine
+===============================
+
+*Synopsis*
+     #include <math.h>
+     double acos(double X);
+     float acosf(float X);
+   *Description*
+`acos' computes the inverse cosine (arc cosine) of the input value.
+Arguments to `acos' must be in the range -1 to 1.
+
+   `acosf' is identical to `acos', except that it performs its
+calculations on `floats'.
+
+*Returns*
+`acos' and `acosf' return values in radians, in the range of 0 to pi.
+
+If X is not between -1 and 1, the returned value is NaN (not a number)
+the global variable `errno' is set to `EDOM', and a `DOMAIN error'
+message is sent as standard error output.
+
+   You can modify error handling for these functions using `matherr'.
+
+
+File: libm.info,  Node: acosh,  Next: asin,  Prev: acos,  Up: Math
+
+1.4 `acosh', `acoshf'--inverse hyperbolic cosine
+================================================
+
+*Synopsis*
+     #include <math.h>
+     double acosh(double X);
+     float acoshf(float X);
+   *Description*
+`acosh' calculates the inverse hyperbolic cosine of X.  `acosh' is
+defined as
+      log(X + sqrt(X*X-1))
+
+   X must be a number greater than or equal to 1.
+
+   `acoshf' is identical, other than taking and returning floats.
+
+*Returns*
+`acosh' and `acoshf' return the calculated value.  If X less than 1,
+the return value is NaN and `errno' is set to `EDOM'.
+
+   You can change the error-handling behavior with the non-ANSI
+`matherr' function.
+
+*Portability*
+Neither `acosh' nor `acoshf' are ANSI C.  They are not recommended for
+portable programs.
+
+
+File: libm.info,  Node: asin,  Next: asinh,  Prev: acosh,  Up: Math
+
+1.5 `asin', `asinf'--arc sine
+=============================
+
+*Synopsis*
+     #include <math.h>
+     double asin(double X);
+     float asinf(float X);
+   *Description*
+`asin' computes the inverse sine (arc sine) of the argument X.
+Arguments to `asin' must be in the range -1 to 1.
+
+   `asinf' is identical to `asin', other than taking and returning
+floats.
+
+   You can modify error handling for these routines using `matherr'.
+
+*Returns*
+`asin' returns values in radians, in the range of -pi/2 to pi/2.
+
+If X is not in the range -1 to 1, `asin' and `asinf' return NaN (not a
+number), set the global variable `errno' to `EDOM', and issue a `DOMAIN
+error' message.
+
+   You can change this error treatment using `matherr'.
+
+
+File: libm.info,  Node: asinh,  Next: atan,  Prev: asin,  Up: Math
+
+1.6 `asinh', `asinhf'--inverse hyperbolic sine
+==============================================
+
+*Synopsis*
+     #include <math.h>
+     double asinh(double X);
+     float asinhf(float X);
+   *Description*
+`asinh' calculates the inverse hyperbolic sine of X.  `asinh' is
+defined as
+      sgn(X) * log(abs(X) + sqrt(1+X*X))
+
+   `asinhf' is identical, other than taking and returning floats.
+
+*Returns*
+`asinh' and `asinhf' return the calculated value.
+
+*Portability*
+Neither `asinh' nor `asinhf' are ANSI C.
+
+
+File: libm.info,  Node: atan,  Next: atan2,  Prev: asinh,  Up: Math
+
+1.7 `atan', `atanf'--arc tangent
+================================
+
+*Synopsis*
+     #include <math.h>
+     double atan(double X);
+     float atanf(float X);
+   *Description*
+`atan' computes the inverse tangent (arc tangent) of the input value.
+
+   `atanf' is identical to `atan', save that it operates on `floats'.
+
+*Returns*
+`atan' returns a value in radians, in the range of -pi/2 to pi/2.
+
+*Portability*
+`atan' is ANSI C.  `atanf' is an extension.
+
+
+File: libm.info,  Node: atan2,  Next: atanh,  Prev: atan,  Up: Math
+
+1.8 `atan2', `atan2f'--arc tangent of y/x
+=========================================
+
+*Synopsis*
+     #include <math.h>
+     double atan2(double Y,double X);
+     float atan2f(float Y,float X);
+   *Description*
+`atan2' computes the inverse tangent (arc tangent) of Y/X.  `atan2'
+produces the correct result even for angles near pi/2 or -pi/2 (that
+is, when X is near 0).
+
+   `atan2f' is identical to `atan2', save that it takes and returns
+`float'.
+
+*Returns*
+`atan2' and `atan2f' return a value in radians, in the range of -pi to
+pi.
+
+   You can modify error handling for these functions using `matherr'.
+
+*Portability*
+`atan2' is ANSI C.  `atan2f' is an extension.
+
+
+File: libm.info,  Node: atanh,  Next: jN,  Prev: atan2,  Up: Math
+
+1.9 `atanh', `atanhf'--inverse hyperbolic tangent
+=================================================
+
+*Synopsis*
+     #include <math.h>
+     double atanh(double X);
+     float atanhf(float X);
+   *Description*
+`atanh' calculates the inverse hyperbolic tangent of X.
+
+   `atanhf' is identical, other than taking and returning `float'
+values.
+
+*Returns*
+`atanh' and `atanhf' return the calculated value.
+
+   If
+     X|
+   is greater than 1, the global `errno' is set to `EDOM' and the
+result is a NaN.  A `DOMAIN error' is reported.
+
+   If
+     X|
+   is 1, the global `errno' is set to `EDOM'; and the result is
+infinity with the same sign as `x'.  A `SING error' is reported.
+
+   You can modify the error handling for these routines using `matherr'.
+
+*Portability*
+Neither `atanh' nor `atanhf' are ANSI C.
+
+
+File: libm.info,  Node: jN,  Next: cbrt,  Prev: atanh,  Up: Math
+
+1.10 `jN', `jNf', `yN', `yNf'--Bessel functions
+===============================================
+
+*Synopsis*
+     #include <math.h>
+     double j0(double X);
+     float j0f(float X);
+     double j1(double X);
+     float j1f(float X);
+     double jn(int N, double X);
+     float jnf(int N, float X);
+     double y0(double X);
+     float y0f(float X);
+     double y1(double X);
+     float y1f(float X);
+     double yn(int N, double X);
+     float ynf(int N, float X);
+   *Description*
+The Bessel functions are a family of functions that solve the
+differential equation
+       2               2    2
+      x  y'' + xy' + (x  - p )y  = 0
+   These functions have many applications in engineering and physics.
+
+   `jn' calculates the Bessel function of the first kind of order N.
+`j0' and `j1' are special cases for order 0 and order 1 respectively.
+
+   Similarly, `yn' calculates the Bessel function of the second kind of
+order N, and `y0' and `y1' are special cases for order 0 and 1.
+
+   `jnf', `j0f', `j1f', `ynf', `y0f', and `y1f' perform the same
+calculations, but on `float' rather than `double' values.
+
+*Returns*
+The value of each Bessel function at X is returned.
+
+*Portability*
+None of the Bessel functions are in ANSI C.
+
+
+File: libm.info,  Node: cbrt,  Next: copysign,  Prev: jN,  Up: Math
+
+1.11 `cbrt', `cbrtf'--cube root
+===============================
+
+*Synopsis*
+     #include <math.h>
+     double cbrt(double X);
+     float  cbrtf(float X);
+   *Description*
+`cbrt' computes the cube root of the argument.
+
+*Returns*
+The cube root is returned.
+
+*Portability*
+`cbrt' is in System V release 4.  `cbrtf' is an extension.
+
+
+File: libm.info,  Node: copysign,  Next: cosh,  Prev: cbrt,  Up: Math
+
+1.12 `copysign', `copysignf'--sign of Y, magnitude of X
+=======================================================
+
+*Synopsis*
+     #include <math.h>
+     double copysign (double X, double Y);
+     float copysignf (float X, float Y);
+   *Description*
+`copysign' constructs a number with the magnitude (absolute value) of
+its first argument, X, and the sign of its second argument, Y.
+
+   `copysignf' does the same thing; the two functions differ only in
+the type of their arguments and result.
+
+*Returns*
+`copysign' returns a `double' with the magnitude of X and the sign of Y.
+`copysignf' returns a `float' with the magnitude of X and the sign of Y.
+
+*Portability*
+`copysign' is not required by either ANSI C or the System V Interface
+Definition (Issue 2).
+
+
+File: libm.info,  Node: cosh,  Next: erf,  Prev: copysign,  Up: Math
+
+1.13 `cosh', `coshf'--hyperbolic cosine
+=======================================
+
+*Synopsis*
+     #include <math.h>
+     double cosh(double X);
+     float coshf(float X)
+   *Description*
+`cosh' computes the hyperbolic cosine of the argument X.  `cosh(X)' is
+defined as
+      (exp(x) + exp(-x))/2
+
+   Angles are specified in radians.  `coshf' is identical, save that it
+takes and returns `float'.
+
+*Returns*
+The computed value is returned.  When the correct value would create an
+overflow,  `cosh' returns the value `HUGE_VAL' with the appropriate
+sign, and the global value `errno' is set to `ERANGE'.
+
+   You can modify error handling for these functions using the function
+`matherr'.
+
+*Portability*
+`cosh' is ANSI.  `coshf' is an extension.
+
+
+File: libm.info,  Node: erf,  Next: exp,  Prev: cosh,  Up: Math
+
+1.14 `erf', `erff', `erfc', `erfcf'--error function
+===================================================
+
+*Synopsis*
+     #include <math.h>
+     double erf(double X);
+     float erff(float X);
+     double erfc(double X);
+     float erfcf(float X);
+   *Description*
+`erf' calculates an approximation to the "error function", which
+estimates the probability that an observation will fall within X
+standard deviations of the mean (assuming a normal distribution).
+
+   `erfc' calculates the complementary probability; that is, `erfc(X)'
+is `1 - erf(X)'.  `erfc' is computed directly, so that you can use it
+to avoid the loss of precision that would result from subtracting large
+probabilities (on large X) from 1.
+
+   `erff' and `erfcf' differ from `erf' and `erfc' only in the argument
+and result types.
+
+*Returns*
+For positive arguments, `erf' and all its variants return a
+probability--a number between 0 and 1.
+
+*Portability*
+None of the variants of `erf' are ANSI C.
+
+
+File: libm.info,  Node: exp,  Next: exp2,  Prev: erf,  Up: Math
+
+1.15 `exp', `expf'--exponential
+===============================
+
+*Synopsis*
+     #include <math.h>
+     double exp(double X);
+     float expf(float X);
+   *Description*
+`exp' and `expf' calculate the exponential of X, that is, e raised to
+the power X (where e is the base of the natural system of logarithms,
+approximately 2.71828).
+
+   You can use the (non-ANSI) function `matherr' to specify error
+handling for these functions.
+
+*Returns*
+On success, `exp' and `expf' return the calculated value.  If the
+result underflows, the returned value is `0'.  If the result overflows,
+the returned value is `HUGE_VAL'.  In either case, `errno' is set to
+`ERANGE'.
+
+*Portability*
+`exp' is ANSI C.  `expf' is an extension.
+
+
+File: libm.info,  Node: exp2,  Next: expm1,  Prev: exp,  Up: Math
+
+1.16 `exp2', `exp2f'-exponential, base 2
+========================================
+
+*Synopsis*
+     #include <math.h>
+     double exp2(double X);
+     float exp2f(float X);
+   *Description*
+`exp2' and `exp2f' calculate 2 ^ X, that is, 2 raised to the power X.
+
+   You can use the (non-ANSI) function `matherr' to specify error
+handling for these functions.
+
+*Returns*
+On success, `exp2' and `exp2f' return the calculated value.  If the
+result underflows, the returned value is `0'.  If the result overflows,
+the returned value is `HUGE_VAL'.  In either case, `errno' is set to
+`ERANGE'.
+
+*Portability*
+ANSI C, POSIX.
+
+
+File: libm.info,  Node: expm1,  Next: fabs,  Prev: exp2,  Up: Math
+
+1.17 `expm1', `expm1f'--exponential minus 1
+===========================================
+
+*Synopsis*
+     #include <math.h>
+     double expm1(double X);
+     float expm1f(float X);
+   *Description*
+`expm1' and `expm1f' calculate the exponential of X and subtract 1,
+that is, e raised to the power X minus 1 (where e is the base of the
+natural system of logarithms, approximately 2.71828).  The result is
+accurate even for small values of X, where using `exp(X)-1' would lose
+many significant digits.
+
+*Returns*
+e raised to the power X, minus 1.
+
+*Portability*
+Neither `expm1' nor `expm1f' is required by ANSI C or by the System V
+Interface Definition (Issue 2).
+
+
+File: libm.info,  Node: fabs,  Next: fdim,  Prev: expm1,  Up: Math
+
+1.18 `fabs', `fabsf'--absolute value (magnitude)
+================================================
+
+*Synopsis*
+     #include <math.h>
+     double fabs(double X);
+     float fabsf(float X);
+   *Description*
+`fabs' and `fabsf' calculate the absolute value (magnitude) of the
+argument X, by direct manipulation of the bit representation of X.
+
+*Returns*
+The calculated value is returned.  No errors are detected.
+
+*Portability*
+`fabs' is ANSI.  `fabsf' is an extension.
+
+
+File: libm.info,  Node: fdim,  Next: floor,  Prev: fabs,  Up: Math
+
+1.19 `fdim', `fdimf'-positive difference
+========================================
+
+*Synopsis*
+     #include <math.h>
+     double fdim(double X, double Y);
+     float fdimf(float X, float Y);
+   *Description*
+The `fdim' functions determine the positive difference between their
+arguments, returning:
+     	X - Y	if X > Y, or
+
+     	+0	if X <= Y, or
+
+     	NAN	if either argument is NAN.
+   A range error may occur.
+
+*Returns*
+The `fdim' functions return the positive difference value.
+
+*Portability*
+ANSI C, POSIX.
+
+
+File: libm.info,  Node: floor,  Next: fma,  Prev: fdim,  Up: Math
+
+1.20 `floor', `floorf', `ceil', `ceilf'--floor and ceiling
+==========================================================
+
+*Synopsis*
+     #include <math.h>
+     double floor(double X);
+     float floorf(float X);
+     double ceil(double X);
+     float ceilf(float X);
+   *Description*
+`floor' and `floorf' find the nearest integer less than or equal to X.
+`ceil' and `ceilf' find the nearest integer greater than or equal to X.
+
+*Returns*
+`floor' and `ceil' return the integer result as a double.  `floorf' and
+`ceilf' return the integer result as a float.
+
+*Portability*
+`floor' and `ceil' are ANSI.  `floorf' and `ceilf' are extensions.
+
+
+File: libm.info,  Node: fma,  Next: fmax,  Prev: floor,  Up: Math
+
+1.21 `fma', `fmaf'-floating multiply add
+========================================
+
+*Synopsis*
+     #include <math.h>
+     double fma(double X, double Y, double Z);
+     float fmaf(float X, float Y, float Z);
+   *Description*
+The `fma' functions compute (X * Y) + Z, rounded as one ternary
+operation:  they compute the value (as if) to infinite precision and
+round once to the result format, according to the rounding mode
+characterized by the value of FLT_ROUNDS.  That is, they are supposed
+to do this:  see below.
+
+*Returns*
+The `fma' functions return (X * Y) + Z, rounded as one ternary
+operation.
+
+*Bugs*
+This implementation does not provide the function that it should, purely
+returning "(X * Y) + Z;" with no attempt at all to provide the
+simulated infinite precision intermediates which are required.  DO NOT
+USE THEM.
+
+   If double has enough more precision than float, then `fmaf' should
+provide the expected numeric results, as it does use double for the
+calculation.  But since this is not the case for all platforms, this
+manual cannot determine if it is so for your case.
+
+*Portability*
+ANSI C, POSIX.
+
+
+File: libm.info,  Node: fmax,  Next: fmin,  Prev: fma,  Up: Math
+
+1.22 `fmax', `fmaxf'-maximum
+============================
+
+*Synopsis*
+     #include <math.h>
+     double fmax(double X, double Y);
+     float fmaxf(float X, float Y);
+   *Description*
+The `fmax' functions determine the maximum numeric value of their
+arguments.  NaN arguments are treated as missing data:  if one argument
+is a NaN and the other numeric, then the `fmax' functions choose the
+numeric value.
+
+*Returns*
+The `fmax' functions return the maximum numeric value of their
+arguments.
+
+*Portability*
+ANSI C, POSIX.
+
+
+File: libm.info,  Node: fmin,  Next: fmod,  Prev: fmax,  Up: Math
+
+1.23 `fmin', `fminf'-minimum
+============================
+
+*Synopsis*
+     #include <math.h>
+     double fmin(double X, double Y);
+     float fminf(float X, float Y);
+   *Description*
+The `fmin' functions determine the minimum numeric value of their
+arguments.  NaN arguments are treated as missing data:  if one argument
+is a NaN and the other numeric, then the `fmin' functions choose the
+numeric value.
+
+*Returns*
+The `fmin' functions return the minimum numeric value of their
+arguments.
+
+*Portability*
+ANSI C, POSIX.
+
+
+File: libm.info,  Node: fmod,  Next: fpclassify,  Prev: fmin,  Up: Math
+
+1.24 `fmod', `fmodf'--floating-point remainder (modulo)
+=======================================================
+
+*Synopsis*
+     #include <math.h>
+     double fmod(double X, double Y)
+     float fmodf(float X, float Y)
+   *Description*
+The `fmod' and `fmodf' functions compute the floating-point remainder
+of X/Y (X modulo Y).
+
+*Returns*
+The `fmod' function returns the value X-I*Y, for the largest integer I
+such that, if Y is nonzero, the result has the same sign as X and
+magnitude less than the magnitude of Y.
+
+   `fmod(X,0)' returns NaN, and sets `errno' to `EDOM'.
+
+   You can modify error treatment for these functions using `matherr'.
+
+*Portability*
+`fmod' is ANSI C. `fmodf' is an extension.
+
+
+File: libm.info,  Node: frexp,  Next: gamma,  Prev: fpclassify,  Up: Math
+
+1.25 `frexp', `frexpf'--split floating-point number
+===================================================
+
+*Synopsis*
+     #include <math.h>
+     double frexp(double VAL, int *EXP);
+     float frexpf(float VAL, int *EXP);
+   *Description*
+All nonzero, normal numbers can be described as M * 2**P.  `frexp'
+represents the double VAL as a mantissa M and a power of two P. The
+resulting mantissa will always be greater than or equal to `0.5', and
+less than `1.0' (as long as VAL is nonzero). The power of two will be
+stored in `*'EXP.
+
+   M and P are calculated so that VAL is M times `2' to the power P.
+
+   `frexpf' is identical, other than taking and returning floats rather
+than doubles.
+
+*Returns*
+`frexp' returns the mantissa M. If VAL is `0', infinity, or Nan,
+`frexp' will set `*'EXP to `0' and return VAL.
+
+*Portability*
+`frexp' is ANSI.  `frexpf' is an extension.
+
+
+File: libm.info,  Node: gamma,  Next: hypot,  Prev: frexp,  Up: Math
+
+1.26 `gamma', `gammaf', `lgamma', `lgammaf', `gamma_r', `gammaf_r', `lgamma_r', `lgammaf_r', `tgamma', and `tgammaf'-logarithmic and plain gamma functions
+==========================================================================================================================================================
+
+*Synopsis*
+     #include <math.h>
+     double gamma(double X);
+     float gammaf(float X);
+     double lgamma(double X);
+     float lgammaf(float X);
+     double gamma_r(double X, int *SIGNGAMP);
+     float gammaf_r(float X, int *SIGNGAMP);
+     double lgamma_r(double X, int *SIGNGAMP);
+     float lgammaf_r(float X, int *SIGNGAMP);
+     double tgamma(double X);
+     float tgammaf(float X);
+   *Description*
+`gamma' calculates the natural logarithm of the gamma function of X.
+The gamma function (`exp(gamma(X))') is a generalization of factorial,
+and retains the property that `exp(gamma(N))' is equivalent to
+`N*exp(gamma(N-1))'.  Accordingly, the results of the gamma function
+itself grow very quickly.  `gamma' is defined as the natural log of the
+gamma function, rather than the gamma function itself, to extend the
+useful range of results representable.
+
+   The sign of the result is returned in the global variable `signgam',
+which is declared in math.h.
+
+   `gammaf' performs the same calculation as `gamma', but uses and
+returns `float' values.
+
+   `lgamma' and `lgammaf' are alternate names for `gamma' and `gammaf'.
+The use of `lgamma' instead of `gamma' is a reminder that these
+functions compute the log of the gamma function, rather than the gamma
+function itself.
+
+   The functions `gamma_r', `gammaf_r', `lgamma_r', and `lgammaf_r' are
+just like `gamma', `gammaf', `lgamma', and `lgammaf', respectively, but
+take an additional argument.  This additional argument is a pointer to
+an integer.  This additional argument is used to return the sign of the
+result, and the global variable `signgam' is not used.  These functions
+may be used for reentrant calls (but they will still set the global
+variable `errno' if an error occurs).
+
+   `tgamma' and `tgammaf' are the "true gamma" functions, returning the
+gamma function of X-without a logarithm.  (They are apparently so named
+because of the prior existence of the old, poorly-named `gamma'
+functions which returned the log of gamma up through BSD 4.2.)
+
+*Returns*
+Normally, the computed result is returned.
+
+   When X is a nonpositive integer, `gamma' returns `HUGE_VAL' and
+`errno' is set to `EDOM'.  If the result overflows, `gamma' returns
+`HUGE_VAL' and `errno' is set to `ERANGE'.
+
+   You can modify this error treatment using `matherr'.
+
+*Portability*
+Neither `gamma' nor `gammaf' is ANSI C.  It is better not to use either
+of these; use `lgamma' or `tgamma' instead.
+`lgamma', `lgammaf', `tgamma', and `tgammaf' are nominally C standard
+in terms of the base return values, although the `matherr'
+error-handling is not standard, nor is the SIGNGAM global for `lgamma'.
+
+
+File: libm.info,  Node: hypot,  Next: ilogb,  Prev: gamma,  Up: Math
+
+1.27 `hypot', `hypotf'--distance from origin
+============================================
+
+*Synopsis*
+     #include <math.h>
+     double hypot(double X, double Y);
+     float hypotf(float X, float Y);
+   *Description*
+`hypot' calculates the Euclidean distance `sqrt(X*X + Y*Y)' between the
+origin (0,0) and a point represented by the Cartesian coordinates
+(X,Y).  `hypotf' differs only in the type of its arguments and result.
+
+*Returns*
+Normally, the distance value is returned.  On overflow, `hypot' returns
+`HUGE_VAL' and sets `errno' to `ERANGE'.
+
+   You can change the error treatment with `matherr'.
+
+*Portability*
+`hypot' and `hypotf' are not ANSI C.
+
+File: libm.info,  Node: ilogb,  Next: infinity,  Prev: hypot,  Up: Math
+
+1.28 `ilogb', `ilogbf'--get exponent of floating-point number
+=============================================================
+
+*Synopsis*
+     #include <math.h>
+     int ilogb(double VAL);
+     int ilogbf(float VAL);
+   *Description*
+All nonzero, normal numbers can be described as M * 2**P.  `ilogb' and
+`ilogbf' examine the argument VAL, and return P.  The functions `frexp'
+and `frexpf' are similar to `ilogb' and `ilogbf', but also return M.
+
+*Returns*
+`ilogb' and `ilogbf' return the power of two used to form the
+floating-point argument.  If VAL is `0', they return `FP_ILOGB0'.  If
+VAL is infinite, they return `INT_MAX'.  If VAL is NaN, they return
+`FP_ILOGBNAN'.  (`FP_ILOGB0' and `FP_ILOGBNAN' are defined in math.h,
+but in turn are defined as INT_MIN or INT_MAX from limits.h.  The value
+of FP_ILOGB0 may be either INT_MIN or -INT_MAX.  The value of
+FP_ILOGBNAN may be either INT_MAX or INT_MIN.)
+
+*Portability*
+C99, POSIX
+
+
+File: libm.info,  Node: infinity,  Next: isgreater,  Prev: ilogb,  Up: Math
+
+1.29 `infinity', `infinityf'-representation of infinity
+=======================================================
+
+*Synopsis*
+     #include <math.h>
+     double infinity(void);
+     float infinityf(void);
+   *Description*
+`infinity' and `infinityf' return the special number IEEE infinity in
+double- and single-precision arithmetic respectively.
+
+*Portability*
+`infinity' and `infinityf' are neither standard C nor POSIX.  C and
+POSIX require macros HUGE_VAL and HUGE_VALF to be defined in math.h,
+which Newlib defines to be infinities corresponding to these archaic
+infinity() and infinityf() functions in floating-point implementations
+which do have infinities.
+
+
+File: libm.info,  Node: isgreater,  Next: ldexp,  Prev: infinity,  Up: Math
+
+1.30 `isgreater', `isgreaterequal', `isless', `islessequal', `islessgreater', and `isunordered'-comparison macros
+=================================================================================================================
+
+*Synopsis*
+     #include <math.h>
+     int isgreater(real-floating X, real-floating Y);
+     int isgreaterequal(real-floating X, real-floating Y);
+     int isless(real-floating X, real-floating Y);
+     int islessequal(real-floating X, real-floating Y);
+     int islessgreater(real-floating X, real-floating Y);
+     int isunordered(real-floating X, real-floating Y);
+   *Description*
+`isgreater', `isgreaterequal', `isless', `islessequal',
+`islessgreater', and `isunordered' are macros defined for use in
+comparing floating-point numbers without raising any floating-point
+exceptions.
+
+   The relational operators (i.e. <, >, <=, and >=) support the usual
+mathematical relationships between numeric values.  For any ordered
+pair of numeric values exactly one of the relationships-less, greater,
+and equal-is true.  Relational operators may raise the "invalid"
+floating-point exception when argument values are NaNs.  For a NaN and
+a numeric value, or for two NaNs, just the unordered relationship is
+true (i.e., if one or both of the arguments a NaN, the relationship is
+called unordered).  The specified macros are quiet (non floating-point
+exception raising) versions of the relational operators, and other
+comparison macros that facilitate writing efficient code that accounts
+for NaNs without suffering the "invalid" floating-point exception.  In
+the synopses shown, "real-floating" indicates that the argument is an
+expression of real floating type.
+
+   Please note that saying that the macros do not raise floating-point
+exceptions, it is referring to the function that they are performing.
+It is certainly possible to give them an expression which causes an
+exception.  For example:
+`NaN < 1.0'
+     causes an "invalid" exception,
+
+`isless(NaN, 1.0)'
+     does not, and
+
+`isless(NaN*0., 1.0)'
+     causes an exception due to the "NaN*0.", but not from the
+     resultant reduced comparison of isless(NaN, 1.0).
+
+*Returns*
+No floating-point exceptions are raised for any of the macros.
+The `isgreater' macro returns the value of (x) > (y).
+The `isgreaterequal' macro returns the value of (x) >= (y).
+The `isless' macro returns the value of (x) < (y).
+The `islessequal' macro returns the value of (x) <= (y).
+The `islessgreater' macro returns the value of (x) < (y) || (x) > (y).
+The `isunordered' macro returns 1 if either of its arguments is NaN and
+0 otherwise.
+
+*Portability*
+C99, POSIX.
+
+
+File: libm.info,  Node: fpclassify,  Next: frexp,  Prev: fmod,  Up: Math
+
+1.31 `fpclassify', `isfinite', `isinf', `isnan', and `isnormal'-floating-point classification macros; `finite', `finitef', `isinf', `isinff', `isnan', `isnanf'-test for exceptional numbers
+============================================================================================================================================================================================
+
+*Synopsis*
+     [C99 standard macros:]
+     #include <math.h>
+     int fpclassify(real-floating X);
+     int isfinite(real-floating X);
+     int isinf(real-floating X);
+     int isnan(real-floating X);
+     int isnormal(real-floating X);
+
+     [Archaic SUSv2 functions:]
+     #include <ieeefp.h>
+     int isnan(double ARG);
+     int isinf(double ARG);
+     int finite(double ARG);
+     int isnanf(float ARG);
+     int isinff(float ARG);
+     int finitef(float ARG);
+   *Description*
+`fpclassify', `isfinite', `isinf', `isnan', and `isnormal' are macros
+defined for use in classifying floating-point numbers.  This is a help
+because of special "values" like NaN and infinities.  In the synopses
+shown, "real-floating" indicates that the argument is an expression of
+real floating type.  These function-like macros are C99 and
+POSIX-compliant, and should be used instead of the now-archaic SUSv2
+functions.
+
+   The `fpclassify' macro classifies its argument value as NaN,
+infinite, normal, subnormal, zero, or into another
+implementation-defined category.  First, an argument represented in a
+format wider than its semantic type is converted to its semantic type.
+Then classification is based on the type of the argument.  The
+`fpclassify' macro returns the value of the number classification macro
+appropriate to the value of its argument:
+
+`FP_INFINITE'
+     X is either plus or minus infinity;
+
+`FP_NAN'
+     X is "Not A Number" (plus or minus);
+
+`FP_NORMAL'
+     X is a "normal" number (i.e. is none of the other special forms);
+
+`FP_SUBNORMAL'
+     X is too small be stored as a regular normalized number (i.e. loss
+     of precision is likely); or
+
+`FP_ZERO'
+     X is 0 (either plus or minus).
+
+   The "`is'" set of macros provide a useful set of shorthand ways for
+classifying floating-point numbers, providing the following equivalent
+relations:
+
+``isfinite'(X)'
+     returns non-zero if X is finite.  (It is equivalent to
+     (`fpclassify'(X) != FP_INFINITE  &&  `fpclassify'(X) != FP_NAN).)
+
+``isinf'(X)'
+     returns non-zero if X is infinite.  (It is equivalent to
+     (`fpclassify'(X) == FP_INFINITE).)
+
+``isnan'(X)'
+     returns non-zero if X is NaN.  (It is equivalent to
+     (`fpclassify'(X) == FP_NAN).)
+
+``isnormal'(X)'
+     returns non-zero if X is normal.  (It is equivalent to
+     (`fpclassify'(X) == FP_NORMAL).)
+
+   The archaic SUSv2 functions provide information on the floating-point
+argument supplied.
+
+   There are five major number formats ("exponent" referring to the
+biased exponent in the binary-encoded number):
+`zero'
+     A number which contains all zero bits, excluding the sign bit.
+
+`subnormal'
+     A number with a zero exponent but a nonzero fraction.
+
+`normal'
+     A number with an exponent and a fraction.
+
+`infinity'
+     A number with an all 1's exponent and a zero fraction.
+
+`NAN'
+     A number with an all 1's exponent and a nonzero fraction.
+
+
+   `isnan' returns 1 if the argument is a nan. `isinf' returns 1 if the
+argument is infinity.  `finite' returns 1 if the argument is zero,
+subnormal or normal.  The `isnanf', `isinff' and `finitef' functions
+perform the same operations as their `isnan', `isinf' and `finite'
+counterparts, but on single-precision floating-point numbers.
+
+   It should be noted that the C99 standard dictates that `isnan' and
+`isinf' are macros that operate on multiple types of floating-point.
+The SUSv2 standard declares `isnan' as a function taking double.
+Newlib has decided to declare them both as macros in math.h and as
+functions in ieeefp.h to maintain backward compatibility.
+
+*Returns*
+The fpclassify macro returns the value corresponding to the appropriate
+FP_ macro.
+The isfinite macro returns nonzero if X is finite, else 0.
+The isinf macro returns nonzero if X is infinite, else 0.
+The isnan macro returns nonzero if X is an NaN, else 0.
+The isnormal macro returns nonzero if X has a normal value, else 0.
+
+*Portability*
+math.h macros are C99, POSIX.
+
+   ieeefp.h funtions are outdated and should be avoided.
+
+
+File: libm.info,  Node: ldexp,  Next: log,  Prev: isgreater,  Up: Math
+
+1.32 `ldexp', `ldexpf'--load exponent
+=====================================
+
+*Synopsis*
+     #include <math.h>
+     double ldexp(double VAL, int EXP);
+     float ldexpf(float VAL, int EXP);
+   *Description*
+`ldexp' calculates the value VAL times 2 to the power EXP.  `ldexpf' is
+identical, save that it takes and returns `float' rather than `double'
+values.
+
+*Returns*
+`ldexp' returns the calculated value.
+
+   Underflow and overflow both set `errno' to `ERANGE'.  On underflow,
+`ldexp' and `ldexpf' return 0.0.  On overflow, `ldexp' returns plus or
+minus `HUGE_VAL'.
+
+*Portability*
+`ldexp' is ANSI. `ldexpf' is an extension.
+
+
+File: libm.info,  Node: log,  Next: log10,  Prev: ldexp,  Up: Math
+
+1.33 `log', `logf'--natural logarithms
+======================================
+
+*Synopsis*
+     #include <math.h>
+     double log(double X);
+     float logf(float X);
+   *Description*
+Return the natural logarithm of X, that is, its logarithm base e (where
+e is the base of the natural system of logarithms, 2.71828...).  `log'
+and `logf' are identical save for the return and argument types.
+
+   You can use the (non-ANSI) function `matherr' to specify error
+handling for these functions.
+
+*Returns*
+Normally, returns the calculated value.  When X is zero, the returned
+value is `-HUGE_VAL' and `errno' is set to `ERANGE'.  When X is
+negative, the returned value is NaN (not a number) and `errno' is set
+to `EDOM'.  You can control the error behavior via `matherr'.
+
+*Portability*
+`log' is ANSI. `logf' is an extension.
+
+
+File: libm.info,  Node: log10,  Next: log1p,  Prev: log,  Up: Math
+
+1.34 `log10', `log10f'--base 10 logarithms
+==========================================
+
+*Synopsis*
+     #include <math.h>
+     double log10(double X);
+     float log10f(float X);
+   *Description*
+`log10' returns the base 10 logarithm of X.  It is implemented as
+`log(X) / log(10)'.
+
+   `log10f' is identical, save that it takes and returns `float' values.
+
+*Returns*
+`log10' and `log10f' return the calculated value.
+
+   See the description of `log' for information on errors.
+
+*Portability*
+`log10' is ANSI C.  `log10f' is an extension.
+
+
+File: libm.info,  Node: log1p,  Next: log2,  Prev: log10,  Up: Math
+
+1.35 `log1p', `log1pf'--log of `1 + X'
+======================================
+
+*Synopsis*
+     #include <math.h>
+     double log1p(double X);
+     float log1pf(float X);
+   *Description*
+`log1p' calculates the natural logarithm of `1+X'.  You can use `log1p'
+rather than ``log(1+X)'' for greater precision when X is very small.
+
+   `log1pf' calculates the same thing, but accepts and returns `float'
+values rather than `double'.
+
+*Returns*
+`log1p' returns a `double', the natural log of `1+X'.  `log1pf' returns
+a `float', the natural log of `1+X'.
+
+*Portability*
+Neither `log1p' nor `log1pf' is required by ANSI C or by the System V
+Interface Definition (Issue 2).
+
+
+File: libm.info,  Node: log2,  Next: logb,  Prev: log1p,  Up: Math
+
+1.36 `log2', `log2f'-base 2 logarithm
+=====================================
+
+*Synopsis*
+     #include <math.h>
+     double log2(double X);
+     float log2f(float X);
+   *Description*
+The `log2' functions compute the base-2 logarithm of X.  A domain error
+occurs if the argument is less than zero.  A range error occurs if the
+argument is zero.
+
+   The Newlib implementations are not full, intrinisic calculations, but
+rather are derivatives based on `log'.  (Accuracy might be slightly off
+from a direct calculation.)  In addition to functions, they are also
+implemented as macros defined in math.h:
+      #define log2(x) (log (x) / _M_LN2)
+      #define log2f(x) (logf (x) / (float) _M_LN2)
+   To use the functions instead, just undefine the macros first.
+
+   You can use the (non-ANSI) function `matherr' to specify error
+handling for these functions, indirectly through the respective `log'
+function.
+
+*Returns*
+The `log2' functions return `log base-2(X)' on success.  When X is
+zero, the returned value is `-HUGE_VAL' and `errno' is set to `ERANGE'.
+When X is negative, the returned value is NaN (not a number) and
+`errno' is set to `EDOM'.  You can control the error behavior via
+`matherr'.
+
+*Portability*
+C99, POSIX, System V Interface Definition (Issue 6).
+
+
+File: libm.info,  Node: logb,  Next: lrint,  Prev: log2,  Up: Math
+
+1.37 `logb', `logbf'-get exponent of floating-point number
+==========================================================
+
+*Synopsis*
+     #include <math.h>
+     double logb(double X);
+     float logbf(float X);
+   *Description*
+The `logb' functions extract the exponent of X, as a signed integer
+value in floating-point format.  If X is subnormal it is treated as
+though it were normalized; thus, for positive finite X, 1 <= (X *
+FLT_RADIX to the power (-logb(X))) < FLT_RADIX.  A domain error may
+occur if the argument is zero.  In this floating-point implementation,
+FLT_RADIX is 2.  Which also means that for finite X, `logb'(X) =
+`floor'(`log2'(`fabs'(X))).
+
+   All nonzero, normal numbers can be described as M * 2**P, where 1.0
+<= M < 2.0.  The `logb' functions examine the argument X, and return P.
+The `frexp' functions are similar to the `logb' functions, but
+returning M adjusted to the interval [.5, 1) or 0, and P+1.
+
+*Returns*
+When X is:
++inf or -inf, +inf is returned;
+NaN, NaN is returned;
+0, -inf is returned, and the divide-by-zero exception is raised;
+otherwise, the `logb' functions return the signed exponent of X.
+
+*Portability*
+ANSI C, POSIX
+
+*See Also*
+frexp, ilogb
+
+
+File: libm.info,  Node: lrint,  Next: lround,  Prev: logb,  Up: Math
+
+1.38 `lrint', `lrintf', `llrint', `llrintf'-round to integer
+============================================================
+
+*Synopsis*
+     #include <math.h>
+     long int lrint(double X);
+     long int lrintf(float X);
+     long long int llrint(double X);
+     long long int llrintf(float X);
+   *Description*
+The `lrint' and `llrint' functions round their argument to the nearest
+integer value, using the current rounding direction.  If the rounded
+value is outside the range of the return type, the numeric result is
+unspecified.  A range error may occur if the magnitude of X is too
+large.  The "inexact" floating-point exception is raised in
+implementations that support it when the result differs in value from
+the argument (i.e., when a fraction actually has been truncated).
+
+*Returns*
+X rounded to an integral value, using the current rounding direction.
+
+*See Also*
+`lround'
+
+*Portability*
+ANSI C, POSIX
+
+
+File: libm.info,  Node: lround,  Next: matherr,  Prev: lrint,  Up: Math
+
+1.39 `lround', `lroundf', `llround', `llroundf'-round to integer, to nearest
+============================================================================
+
+*Synopsis*
+     #include <math.h>
+     long int lround(double X);
+     long int lroundf(float X);
+     long long int llround(double X);
+     long long int llroundf(float X);
+   *Description*
+The `lround' and `llround' functions round their argument to the
+nearest integer value, rounding halfway cases away from zero, regardless
+of the current rounding direction.  If the rounded value is outside the
+range of the return type, the numeric result is unspecified (depending
+upon the floating-point implementation, not the library).  A range
+error may occur if the magnitude of x is too large.
+
+*Returns*
+X rounded to an integral value as an integer.
+
+*See Also*
+See the `round' functions for the return being the same floating-point
+type as the argument.  `lrint', `llrint'.
+
+*Portability*
+ANSI C, POSIX
+
+
+File: libm.info,  Node: matherr,  Next: modf,  Prev: lround,  Up: Math
+
+1.40 `matherr'--modifiable math error handler
+=============================================
+
+*Synopsis*
+     #include <math.h>
+     int matherr(struct exception *E);
+   *Description*
+`matherr' is called whenever a math library function generates an error.
+You can replace `matherr' by your own subroutine to customize error
+treatment.  The customized `matherr' must return 0 if it fails to
+resolve the error, and non-zero if the error is resolved.
+
+   When `matherr' returns a nonzero value, no error message is printed
+and the value of `errno' is not modified.  You can accomplish either or
+both of these things in your own `matherr' using the information passed
+in the structure `*E'.
+
+   This is the `exception' structure (defined in ``math.h''):
+     	struct exception {
+     	        int type;
+     	        char *name;
+     	        double arg1, arg2, retval;
+     		int err;
+     	};
+
+   The members of the exception structure have the following meanings:
+`type'
+     The type of mathematical error that occured; macros encoding error
+     types are also defined in ``math.h''.
+
+`name'
+     a pointer to a null-terminated string holding the name of the math
+     library function where the error occurred.
+
+`arg1, arg2'
+     The arguments which caused the error.
+
+`retval'
+     The error return value (what the calling function will return).
+
+`err'
+     If set to be non-zero, this is the new value assigned to `errno'.
+
+   The error types defined in ``math.h'' represent possible mathematical
+errors as follows:
+
+`DOMAIN'
+     An argument was not in the domain of the function; e.g.
+     `log(-1.0)'.
+
+`SING'
+     The requested calculation would result in a singularity; e.g.
+     `pow(0.0,-2.0)'
+
+`OVERFLOW'
+     A calculation would produce a result too large to represent; e.g.
+     `exp(1000.0)'.
+
+`UNDERFLOW'
+     A calculation would produce a result too small to represent; e.g.
+     `exp(-1000.0)'.
+
+`TLOSS'
+     Total loss of precision.  The result would have no significant
+     digits; e.g. `sin(10e70)'.
+
+`PLOSS'
+     Partial loss of precision.
+
+*Returns*
+The library definition for `matherr' returns `0' in all cases.
+
+   You can change the calling function's result from a customized
+`matherr' by modifying `e->retval', which propagates backs to the
+caller.
+
+   If `matherr' returns `0' (indicating that it was not able to resolve
+the error) the caller sets `errno' to an appropriate value, and prints
+an error message.
+
+*Portability*
+`matherr' is not ANSI C.
+
+
+File: libm.info,  Node: modf,  Next: nan,  Prev: matherr,  Up: Math
+
+1.41 `modf', `modff'--split fractional and integer parts
+========================================================
+
+*Synopsis*
+     #include <math.h>
+     double modf(double VAL, double *IPART);
+     float modff(float VAL, float *IPART);
+   *Description*
+`modf' splits the double VAL apart into an integer part and a
+fractional part, returning the fractional part and storing the integer
+part in `*IPART'.  No rounding whatsoever is done; the sum of the
+integer and fractional parts is guaranteed to be exactly  equal to VAL.
+ That is, if REALPART = modf(VAL, &INTPART); then ``REALPART+INTPART''
+is the same as VAL.  `modff' is identical, save that it takes and
+returns `float' rather than `double' values.
+
+*Returns*
+The fractional part is returned.  Each result has the same sign as the
+supplied argument VAL.
+
+*Portability*
+`modf' is ANSI C. `modff' is an extension.
+
+
+File: libm.info,  Node: nan,  Next: nearbyint,  Prev: modf,  Up: Math
+
+1.42 `nan', `nanf'--representation of "Not a Number"
+====================================================
+
+*Synopsis*
+     #include <math.h>
+     double nan(const char *);
+     float nanf(const char *);
+   *Description*
+`nan' and `nanf' return an IEEE NaN (Not a Number) in double- and
+single-precision arithmetic respectively.  The argument is currently
+disregarded.
+
+
+File: libm.info,  Node: nearbyint,  Next: nextafter,  Prev: nan,  Up: Math
+
+1.43 `nearbyint', `nearbyintf'-round to integer
+===============================================
+
+*Synopsis*
+     #include <math.h>
+     double nearbyint(double X);
+     float nearbyintf(float X);
+   *Description*
+The `nearbyint' functions round their argument to an integer value in
+floating-point format, using the current rounding direction and
+(supposedly) without raising the "inexact" floating-point exception.
+See the `rint' functions for the same function with the "inexact"
+floating-point exception being raised when appropriate.
+
+*Bugs*
+Newlib does not support the floating-point exception model, so that the
+floating-point exception control is not present and thereby what may be
+seen will be compiler and hardware dependent in this regard.  The
+Newlib `nearbyint' functions are identical to the `rint' functions with
+respect to the floating-point exception behavior, and will cause the
+"inexact" exception to be raised for most targets.
+
+*Returns*
+X rounded to an integral value, using the current rounding direction.
+
+*Portability*
+ANSI C, POSIX
+
+*See Also*
+`rint', `round'
+
+
+File: libm.info,  Node: nextafter,  Next: pow,  Prev: nearbyint,  Up: Math
+
+1.44 `nextafter', `nextafterf'--get next number
+===============================================
+
+*Synopsis*
+     #include <math.h>
+     double nextafter(double VAL, double DIR);
+     float nextafterf(float VAL, float DIR);
+   *Description*
+`nextafter' returns the double-precision floating-point number closest
+to VAL in the direction toward DIR.  `nextafterf' performs the same
+operation in single precision.  For example, `nextafter(0.0,1.0)'
+returns the smallest positive number which is representable in double
+precision.
+
+*Returns*
+Returns the next closest number to VAL in the direction toward DIR.
+
+*Portability*
+Neither `nextafter' nor `nextafterf' is required by ANSI C or by the
+System V Interface Definition (Issue 2).
+
+
+File: libm.info,  Node: pow,  Next: remainder,  Prev: nextafter,  Up: Math
+
+1.45 `pow', `powf'--x to the power y
+====================================
+
+*Synopsis*
+     #include <math.h>
+     double pow(double X, double Y);
+     float powf(float X, float Y);
+   *Description*
+`pow' and `powf' calculate X raised to the exponent Y.
+
+*Returns*
+On success, `pow' and `powf' return the value calculated.
+
+   When the argument values would produce overflow, `pow' returns
+`HUGE_VAL' and set `errno' to `ERANGE'.  If the argument X passed to
+`pow' or `powf' is a negative noninteger, and Y is also not an integer,
+then `errno' is set to `EDOM'.  If X and Y are both 0, then `pow' and
+`powf' return `1'.
+
+   You can modify error handling for these functions using `matherr'.
+
+*Portability*
+`pow' is ANSI C. `powf' is an extension.
+
+File: libm.info,  Node: remainder,  Next: remquo,  Prev: pow,  Up: Math
+
+1.46 `remainder', `remainderf'--round and  remainder
+====================================================
+
+*Synopsis*
+     #include <math.h>
+     double remainder(double X, double Y);
+     float remainderf(float X, float Y);
+   *Description*
+`remainder' and `remainderf' find the remainder of X/Y; this value is
+in the range -Y/2 .. +Y/2.
+
+*Returns*
+`remainder' returns the integer result as a double.
+
+*Portability*
+`remainder' is a System V release 4.  `remainderf' is an extension.
+
+
+File: libm.info,  Node: remquo,  Next: rint,  Prev: remainder,  Up: Math
+
+1.47 `remquo', `remquof'-remainder and part of quotient
+=======================================================
+
+*Synopsis*
+     #include <math.h>
+     double remquo(double X, double Y, int *QUO);
+     float remquof(float X, float Y, int *QUO);
+   *Description*
+The `remquo' functions compute the same remainder as the `remainder'
+functions; this value is in the range -Y/2 ... +Y/2.  In the object
+pointed to by `quo' they store a value whose sign is the sign of `x'/`y'
+and whose magnitude is congruent modulo 2**n to the magnitude of the
+integral quotient of `x'/`y'.  (That is, `quo' is given the n lsbs of
+the quotient, not counting the sign.)  This implementation uses n=31 if
+int is 32 bits or more, otherwise, n is 1 less than the width of int.
+
+   For example:
+     	remquo(-29.0, 3.0, &QUO)
+   returns -1.0 and sets QUO=10, and
+     	remquo(-98307.0, 3.0, &QUO)
+   returns -0.0 and sets QUO=-32769, although for 16-bit int, QUO=-1.
+In the latter case, the actual quotient of -(32769=0x8001) is reduced
+to -1 because of the 15-bit limitation for the quotient.
+
+*Returns*
+When either argument is NaN, NaN is returned.  If Y is 0 or X is
+infinite (and neither is NaN), a domain error occurs (i.e. the "invalid"
+floating point exception is raised or errno is set to EDOM), and NaN is
+returned.  Otherwise, the `remquo' functions return X REM Y.
+
+*Bugs*
+IEEE754-2008 calls for `remquo'(subnormal, inf) to cause the "underflow"
+floating-point exception.  This implementation does not.
+
+*Portability*
+C99, POSIX.
+
+
+File: libm.info,  Node: rint,  Next: round,  Prev: remquo,  Up: Math
+
+1.48 `rint', `rintf'-round to integer
+=====================================
+
+*Synopsis*
+     #include <math.h>
+     double rint(double X);
+     float rintf(float X);
+   *Description*
+The `rint' functions round their argument to an integer value in
+floating-point format, using the current rounding direction.  They
+raise the "inexact" floating-point exception if the result differs in
+value from the argument.  See the `nearbyint' functions for the same
+function with the "inexact" floating-point exception never being
+raised.  Newlib does not directly support floating-point exceptions.
+The `rint' functions are written so that the "inexact" exception is
+raised in hardware implementations that support it, even though Newlib
+does not provide access.
+
+*Returns*
+X rounded to an integral value, using the current rounding direction.
+
+*Portability*
+ANSI C, POSIX
+
+*See Also*
+`nearbyint', `round'
+
+
+File: libm.info,  Node: round,  Next: scalbn,  Prev: rint,  Up: Math
+
+1.49 `round', `roundf'-round to integer, to nearest
+===================================================
+
+*Synopsis*
+     #include <math.h>
+     double round(double X);
+     float roundf(float X);
+   *Description*
+The `round' functions round their argument to the nearest integer value
+in floating-point format, rounding halfway cases away from zero,
+regardless of the current rounding direction.  (While the "inexact"
+floating-point exception behavior is unspecified by the C standard, the
+`round' functions are written so that "inexact" is not raised if the
+result does not equal the argument, which behavior is as recommended by
+IEEE 754 for its related functions.)
+
+*Returns*
+X rounded to an integral value.
+
+*Portability*
+ANSI C, POSIX
+
+*See Also*
+`nearbyint', `rint'
+
+
+File: libm.info,  Node: scalbn,  Next: signbit,  Prev: round,  Up: Math
+
+1.50 `scalbn', `scalbnf', `scalbln', `scalblnf'-scale by power of FLT_RADIX (=2)
+================================================================================
+
+*Synopsis*
+     #include <math.h>
+     double scalbn(double X, int N);
+     float scalbnf(float X, int N);
+     double scalbln(double X, long int N);
+     float scalblnf(float X, long int N);
+   *Description*
+The `scalbn' and `scalbln' functions compute X times FLT_RADIX to the
+power N.  efficiently.  The result is computed by manipulating the
+exponent, rather than by actually performing an exponentiation or
+multiplication.  In this floating-point implementation FLT_RADIX=2,
+which makes the `scalbn' functions equivalent to the `ldexp' functions.
+
+*Returns*
+X times 2 to the power N.  A range error may occur.
+
+*Portability*
+ANSI C, POSIX
+
+*See Also*
+`ldexp'
+
+
+File: libm.info,  Node: signbit,  Next: sin,  Prev: scalbn,  Up: Math
+
+1.51 `signbit'-Does floating-point number have negative sign?
+=============================================================
+
+*Synopsis*
+     #include <math.h>
+     int signbit(real-floating X);
+   *Description*
+The `signbit' macro determines whether the sign of its argument value is
+negative.  The macro reports the sign of all values, including
+infinities, zeros, and NaNs.  If zero is unsigned, it is treated as
+positive.  As shown in the synopsis, the argument is "real-floating,"
+meaning that any of the real floating-point types (float, double, etc.)
+may be given to it.
+
+   Note that because of the possibilities of signed 0 and NaNs, the
+expression "X < 0.0" does not give the same result as `signbit' in all
+cases.
+
+*Returns*
+The `signbit' macro returns a nonzero value if and only if the sign of
+its argument value is negative.
+
+*Portability*
+C99, POSIX.
+
+
+File: libm.info,  Node: sin,  Next: sinh,  Prev: signbit,  Up: Math
+
+1.52 `sin', `sinf', `cos', `cosf'--sine or cosine
+=================================================
+
+*Synopsis*
+     #include <math.h>
+     double sin(double X);
+     float  sinf(float X);
+     double cos(double X);
+     float cosf(float X);
+   *Description*
+`sin' and `cos' compute (respectively) the sine and cosine of the
+argument X.  Angles are specified in radians.
+
+   `sinf' and `cosf' are identical, save that they take and return
+`float' values.
+
+*Returns*
+The sine or cosine of X is returned.
+
+*Portability*
+`sin' and `cos' are ANSI C.  `sinf' and `cosf' are extensions.
+
+
+File: libm.info,  Node: sinh,  Next: sqrt,  Prev: sin,  Up: Math
+
+1.53 `sinh', `sinhf'--hyperbolic sine
+=====================================
+
+*Synopsis*
+     #include <math.h>
+     double sinh(double X);
+     float  sinhf(float X);
+   *Description*
+`sinh' computes the hyperbolic sine of the argument X.  Angles are
+specified in radians.   `sinh'(X) is defined as
+      (exp(X) - exp(-X))/2
+
+   `sinhf' is identical, save that it takes and returns `float' values.
+
+*Returns*
+The hyperbolic sine of X is returned.
+
+   When the correct result is too large to be representable (an
+overflow),  `sinh' returns `HUGE_VAL' with the appropriate sign, and
+sets the global value `errno' to `ERANGE'.
+
+   You can modify error handling for these functions with `matherr'.
+
+*Portability*
+`sinh' is ANSI C.  `sinhf' is an extension.
+
+
+File: libm.info,  Node: sqrt,  Next: tan,  Prev: sinh,  Up: Math
+
+1.54 `sqrt', `sqrtf'--positive square root
+==========================================
+
+*Synopsis*
+     #include <math.h>
+     double sqrt(double X);
+     float  sqrtf(float X);
+   *Description*
+`sqrt' computes the positive square root of the argument.  You can
+modify error handling for this function with `matherr'.
+
+*Returns*
+On success, the square root is returned. If X is real and positive,
+then the result is positive.  If X is real and negative, the global
+value `errno' is set to `EDOM' (domain error).
+
+*Portability*
+`sqrt' is ANSI C.  `sqrtf' is an extension.
+
+
+File: libm.info,  Node: tan,  Next: tanh,  Prev: sqrt,  Up: Math
+
+1.55 `tan', `tanf'--tangent
+===========================
+
+*Synopsis*
+     #include <math.h>
+     double tan(double X);
+     float tanf(float X);
+   *Description*
+`tan' computes the tangent of the argument X.  Angles are specified in
+radians.
+
+   `tanf' is identical, save that it takes and returns `float' values.
+
+*Returns*
+The tangent of X is returned.
+
+*Portability*
+`tan' is ANSI. `tanf' is an extension.
+
+
+File: libm.info,  Node: tanh,  Next: trunc,  Prev: tan,  Up: Math
+
+1.56 `tanh', `tanhf'--hyperbolic tangent
+========================================
+
+*Synopsis*
+     #include <math.h>
+     double tanh(double X);
+     float tanhf(float X);
+   *Description*
+`tanh' computes the hyperbolic tangent of the argument X.  Angles are
+specified in radians.
+
+   `tanh(X)' is defined as
+      sinh(X)/cosh(X)
+   `tanhf' is identical, save that it takes and returns `float' values.
+
+*Returns*
+The hyperbolic tangent of X is returned.
+
+*Portability*
+`tanh' is ANSI C.  `tanhf' is an extension.
+
+
+File: libm.info,  Node: trunc,  Prev: tanh,  Up: Math
+
+1.57 `trunc', `truncf'-round to integer, towards zero
+=====================================================
+
+*Synopsis*
+     #include <math.h>
+     double trunc(double X);
+     float truncf(float X);
+   *Description*
+The `trunc' functions round their argument to the integer value, in
+floating format, nearest to but no larger in magnitude than the
+argument, regardless of the current rounding direction.  (While the
+"inexact" floating-point exception behavior is unspecified by the C
+standard, the `trunc' functions are written so that "inexact" is not
+raised if the result does not equal the argument, which behavior is as
+recommended by IEEE 754 for its related functions.)
+
+*Returns*
+X truncated to an integral value.
+
+*Portability*
+ANSI C, POSIX
+
+
+File: libm.info,  Node: Complex,  Next: Reentrancy,  Prev: Math,  Up: Top
+
+2 Mathematical Complex Functions (`complex.h')
+**********************************************
+
+This chapter groups the complex mathematical functions.  The
+corresponding definitions and declarations are in `complex.h'.
+Functions and documentations are taken from NetBSD.
+
+* Menu:
+
+* cabs::	Complex absolute value
+* cacos::	Complex arc cosine
+* cacosh::	Complex arc hyperbolic cosine
+* carg::	Argument (also called phase angle)
+* casin::	Complex arc sine
+* casinh::	Complex arc hyperbolic sine
+* catan::	Complex arc tangent
+* catanh::	Complex arc hyperbolic tangent
+* ccos::	Complex cosine
+* ccosh::	Complex hyperbolic cosine
+* cexp::	Complex exponent
+* cimag::	Imaginary part
+* clog::	Complex natural (base e) logarithm
+* conj::	Complex conjugate
+* cpow::	Complex power function
+* cproj::	Compute a projection on the Riemann sphere
+* creal::	Real part
+* csin::	Complex sine
+* csinh::	Complex hyperbolic sine
+* csqrt::	Complex square root
+* ctan::	Complex tangent
+* ctanh::	Complex hyperbolic tangent
+
+
+File: libm.info,  Node: cabs,  Next: cacos,  Up: Complex
+
+2.1 `cabs', `cabsf'--complex absolute-value
+===========================================
+
+*Synopsis*
+     #include <complex.h>
+     double cabs(double complex Z);
+     float cabsf(float complex Z);
+   *Description*
+These functions compute compute the complex absolute value (also called
+norm, modulus, or magnitude) of Z.
+
+   `cabsf' is identical to `cabs', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The cabs functions return the complex absolute value.
+
+*Portability*
+`cabs' and `cabsf' are ISO C99
+
+
+File: libm.info,  Node: cacos,  Next: cacosh,  Prev: cabs,  Up: Complex
+
+2.2 `cacos', `cacosf'--complex arc cosine
+=========================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex cacos(double complex Z);
+     float complex cacosf(float complex Z);
+   *Description*
+These functions compute the complex arc cosine of Z, with branch cuts
+outside the interval [-1, +1] along the real axis.
+
+   `cacosf' is identical to `cacos', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex arc cosine value, in the range of a
+strip mathematically  unbounded  along the imaginary axis and in the
+interval [0, pi] along the real axis.
+
+*Portability*
+`cacos' and `cacosf' are ISO C99
+
+
+File: libm.info,  Node: cacosh,  Next: carg,  Prev: cacos,  Up: Complex
+
+2.3 `cacosh', `cacoshf'--complex arc hyperbolic cosine
+======================================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex cacosh(double complex Z);
+     float complex cacoshf(float complex Z);
+   *Description*
+These functions compute the complex arc hyperbolic cosine of Z, with a
+branch cut at values less than 1 along the real axis.
+
+   `cacoshf' is identical to `cacosh', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex arc hyperbolic cosine value, in the
+range of a half-strip of non-negative values along the real axis and in
+the interval [-i * pi, +i * pi] along the imaginary axis.
+
+*Portability*
+`cacosh' and `cacoshf' are ISO C99
+
+
+File: libm.info,  Node: carg,  Next: casin,  Prev: cacosh,  Up: Complex
+
+2.4 `carg', `cargf'--argument (phase angle)
+===========================================
+
+*Synopsis*
+     #include <complex.h>
+     double carg(double complex Z);
+     float cargf(float complex Z);
+   *Description*
+These functions compute the argument (also called phase angle) of Z,
+with a branch cut along the negative real axis.
+
+   `cargf' is identical to `carg', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The carg functions return the value of the argument in the interval
+[-pi, +pi]
+
+*Portability*
+`carg' and `cargf' are ISO C99
+
+
+File: libm.info,  Node: casin,  Next: casinh,  Prev: carg,  Up: Complex
+
+2.5 `casin', `casinf'--complex arc sine
+=======================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex casin(double complex Z);
+     float complex casinf(float complex Z);
+   *Description*
+These functions compute the complex arc sine of Z, with branch cuts
+outside the interval [-1, +1] along the real axis.
+
+   `casinf' is identical to `casin', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex arc sine value, in the range of a
+strip mathematically  unbounded  along the imaginary axis and in the
+interval [-pi/2, +pi/2] along the real axis.
+
+*Portability*
+`casin' and `casinf' are ISO C99
+
+
+File: libm.info,  Node: casinh,  Next: catan,  Prev: casin,  Up: Complex
+
+2.6 `casinh', `casinhf'--complex arc hyperbolic sine
+====================================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex casinh(double complex Z);
+     float complex casinhf(float complex Z);
+   *Description*
+These functions compute the complex arc hyperbolic sine of Z, with
+branch cuts outside the interval [-i, +i] along the imaginary axis.
+
+`casinhf' is identical to `casinh', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex arc hyperbolic sine value, in the
+range of a strip mathematically unbounded along the real axis and in
+the interval [-i*p/2, +i*p/2] along the imaginary axis.
+
+*Portability*
+`casinh' and `casinhf' are ISO C99
+
+
+File: libm.info,  Node: catan,  Next: catanh,  Prev: casinh,  Up: Complex
+
+2.7 `catan', `catanf'--complex arc tangent
+==========================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex catan(double complex Z);
+     float complex catanf(float complex Z);
+   *Description*
+These functions compute the complex arc tangent of Z, with branch cuts
+outside the interval [-i, +i] along the imaginary axis.
+
+`catanf' is identical to `catan', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex arc tangent value, in the range of a
+strip mathematically  unbounded  along the imaginary axis and in the
+interval [-pi/2, +pi/2] along the real axis.
+
+*Portability*
+`catan' and `catanf' are ISO C99
+
+
+File: libm.info,  Node: catanh,  Next: ccos,  Prev: catan,  Up: Complex
+
+2.8 `catanh', `catanhf'--complex arc hyperbolic tangent
+=======================================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex catanh(double complex Z);
+     float complex catanhf(float complex Z);
+   *Description*
+These functions compute the complex arc hyperbolic tan of Z, with
+branch cuts outside the interval [-1, +1] along the real axis.
+
+   `catanhf' is identical to `catanh', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex arc hyperbolic tangent value, in the
+range of a strip mathematically unbounded along the real axis and in
+the interval [-i*p/2, +i*p/2] along the imaginary axis.
+
+*Portability*
+`catanh' and `catanhf' are ISO C99
+
+
+File: libm.info,  Node: ccos,  Next: ccosh,  Prev: catanh,  Up: Complex
+
+2.9 `ccos', `ccosf'--complex cosine
+===================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex ccos(double complex Z);
+     float complex ccosf(float complex Z);
+   *Description*
+These functions compute the complex cosine of Z.
+
+   `ccosf' is identical to `ccos', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex cosine value.
+
+*Portability*
+`ccos' and `ccosf' are ISO C99
+
+
+File: libm.info,  Node: ccosh,  Next: cexp,  Prev: ccos,  Up: Complex
+
+2.10 `ccosh', `ccoshf'--complex hyperbolic cosine
+=================================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex ccosh(double complex Z);
+     float complex ccoshf(float complex Z);
+   *Description*
+These functions compute the complex hyperbolic cosine of Z.
+
+   `ccoshf' is identical to `ccosh', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex hyperbolic cosine value.
+
+*Portability*
+`ccosh' and `ccoshf' are ISO C99
+
+
+File: libm.info,  Node: cexp,  Next: cimag,  Prev: ccosh,  Up: Complex
+
+2.11 `cexp', `cexpf'--complex base-e exponential
+================================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex cexp(double complex Z);
+     float complex cexpf(float complex Z);
+   *Description*
+These functions compute  the complex base-E exponential of Z.
+
+   `cexpf' is identical to `cexp', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The cexp functions return the complex base-E exponential value.
+
+*Portability*
+`cexp' and `cexpf' are ISO C99
+
+
+File: libm.info,  Node: cimag,  Next: clog,  Prev: cexp,  Up: Complex
+
+2.12 `cimag', `cimagf'--imaginary part
+======================================
+
+*Synopsis*
+     #include <complex.h>
+     double cimag(double complex Z);
+     float cimagf(float complex Z);
+   *Description*
+These functions compute the imaginary part of Z.
+
+   `cimagf' is identical to `cimag', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The cimag functions return the imaginary part value (as a real).
+
+*Portability*
+`cimag' and `cimagf' are ISO C99
+
+
+File: libm.info,  Node: clog,  Next: conj,  Prev: cimag,  Up: Complex
+
+2.13 `clog', `clogf'--complex base-e logarithm
+==============================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex clog(double complex Z);
+     float complex clogf(float complex Z);
+   *Description*
+These functions compute the complex natural (base-E) logarithm of Z,
+with a branch cut along the negative real axis.
+
+   `clogf' is identical to `clog', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The clog functions return the complex natural logarithm value, in the
+range of a strip mathematically unbounded along the real axis and in
+the interval [-i*pi , +i*pi] along the imaginary axis.
+
+*Portability*
+`clog' and `clogf' are ISO C99
+
+
+File: libm.info,  Node: conj,  Next: cpow,  Prev: clog,  Up: Complex
+
+2.14 `conj', `conjf'--complex conjugate
+=======================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex conj(double complex Z);
+     float complex conjf(float complex Z);
+   *Description*
+These functions compute the complex conjugate of Z, by reversing the
+sign of its imaginary part.
+
+   `conjf' is identical to `conj', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The conj functions return the complex conjugate value.
+
+*Portability*
+`conj' and `conjf' are ISO C99
+
+
+File: libm.info,  Node: cpow,  Next: cproj,  Prev: conj,  Up: Complex
+
+2.15 `cpow', `cpowf'--complex power
+===================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex cpow(double complex X, double complex Y);
+     float complex cpowf(float complex X, float complex Y);
+   *Description*
+The cpow functions compute the complex power function x^y power, with a
+branch cut for the first parameter along the negative real axis.
+
+`cpowf' is identical to `cpow', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The cpow functions return the complex power function value.
+
+*Portability*
+`cpow' and `cpowf' are ISO C99
+
+
+File: libm.info,  Node: cproj,  Next: creal,  Prev: cpow,  Up: Complex
+
+2.16 `cproj', `cprojf'-- Riemann sphere projection
+==================================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex cproj(double complex Z);
+     float complex cprojf(float complex Z);
+   *Description*
+These functions compute a projection of Z onto the Riemann sphere: Z
+projects to Z except that all complex infinities (even those with one
+infinite part and one NaN part) project to positive infinity on the
+real axis. If Z has an infinite part, then `cproj'(Z) is equivalent to
+
+   INFINITY + I * copysign(0.0, cimag(z))
+
+   `cprojf' is identical to `cproj', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The cproj functions return the value of the projection onto the Riemann
+sphere.
+
+*Portability*
+`cproj' and `cprojf' are ISO C99
+
+
+File: libm.info,  Node: creal,  Next: csin,  Prev: cproj,  Up: Complex
+
+2.17 `creal', `crealf'--real part
+=================================
+
+*Synopsis*
+     #include <complex.h>
+     double creal(double complex Z);
+     float crealf(float complex Z);
+   *Description*
+These functions compute the real part of Z.
+
+   `crealf' is identical to `creal', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The creal functions return the real part value.
+
+*Portability*
+`creal' and `crealf' are ISO C99
+
+
+File: libm.info,  Node: csin,  Next: csinh,  Prev: creal,  Up: Complex
+
+2.18 `csin', `csinf'--complex sine
+==================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex csin(double complex Z);
+     float complex csinf(float complex Z);
+   *Description*
+These functions compute the complex sine of Z.
+
+   `csinf' is identical to `csin', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex sine value.
+
+*Portability*
+`csin' and `csinf' are ISO C99
+
+
+File: libm.info,  Node: csinh,  Next: csqrt,  Prev: csin,  Up: Complex
+
+2.19 `csinh', `csinhf'--complex hyperbolic sine
+===============================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex csinh(double complex Z);
+     float complex csinhf(float complex Z);
+   *Description*
+These functions compute the complex hyperbolic sine of Z.
+
+   `ccoshf' is identical to `ccosh', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex hyperbolic sine value.
+
+*Portability*
+`csinh' and `csinhf' are ISO C99
+
+
+File: libm.info,  Node: csqrt,  Next: ctan,  Prev: csinh,  Up: Complex
+
+2.20 `csqrt', `csqrtf'--complex square root
+===========================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex csqrt(double complex Z);
+     float complex csqrtf(float complex Z);
+   *Description*
+These functions compute the complex square root of Z, with a branch cut
+along the negative real axis.
+
+   `csqrtf' is identical to `csqrt', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+The csqrt functions return the complex square root value, in the range
+of the right halfplane (including the imaginary axis).
+
+*Portability*
+`csqrt' and `csqrtf' are ISO C99
+
+
+File: libm.info,  Node: ctan,  Next: ctanh,  Prev: csqrt,  Up: Complex
+
+2.21 `ctan', `ctanf'--complex tangent
+=====================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex ctan(double complex Z);
+     float complex ctanf(float complex Z);
+   *Description*
+These functions compute the complex tangent of Z.
+
+   `ctanf' is identical to `ctan', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex tangent value.
+
+*Portability*
+`ctan' and `ctanf' are ISO C99
+
+
+File: libm.info,  Node: ctanh,  Prev: ctan,  Up: Complex
+
+2.22 `ctanh', `ctanf'--complex hyperbolic tangent
+=================================================
+
+*Synopsis*
+     #include <complex.h>
+     double complex ctanh(double complex Z);
+     float complex ctanhf(float complex Z);
+   *Description*
+These functions compute the complex hyperbolic tangent of Z.
+
+   `ctanhf' is identical to `ctanh', except that it performs its
+calculations on `floats complex'.
+
+*Returns*
+These functions return the complex hyperbolic tangent value.
+
+*Portability*
+`ctanh' and `ctanhf' are ISO C99
+
+
+File: libm.info,  Node: Reentrancy,  Next: Long Double Functions,  Prev: Complex,  Up: Top
+
+3 Reentrancy Properties of `libm'
+*********************************
+
+When a libm function detects an exceptional case, `errno' may be set,
+the `matherr' function may be called, and a error message may be
+written to the standard error stream.  This behavior may not be
+reentrant.
+
+   With reentrant C libraries like the Red Hat newlib C library,
+`errno' is a macro which expands to the per-thread error value.  This
+makes it thread safe.
+
+   When the user provides his own `matherr' function it must be
+reentrant for the math library as a whole to be reentrant.
+
+   In normal debugged programs, there are usually no math subroutine
+errors--and therefore no assignments to `errno' and no `matherr' calls;
+in that situation, the math functions behave reentrantly.
+
+
+File: libm.info,  Node: Long Double Functions,  Next: Index,  Prev: Reentrancy,  Up: Top
+
+4 The long double function support of `libm'
+********************************************
+
+Currently, the full set of long double math functions is only provided
+on platforms where long double equals double.  For such platforms, the
+long double math functions are implemented as calls to the double
+versions.
+
+
+File: libm.info,  Node: Index,  Prev: Long Double Functions,  Up: Top
+
+Index
+*****
+
+ [index ]
+* Menu:
+
+* acos:                                  acos.                 (line  6)
+* acosf:                                 acos.                 (line  6)
+* acosh:                                 acosh.                (line  6)
+* acoshf:                                acosh.                (line  6)
+* asin:                                  asin.                 (line  6)
+* asinf:                                 asin.                 (line  6)
+* asinh:                                 asinh.                (line  6)
+* asinhf:                                asinh.                (line  6)
+* atan:                                  atan.                 (line  6)
+* atan2:                                 atan2.                (line  6)
+* atan2f:                                atan2.                (line  6)
+* atanf:                                 atan.                 (line  6)
+* atanh:                                 atanh.                (line  6)
+* atanhf:                                atanh.                (line  6)
+* cabs:                                  cabs.                 (line  6)
+* cabsf:                                 cabs.                 (line  6)
+* cacos:                                 cacos.                (line  6)
+* cacosf:                                cacos.                (line  6)
+* cacosh:                                cacosh.               (line  6)
+* cacoshf:                               cacosh.               (line  6)
+* carg:                                  carg.                 (line  6)
+* cargf:                                 carg.                 (line  6)
+* casin:                                 casin.                (line  6)
+* casinf:                                casin.                (line  6)
+* casinh:                                casinh.               (line  6)
+* casinhf:                               casinh.               (line  6)
+* catan:                                 catan.                (line  6)
+* catanf:                                catan.                (line  6)
+* catanh:                                catanh.               (line  6)
+* catanhf:                               catanh.               (line  6)
+* cbrt:                                  cbrt.                 (line  6)
+* cbrtf:                                 cbrt.                 (line  6)
+* ccos:                                  ccos.                 (line  6)
+* ccosf:                                 ccos.                 (line  6)
+* ccosh:                                 ccosh.                (line  6)
+* ccoshf:                                ccosh.                (line  6)
+* ceil:                                  floor.                (line  6)
+* ceilf:                                 floor.                (line  6)
+* cexp:                                  cexp.                 (line  6)
+* cexpf:                                 cexp.                 (line  6)
+* cimag:                                 cimag.                (line  6)
+* cimagf:                                cimag.                (line  6)
+* clog:                                  clog.                 (line  6)
+* clogf:                                 clog.                 (line  6)
+* conj:                                  conj.                 (line  6)
+* conjf:                                 conj.                 (line  6)
+* copysign:                              copysign.             (line  6)
+* copysignf:                             copysign.             (line  6)
+* cos:                                   sin.                  (line  6)
+* cosf:                                  sin.                  (line  6)
+* cpow:                                  cpow.                 (line  6)
+* cpowf:                                 cpow.                 (line  6)
+* cproj:                                 cproj.                (line  6)
+* cprojf:                                cproj.                (line  6)
+* creal:                                 creal.                (line  6)
+* crealf:                                creal.                (line  6)
+* csin:                                  csin.                 (line  6)
+* csinf:                                 csin.                 (line  6)
+* csinh:                                 csinh.                (line  6)
+* csinhf:                                csinh.                (line  6)
+* csqrt:                                 csqrt.                (line  6)
+* csqrtf:                                csqrt.                (line  6)
+* ctan:                                  ctan.                 (line  6)
+* ctanf:                                 ctan.                 (line  6)
+* ctanh:                                 ctanh.                (line  6)
+* ctanhf:                                ctanh.                (line  6)
+* erf:                                   erf.                  (line  6)
+* erfc:                                  erf.                  (line  6)
+* erfcf:                                 erf.                  (line  6)
+* erff:                                  erf.                  (line  6)
+* exp:                                   exp.                  (line  6)
+* exp2:                                  exp2.                 (line  6)
+* exp2f:                                 exp2.                 (line  6)
+* expf:                                  exp.                  (line  6)
+* expm1:                                 expm1.                (line  6)
+* expm1f:                                expm1.                (line  6)
+* fabs:                                  fabs.                 (line  6)
+* fabsf:                                 fabs.                 (line  6)
+* fdim:                                  fdim.                 (line  6)
+* fdimf:                                 fdim.                 (line  6)
+* finite:                                fpclassify.           (line  6)
+* finitef:                               fpclassify.           (line  6)
+* floor:                                 floor.                (line  6)
+* floorf:                                floor.                (line  6)
+* fma:                                   fma.                  (line  6)
+* fmaf:                                  fma.                  (line  6)
+* fmax:                                  fmax.                 (line  6)
+* fmaxf:                                 fmax.                 (line  6)
+* fmin:                                  fmin.                 (line  6)
+* fminf:                                 fmin.                 (line  6)
+* fmod:                                  fmod.                 (line  6)
+* fmodf:                                 fmod.                 (line  6)
+* fpclassify:                            fpclassify.           (line  6)
+* frexp:                                 frexp.                (line  6)
+* frexpf:                                frexp.                (line  6)
+* gamma:                                 gamma.                (line  6)
+* gamma_r:                               gamma.                (line  6)
+* gammaf:                                gamma.                (line  6)
+* gammaf_r:                              gamma.                (line  6)
+* hypot:                                 hypot.                (line  6)
+* hypotf:                                hypot.                (line  6)
+* ilogb:                                 ilogb.                (line  6)
+* ilogbf:                                ilogb.                (line  6)
+* infinity:                              infinity.             (line  6)
+* infinityf:                             infinity.             (line  6)
+* isfinite:                              fpclassify.           (line  6)
+* isgreater:                             isgreater.            (line  6)
+* isgreaterequal:                        isgreater.            (line  6)
+* isinf:                                 fpclassify.           (line  6)
+* isinff:                                fpclassify.           (line  6)
+* isless:                                isgreater.            (line  6)
+* islessequal:                           isgreater.            (line  6)
+* islessgreater:                         isgreater.            (line  6)
+* isnan:                                 fpclassify.           (line  6)
+* isnanf:                                fpclassify.           (line  6)
+* isnormal:                              fpclassify.           (line  6)
+* isunordered:                           isgreater.            (line  6)
+* j0:                                    jN.                   (line  6)
+* j0f:                                   jN.                   (line  6)
+* j1:                                    jN.                   (line  6)
+* j1f:                                   jN.                   (line  6)
+* jn:                                    jN.                   (line  6)
+* jnf:                                   jN.                   (line  6)
+* ldexp:                                 ldexp.                (line  6)
+* ldexpf:                                ldexp.                (line  6)
+* lgamma:                                gamma.                (line  6)
+* lgamma_r:                              gamma.                (line  6)
+* lgammaf:                               gamma.                (line  6)
+* lgammaf_r:                             gamma.                (line  6)
+* llrint:                                lrint.                (line  6)
+* llrintf:                               lrint.                (line  6)
+* llround:                               lround.               (line  6)
+* llroundf:                              lround.               (line  6)
+* log:                                   log.                  (line  6)
+* log10:                                 log10.                (line  6)
+* log10f:                                log10.                (line  6)
+* log1p:                                 log1p.                (line  6)
+* log1pf:                                log1p.                (line  6)
+* log2:                                  log2.                 (line  6)
+* log2f:                                 log2.                 (line  6)
+* logb:                                  logb.                 (line  6)
+* logbf:                                 logb.                 (line  6)
+* logf:                                  log.                  (line  6)
+* lrint:                                 lrint.                (line  6)
+* lrintf:                                lrint.                (line  6)
+* lround:                                lround.               (line  6)
+* lroundf:                               lround.               (line  6)
+* matherr:                               matherr.              (line  6)
+* matherr and reentrancy:                Reentrancy.           (line  6)
+* modf:                                  modf.                 (line  6)
+* modff:                                 modf.                 (line  6)
+* nan:                                   nan.                  (line  6)
+* nanf:                                  nan.                  (line  6)
+* nearbyint:                             nearbyint.            (line  6)
+* nearbyintf:                            nearbyint.            (line  6)
+* nextafter:                             nextafter.            (line  6)
+* nextafterf:                            nextafter.            (line  6)
+* OS stubs:                              Math.                 (line 19)
+* pow:                                   pow.                  (line  6)
+* powf:                                  pow.                  (line  6)
+* reentrancy:                            Reentrancy.           (line  6)
+* remainder:                             remainder.            (line  6)
+* remainderf:                            remainder.            (line  6)
+* remquo:                                remquo.               (line  6)
+* remquof:                               remquo.               (line  6)
+* rint:                                  rint.                 (line  6)
+* rintf:                                 rint.                 (line  6)
+* round:                                 round.                (line  6)
+* roundf:                                round.                (line  6)
+* scalbln:                               scalbn.               (line  6)
+* scalblnf:                              scalbn.               (line  6)
+* scalbn:                                scalbn.               (line  6)
+* scalbnf:                               scalbn.               (line  6)
+* signbit:                               signbit.              (line  6)
+* sin:                                   sin.                  (line  6)
+* sinf:                                  sin.                  (line  6)
+* sinh:                                  sinh.                 (line  6)
+* sinhf:                                 sinh.                 (line  6)
+* sqrt:                                  sqrt.                 (line  6)
+* sqrtf:                                 sqrt.                 (line  6)
+* stubs:                                 Math.                 (line 19)
+* support subroutines:                   Math.                 (line 19)
+* system calls:                          Math.                 (line 19)
+* tan:                                   tan.                  (line  6)
+* tanf:                                  tan.                  (line  6)
+* tanh:                                  tanh.                 (line  6)
+* tanhf:                                 tanh.                 (line  6)
+* tgamma:                                gamma.                (line  6)
+* tgammaf:                               gamma.                (line  6)
+* trunc:                                 trunc.                (line  6)
+* truncf:                                trunc.                (line  6)
+* y0:                                    jN.                   (line  6)
+* y0f:                                   jN.                   (line  6)
+* y1:                                    jN.                   (line  6)
+* y1f:                                   jN.                   (line  6)
+* yn:                                    jN.                   (line  6)
+* ynf:                                   jN.                   (line  6)
+
+
+
+Tag Table:
+Node: Top1315
+Node: Math1668
+Node: version4967
+Node: acos7488
+Node: acosh8274
+Node: asin9099
+Node: asinh9890
+Node: atan10465
+Node: atan210987
+Node: atanh11725
+Node: jN12599
+Node: cbrt13894
+Node: copysign14297
+Node: cosh15126
+Node: erf15941
+Node: exp16976
+Node: exp217759
+Node: expm118445
+Node: fabs19177
+Node: fdim19714
+Node: floor20299
+Node: fma21005
+Node: fmax22190
+Node: fmin22780
+Node: fmod23371
+Node: frexp24149
+Node: gamma25096
+Node: hypot28121
+Node: ilogb28851
+Node: infinity29859
+Node: isgreater30601
+Node: fpclassify33308
+Node: ldexp37764
+Node: log38465
+Node: log1039355
+Node: log1p39963
+Node: log240701
+Node: logb42036
+Node: lrint43293
+Node: lround44279
+Node: matherr45312
+Node: modf47867
+Node: nan48809
+Node: nearbyint49251
+Node: nextafter50416
+Node: pow51225
+Node: remainder52049
+Node: remquo52610
+Node: rint54203
+Node: round55171
+Node: scalbn56016
+Node: signbit56919
+Node: sin57858
+Node: sinh58511
+Node: sqrt59334
+Node: tan59973
+Node: tanh60450
+Node: trunc61034
+Node: Complex61843
+Node: cabs62921
+Node: cacos63512
+Node: cacosh64274
+Node: carg65095
+Node: casin65736
+Node: casinh66497
+Node: catan67315
+Node: catanh68092
+Node: ccos68915
+Node: ccosh69458
+Node: cexp70055
+Node: cimag70651
+Node: clog71204
+Node: conj71980
+Node: cpow72582
+Node: cproj73254
+Node: creal74135
+Node: csin74657
+Node: csinh75193
+Node: csqrt75783
+Node: ctan76477
+Node: ctanh77025
+Node: Reentrancy77611
+Node: Long Double Functions78467
+Node: Index78869
+
+End Tag Table

@@ -1,0 +1,7 @@
+#!/bin/sh
+source ./functions.sh
+test -f /examples/testsuite/test-tcpdump.input
+require [ $? -eq 0 ]
+assert strings -a -f /examples/testsuite test-tcpdump.input > $0.log
+grep -q test-tcpdump.input $0.log
+require [ $? -eq 0 ]

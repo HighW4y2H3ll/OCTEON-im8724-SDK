@@ -1,0 +1,12 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert touch $0.log
+assert chmod 777 $0.log
+require_good ls -l $0.log | grep -q rwxrwxrwx
+assert chmod 111 $0.log
+require_good ls -l $0.log | grep -q r--r--r--
+assert chmod +x $0.log
+require_good ls -l $0.log | grep -q rwxr-xr-x
+assert rm -f $0.log 

@@ -1,0 +1,24 @@
+#!/bin/sh
+
+#
+# The test requires a board with a DS1337 clock.  The ds1337 driver
+# must be disabled in the kernel so that the test program will have
+# access to the device via i2c-dev.
+#
+# That is, CONFIG_RTC_DRV_DS1307 must not be set.
+#
+
+source ./functions.sh
+
+have_rtc
+require_good
+
+test -x /sys/class/rtc/rtc0
+require_bad
+
+if [ ! -c /dev/i2c-0 ] ; then
+mknod /dev/i2c-0 c 89 0
+fi
+
+assert ./i2c-multi > $0.log
+assert grep -q "Success" $0.log

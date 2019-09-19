@@ -1,0 +1,26 @@
+#!/bin/sh
+
+source ./functions.sh
+
+# skip the test, doesn't have enough memory to run
+have_cn50xx
+require [ $? != 0 ]
+require test -f /usr/bin/gdb
+require test -f /usr/bin/gdbserver
+killall -9 gdbserver > /dev/null 2>&1
+killall -9 gdb > /dev/null 2>&1
+gdbserver :2020 /usr/bin/gdb </dev/null > /dev/null 2>&1 &
+assert cat > $0.commands <<EOF
+file /usr/bin/gdb
+target remote 127.0.0.1:2020
+break main
+continue
+backtrace
+quit
+y
+EOF
+assert gdb --command=$0.commands </dev/null > $0.log 2>&1
+assert grep -q "Breakpoint 1 at" $0.log
+assert grep -q "Breakpoint 1," $0.log
+assert grep -q "main ()" $0.log
+

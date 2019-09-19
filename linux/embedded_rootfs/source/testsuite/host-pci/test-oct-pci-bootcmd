@@ -1,0 +1,12 @@
+#!/bin/sh
+
+source ./functions.sh
+
+have_cavium_pci_device
+require_good
+
+OCTEON_REMOTE_DEBUG=1 oct-pci-csr ciu_fuse | grep -q BAR1
+require_good
+
+assert oct-pci-bootcmd "printenv" > /dev/null
+

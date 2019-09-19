@@ -1,0 +1,7 @@
+config CONFIG_octeon-debug-agent
+	bool "octeon-debug-agent"
+	depends OCTEON_UTILS
+	default y
+	help
+		Include Octeon debug agent
+

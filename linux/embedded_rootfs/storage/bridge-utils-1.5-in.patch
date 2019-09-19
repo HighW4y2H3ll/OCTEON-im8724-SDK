@@ -1,0 +1,10 @@
+--- libbridge/libbridge.h.orig	2013-10-03 14:42:30.401204750 -0700
++++ libbridge/libbridge.h	2013-10-03 14:41:44.001142259 -0700
+@@ -20,6 +20,7 @@
+ #define _LIBBRIDGE_H
+ 
+ #include <sys/socket.h>
++#include <netinet/in.h>
+ #include <linux/if.h>
+ #include <linux/if_bridge.h>
+ 

@@ -1,0 +1,146 @@
+Readme for oct-packet-io utility
+
+Overview:
+
+This program provides an interface to the packet input and output of the 
+Cavium Octeon Simulator.  Packets transfer into the simulator just like 
+they came from the actual Octeon ethernet hardware.  Packets may be stored 
+in tcpdump/pcap capture files or in Octeon specific text files.  Packets 
+can also be bridged from an existing host ethernet device into the 
+simulator.  
+
+Supported Options:
+
+ -o --octeon_log=file          Log all packets out of the simulator in the
+                               Octeon text format. "%d" will be replaced with
+                               the output port number
+ -t --tcpdump_log=file         Log all packets out of the simulator in tcpdump
+                               format. "%d" will be replaced with the output
+                               port number
+ -i --input=file               Read input from the specified Octeon text file
+                               and send it to the simulator.
+ -I --tcpdump_input=port:file  Read input from the specified tcpdump file and
+                               send it to the simulator.
+ -p --tcp_port=port            TCP port to use to connect to the simulator.
+                               Defaults to port 2000.
+ -b --bridge=port:interface    Bridge traffic received on a Linux interface
+                               to the supplied simulator port.
+ -c --strip_cycles[=cycles]    Strip the cycle count from Octeon logs, forcing 
+			       it to be cycles. This can be useful to allow 
+			       easy diffs with the original input.
+ --promiscuous                 Put the bridge interface in promiscuous mode.
+
+
+Note that the connection to the simulator will not work unless the
+OCTEON_MODEL environment variable is set to the same value it has for
+the simulator.
+
+Simulator Requirements:
+
+The Octeon simulator must be started with the option "-serve=<port>".  
+This enables oct-packet-io to interface with the simulator on the 
+specified TCP/IP port number.  The TCP/IP port number supplied to "-serve" 
+must be the same as the argument "--tcp_port" to oct-packet-io.  
+
+File Based Operation:
+
+Upon startup, oct-packet-io attempts to connect to a simulator on the 
+local host using the port specified by "--tcp_port" argument.  It will 
+continue to try until a successful connection is established.  Once the 
+connection is established all files specified with the "--input" and 
+"--tcpdump_input" are sent to the simulator in the command line order.  
+After the input files are sent oct-packet-io will continue to store all 
+packets from the simulator into the files specified by "--octeon_log" and 
+"--tcpdump_log".  When the simulator terminates the TCP/IP connection, 
+oct-packet-io will display some overall packet statistics and terminate.  
+The following table shows the possible output logging operations: 
+
+Logging Option			Output
+none				Packets received from the simulator are sent 
+				to <stdout> in the Octeon text file format. 
+				Status and error messages are sent to 
+				<stderr>. Standard unix piping can be used to 
+				control output.
+--octeon_log=out.log		Packets received from the simulator are written 
+				to "out.log" in the Octeon text file format. 
+				Status and error messages are sent to <stderr>. 
+--tcpdump_log=out.log		Packets received from the simulator are written 
+				to "out.log" in the tcpdump/pcap file format. 
+				Status and error messages are sent to <stderr>. 
+				Note that tcpdump/pcap files will lose the 
+				ethernet port number and cycle processing data.
+--octeon_log=port_%d.log	Packets received from the simulator are written 
+				to "port_%d.log" in the Octeon text file format. 
+				The "%d" is replaced with the Octeon simulator 
+				output ethernet port. This allows you to 
+				separate packets based on the ethernet port 
+				they originate from. Status and error messages 
+				are sent to <stderr>. 
+--tcpdump_log=port_%d.log	Packets received from the simulator are written 
+				to "port_%d.log" in the tcpdump/pcap file format. 
+				The "%d" is replaced with the Octeon simulator 
+				output ethernet port. This allows you to 
+				separate packets based on the ethernet port 
+				they originate from. Status and error messages 
+				are sent to <stderr>. 
+--strip_cycles=1		Sometimes it is more desirable for the output
+				to exactly match the input than have correct 
+				hardware cycle counts. This option can be used 
+				to force the cycle count in log files to the 
+				specified value. Output files can then be 
+				exactly match against input files using the 
+				unix "diff" utility.
+
+File Input:			
+
+The file input operations "-input" and "-tcpdump_input" may be specified 
+multiple times to send multiple files to the simulator. Each file will be sent 
+in command line order. Although files are sent sequentially, they can be sent 
+much faster than the simulator processes them. This allows each hardware port
+in the simulator to appear to receive data in parallel.
+
+Bridging:
+
+Optionally oct-packet-io can be used to bridge real network traffic
+between the Octeon simulator and a real Linux ethernet device.  In
+this mode the Octeon simulator appears to be another node on the
+network.  Although this can be useful for testing, the simulator runs
+much slower than real hardware.  It will not be able to keep up with
+high traffic loads. Protocols with short timeouts may fail due to the
+speed differences between the simulator and real hardware. Bridging
+requires that oct-packet-io be run with root privileges.  In this mode
+it may be helpful to also specify --promiscuous, to disable the packet
+ingress filtering of the real ethernet device.
+
+Examples:
+
+Log any packets from the simulator to the screen:
+
+	$ oct-packet-io --tcp_port=2000
+	
+Send a packet trace "in.log" in Octeon text file format to the simulator.  
+Log packets from the simulator into "out.log".  
+
+	$ oct-packet-io --tcp_port=2000 --octeon_log=out.log --input=in.log
+	
+Send a packet trace "in_1.log" in tcpdump/pcap file format to the 
+simulator using the simulated ethernet port 2 (Numbered from 0).  Log 
+packets from the simulator into "out_1.log" based on the port number.  Use 
+the short version of the options for less typing.  
+
+	$ oct-packet-io -p 2000 -t "out_%d.log" -I 1:in_1.log
+	
+Send two Octeon files to the simulator (in1.oct, in2.oct) and two tcpdump/pcap
+files (in1.pcap, in2.pcap). Record the output of the simulator in both Octeon 
+and tcpdump/pcap format. Divide output by port number and force the cycle 
+counts to one for diffing.
+
+	$ oct-packet-io -p 2000 -i in1.oct -I in1.pcap -i in2.oct \
+		-I in2.oct -o out%d.oct -t out%d.pcap -c1
+		
+Bridge packets from "eth1" into the first simulator hardware ethernet. Also 
+log output packets.
+
+	$ oct-packet-io -p 2000 -b 0:eth1 -o bridge_out.log --promiscuous
+    
+----

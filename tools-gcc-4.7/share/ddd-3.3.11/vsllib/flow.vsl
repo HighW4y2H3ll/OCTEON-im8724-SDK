@@ -1,0 +1,389 @@
+// $Id: flow.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Drawing flow charts
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "std.vsl"
+#include "slopes.vsl"
+#include "arcs.vsl"
+
+// Flow charts
+
+// Version
+flow_version() = "$Revision: 14384 $";
+
+// Constants
+
+// Minimum with of junction line
+flow_space() = box(hspace(" "), whitethickness() * 5);	
+
+
+// Junction lines
+
+// Corner lines
+
+// Half lines
+nn_flow() = hcenter(vrule() | vfill()) ^ flow_space();
+ss_flow() = hcenter(vfill() | vrule()) ^ flow_space();
+ee_flow() = vcenter(hfill() & hrule()) ^ flow_space();
+ww_flow() = vcenter(hrule() & hfill()) ^ flow_space();
+
+nn_flow(c) = ((hspace(c) | vfill()) & (vrule() | vfill()) & fill()) ^ flow_space();
+ss_flow(c) = ((hspace(c) | vfill()) & (vfill() | vrule()) & fill()) ^ flow_space();
+ee_flow(c) = vcenter(hspace(c) & hrule()) ^ flow_space();
+ww_flow(c) = vcenter((hrule() | hspace(c)) & fill()) ^ flow_space();
+
+// Corners (XY_flow() = from X to Y)
+ne_flow(...) = nn_flow(...) ^ ee_flow(...);
+nw_flow(...) = nn_flow(...) ^ ww_flow(...);
+ns_flow(...) = nn_flow(...) ^ ss_flow(...);
+
+wn_flow(...) = ww_flow(...) ^ nn_flow(...);
+we_flow(...) = ww_flow(...) ^ ee_flow(...);
+ws_flow(...) = ww_flow(...) ^ ss_flow(...);
+
+se_flow(...) = ss_flow(...) ^ ee_flow(...);
+sw_flow(...) = ss_flow(...) ^ ww_flow(...);
+sn_flow(...) = ss_flow(...) ^ nn_flow(...);
+
+es_flow(...) = ee_flow(...) ^ ss_flow(...);
+ew_flow(...) = ee_flow(...) ^ ww_flow(...);
+en_flow(...) = ee_flow(...) ^ nn_flow(...);
+
+
+// T lines
+n_tee(...) = nn_flow(...) ^ we_flow(...);
+w_tee(...) = ww_flow(...) ^ ns_flow(...);
+s_tee(...) = ss_flow(...) ^ we_flow(...);
+e_tee(...) = ee_flow(...) ^ ns_flow(...);
+
+
+// Junction arrows
+
+// Half, incoming arrows
+nn_aflow() = hcenter(s_arrow() | vfill()) ^ flow_space();
+ss_aflow() = hcenter(vfill() | n_arrow()) ^ flow_space();
+ee_aflow() = vcenter(hfill() & w_arrow()) ^ flow_space();
+ww_aflow() = vcenter(e_arrow() & hfill()) ^ flow_space();
+
+nn_aflow(c) = hspace(c) & (s_arrow() | vfill()) & hfill();
+ss_aflow(c) = hspace(c) & (vfill() | n_arrow()) & hfill();
+ee_aflow(c) = hspace(c) & vcenter(w_arrow());
+ww_aflow(c) = (hspace(c) | vcenter(e_arrow())) & hfill();
+
+// T arrows (arrow head meets bar)
+n_addflow(...) = nn_aflow(...) ^ we_flow(...);
+w_addflow(...) = ww_aflow(...) ^ ns_flow(...);
+s_addflow(...) = ss_aflow(...) ^ we_flow(...);
+e_addflow(...) = ee_aflow(...) ^ ns_flow(...);
+
+
+
+
+// Symbols
+
+// All xxxFlow() fnctions return a tuple (BOX, CONNECT, LABELS, GOTOS)
+// BOX is the created image; CONNECT is the horizontal distance of
+// the connecting line.
+
+// Helpers
+
+fallbackFlow(box);
+
+// Compute maximum of all CONNECTs
+max_connect((_, connect, _...)) = connect;
+max_connect((stmt1, connect1, _...), (stmt2, connect2, _...), ...) = 
+  if connect1 > connect2 then max_connect((stmt1, connect1), ...)
+						 else max_connect((stmt2, connect2), ...) fi;
+
+// Helpers for not yet created flows
+max_connect((stmt1, connect1, _...), box, ...) = 
+	max_connect((stmt1, connect1), fallbackFlow(box), ...);
+max_connect(box, ...) = max_connect(fallbackFlow(box), ...);
+
+
+// Align a box according to TARGETCONNECT
+align((box, boxconnect, _...), targetconnect) = 
+  (hspace(targetconnect - boxconnect)) & box;
+align(box, targetconnect) =
+  align(fallbackFlow(box), targetconnect);
+
+
+// Add extensible connections on top and on bottom
+
+attach((box, boxconnect, a...)) = 
+(
+  align((vrule(), 0), boxconnect)
+| box
+| align((vrule(), 0), boxconnect), boxconnect, a...);
+
+attach(box, boxconnect) = attach((box, boxconnect, [], []));
+
+attach(anybox) = attach(heven(anybox), hspace(heven(anybox)) / 2);
+
+
+// Simple symbols
+
+// Ordinary statement
+
+statFlow(stmt) = 
+  attach(fix(frame(stmt)));
+
+
+// Use if param is no flow symbol
+
+fallbackFlow(box) = statFlow("BAD BOX: " & frame(box));
+
+
+// Procedure call
+
+callFlow(stmt) = 
+attach(
+	hrule() 
+  | w_rule() & w_rule() & (hwhite() | stmt | hwhite()) & e_rule() & e_rule()
+  | hrule()
+);
+
+
+// Printing symbol
+
+printFlow(stmt) = 
+attach(
+	(sheet ^ square(vspace(stmt))) & 
+		(hrule() | whiteframe(stmt) | hrule()) & vrule()
+	where sheet = hrule() | (sw_arc90() & fill()) | fill() & ne_arc90()
+);
+
+
+// Punch card symbol
+
+punchFlow(stmt) = attach(punchcard(stmt));
+
+
+// Oval (for start and end)
+
+ovalFlow(label) = attach(oval(label));
+
+
+// Rhomb (for tests)
+
+rhombFlow(cond, truelabel, falselabel) =
+  attach(rhomb(cond) ^ ne_flush(truelabel) ^ sw_flush(falselabel));
+
+
+
+// Composite symbols
+
+// Sequence
+
+__seqFlow(max, (stmt, connect, _...)) = align((fix(stmt), connect), max);
+__seqFlow(max, (stmt, connect, _...), ...) =
+  __seqFlow(max, (stmt, connect))
+| align((vrule() & vspace(flow_space()), 0), max)
+| __seqFlow(max, ...);
+__seqFlow(max, box, ...) =
+  __seqFlow(max, fallbackFlow(box), ...);
+
+_seqFlow(max, ...) = 
+  attach(__seqFlow(max, ...), max);
+
+seqFlow(...) = 
+  _seqFlow(max_connect(...), ...);
+  
+
+
+
+
+// Test
+
+__testFlow(c1, c2, rhomb, truebody, falsebody) =
+attach(
+  ( vfix(align(rhomb, c1)) & vcenter(hrule())
+  | ns_flow(c1)
+  | align(falsebody, c1)
+  | ns_flow(c1)
+  | vfix(e_addflow(c1))
+  ) &
+  ( vspace(align(rhomb, c1) / 2)
+  | vfix(hrule() | hspace(c2))
+  | ns_flow(c2)
+  | align(truebody, c2)
+  | ns_flow(c2)
+  | vfix(hrule() | hspace(c2))
+  | vspace(e_addflow(c1) / 2 - 1)
+  )
+, c1);
+
+_testFlow(rhomb, truebody, falsebody) =
+  __testFlow(
+	max_connect(rhomb, falsebody), max_connect(truebody),
+	  rhomb, truebody, falsebody);
+
+testFlow(cond, truebody, falsebody, tl, fl) =
+  _testFlow(rhombFlow(cond, tl, fl), truebody, falsebody);
+
+testFlow(cond, truebody, falsebody) = 
+  testFlow(cond, truebody, falsebody, "T", "F");
+
+testFlow(cond, (tb, tc, a...)) =
+  testFlow(cond, (tb, tc, a...), (ns_flow(tc), tc));
+
+testFlow(cond, box) = 
+  testFlow(cond, fallbackFlow(box));
+
+
+
+
+
+// A while loop
+
+__positiveTopLoopFlow(c1, c2, rhomb, loopbody) =
+attach(
+  ( vfix(e_addflow(c1))
+  | vfix(align(rhomb, c1)) & vcenter(hrule())
+  | ns_flow(c1)
+  ) &
+  ( vfix(ew_flow(c2))
+  | vspace(align(rhomb, c1) / 2)
+  | fix(hrule() | hspace(c2))
+  | vfix(ns_flow(c2))
+  | align(loopbody, c2)
+  | vfix(ne_flow(c2))
+  ) &
+  ( fix(sw_flow())
+  | hfix(sn_flow())
+  | fix(wn_flow())
+  )
+, c1);
+
+_positiveTopLoopFlow(rhomb, loopbody) =
+  __positiveTopLoopFlow(
+	max_connect(rhomb), max_connect(loopbody), rhomb, loopbody);
+
+positiveTopLoopFlow(cond, loopbody, tl, fl) =
+  _positiveTopLoopFlow(rhombFlow(cond, tl, fl), loopbody);
+
+positiveTopLoopFlow(cond, loopbody) =
+  positiveTopLoopFlow(cond, loopbody, "T", "F");
+
+
+
+// An `unless' loop
+
+__negativeTopLoopFlow(c, rhomb, loopbody) =
+attach(
+  ( fix(se_flow())
+  | hfix(sn_flow())
+  | fix(en_flow())
+  | vspace(es_flow(c))
+  ) &
+  ( vfix(w_addflow(c))
+  | align(rhomb, c) & vcenter(hrule())
+  | vfix(ns_flow(c))
+  | align(loopbody, c)
+  | vfix(nw_flow(c))
+  | vfix(es_flow(c))
+  ) &
+  ( vspace(w_addflow(c))
+  | vspace(align(rhomb, c) / 2)
+  | hfix((hrule() & hfill()) ^ hspace(flow_space()))
+  | hfix(ns_flow())
+  | fix(nw_flow())
+  )
+, hspace(se_flow() & c));
+
+_negativeTopLoopFlow(rhomb, loopbody) =
+  __negativeTopLoopFlow(
+	max_connect(rhomb, loopbody), rhomb, loopbody);
+
+negativeTopLoopFlow(cond, loopbody, tl, fl) =
+  _negativeTopLoopFlow(rhombFlow(cond, tl, fl), loopbody);
+
+negativeTopLoopFlow(cond, loopbody) =
+  negativeTopLoopFlow(cond, loopbody, "T", "F");
+
+
+
+// A `do-while' loop
+
+__positiveBottomLoopFlow(c, rhomb, loopbody) =
+attach(
+  ( vfix(e_addflow(c))
+  | align(loopbody, c)
+  | vfix(ns_flow(c))
+  | align(rhomb, c) & vcenter(hrule())
+  ) &
+  ( vfix(sw_flow())
+  | hfix(sn_flow())
+  | (hrule() & hfill()) ^ hspace(flow_space())
+  | vspace(align(rhomb, c) / 2)
+  )
+, c);
+
+_positiveBottomLoopFlow(rhomb, loopbody) =
+  __positiveBottomLoopFlow(
+	max_connect(rhomb, loopbody), rhomb, loopbody);
+
+positiveBottomLoopFlow(cond, loopbody, tl, fl) =
+  _positiveBottomLoopFlow(rhombFlow(cond, tl, fl), loopbody);
+
+positiveBottomLoopFlow(cond, body) =
+  positiveBottomLoopFlow(cond, body, "T", "F");
+
+
+// A `do-unless' loop
+
+__negativeBottomLoopFlow(c, rhomb, loopbody) =
+attach(
+  ( vfix(se_flow())
+  | sn_flow()
+  | vfix(en_flow())
+  | vspace(es_flow(c))
+  ) &
+  ( vfix(w_addflow(c))
+  | align(loopbody, c)
+  | vfix(ns_flow(c))
+  | ( align(rhomb, c)
+    | vfix(nw_flow(c))
+    | vfix(es_flow(c))
+    ) &
+    ( vspace(align(rhomb, c) / 2)
+    | fix((hrule() & hfill()) ^ hspace(flow_space()))
+    | hfix(ns_flow())
+    | fix(nw_flow())
+	)
+  )
+, hspace(se_flow() & c));
+
+_negativeBottomLoopFlow(rhomb, loopbody) =
+  __negativeBottomLoopFlow(
+	max_connect(rhomb, loopbody), rhomb, loopbody);
+
+negativeBottomLoopFlow(cond, loopbody, tl, fl) =
+  _negativeBottomLoopFlow(rhombFlow(cond, tl, fl), loopbody);
+
+negativeBottomLoopFlow(cond, body) =
+  negativeBottomLoopFlow(cond, body, "T", "F");

@@ -1,0 +1,721 @@
+/dts-v1/;
+/*
+ * Cavium Inc. SFF7000 board
+ */
+/ {
+	model = "cavium,sff7000";
+	compatible = "cavium,sff7000";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&ciu>;
+
+	soc@0 {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu: interrupt-controller@1070000000000 {
+			compatible = "cavium,octeon-3860-ciu";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Controller register (0 or 1)
+			 * 2) Bit within the register (0..63)
+			 */
+			#interrupt-cells = <2>;
+			reg = <0x10700 0x00000000 0x0 0x7000>;
+		};
+
+		cibl2c: interrupt-controller@107000000e000 {
+			compatible = "cavium,octeon-7130-cib";
+			reg = <0x10700 0x0000e000 0x0 0x8>, /* RAW */
+			      <0x10700 0x0000e100 0x0 0x8>; /* EN */
+			cavium,max-bits = <23>;
+
+			interrupt-controller;
+			interrupt-parent = <&ciu>;
+			interrupts = <1 24>;
+			/* Interrupts are specified by two parts:
+			 * 1) Bit number in the CIB* registers
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			#interrupt-cells = <2>;
+		};
+
+		ciblmc: interrupt-controller@107000000e200 {
+			compatible = "cavium,octeon-7130-cib";
+			reg = <0x10700 0x0000e200 0x0 0x8>, /* RAW */
+			      <0x10700 0x0000e300 0x0 0x8>; /* EN */
+			cavium,max-bits = <12>;
+
+			interrupt-controller;
+			interrupt-parent = <&ciu>;
+			interrupts = <1 52>;
+			/* Interrupts are specified by two parts:
+			 * 1) Bit number in the CIB* registers
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			#interrupt-cells = <2>;
+		};
+
+		cibrst: interrupt-controller@107000000e400 {
+			compatible = "cavium,octeon-7130-cib";
+			reg = <0x10700 0x0000e400 0x0 0x8>, /* RAW */
+			      <0x10700 0x0000e500 0x0 0x8>; /* EN */
+			cavium,max-bits = <6>;
+
+			interrupt-controller;
+			interrupt-parent = <&ciu>;
+			interrupts = <1 63>;
+			/* Interrupts are specified by two parts:
+			 * 1) Bit number in the CIB* registers
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			#interrupt-cells = <2>;
+		};
+
+		cibocla: interrupt-controller@107000000ec00 {
+			compatible = "cavium,octeon-7130-cib";
+			reg = <0x10700 0x0000ec00 0x0 0x8>, /* RAW */
+			      <0x10700 0x0000ee00 0x0 0x8>; /* EN */
+			cavium,max-bits = <15>;
+
+			interrupt-controller;
+			interrupt-parent = <&ciu>;
+			interrupts = <2 17>;
+			/* Interrupts are specified by two parts:
+			 * 1) Bit number in the CIB* registers
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			#interrupt-cells = <2>;
+		};
+
+		cibsata: interrupt-controller@107000000e600 {
+			compatible = "cavium,octeon-7130-cib";
+			reg = <0x10700 0x0000e600 0x0 0x8>, /* RAW */
+			      <0x10700 0x0000e700 0x0 0x8>; /* EN */
+			cavium,max-bits = <4>;
+
+			interrupt-controller;
+			interrupt-parent = <&ciu>;
+			interrupts = <2 16>;
+			/* Interrupts are specified by two parts:
+			 * 1) Bit number in the CIB* registers
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			#interrupt-cells = <2>;
+		};
+
+		cibusb0: interrupt-controller@107000000e800 {
+			compatible = "cavium,octeon-7130-cib";
+			reg = <0x10700 0x0000e800 0x0 0x8>, /* RAW */
+			      <0x10700 0x0000ea00 0x0 0x8>; /* EN */
+			cavium,max-bits = <11>;
+
+			interrupt-controller;
+			interrupt-parent = <&ciu>;
+			interrupts = <1 33>;
+			/* Interrupts are specified by two parts:
+			 * 1) Bit number in the CIB* registers
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			#interrupt-cells = <2>;
+		};
+
+		cibusb1: interrupt-controller@107000000e900 {
+			compatible = "cavium,octeon-7130-cib";
+			reg = <0x10700 0x0000e900 0x0 0x8>, /* RAW */
+			      <0x10700 0x0000eb00 0x0 0x8>; /* EN */
+			cavium,max-bits = <11>;
+
+			interrupt-controller;
+			interrupt-parent = <&ciu>;
+			interrupts = <1 17>;
+			/* Interrupts are specified by two parts:
+			 * 1) Bit number in the CIB* registers
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			#interrupt-cells = <2>;
+		};
+
+		gpio: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-3860-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0 16>, <0 17>, <0 18>, <0 19>,
+				     <0 20>, <0 21>, <0 22>, <0 23>,
+				     <0 24>, <0 25>, <0 26>, <0 27>,
+				     <0 28>, <0 29>, <0 30>, <0 31>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0       0x1f400000  0xc00000>,
+				 <1 0  0x10000 0x20000000  0>,
+				 <2 0  0x10000 0x30000000  0>,
+				 <3 0  0x10000 0x40000000  0>,
+				 <4 0  0x10000 0x50000000  0>,
+				 <5 0  0x10000 0x60000000  0>,
+				 <6 0  0x10000 0x70000000  0>,
+				 <7 0  0x10000 0x80000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index  = <0>;
+				cavium,t-adr     = <20>;
+				cavium,t-ale     = <34>;
+				cavium,t-ce      = <60>;
+				cavium,t-oe      = <60>;
+				cavium,t-we      = <45>;
+				cavium,t-rd-hld  = <35>;
+				cavium,t-wr-hld  = <45>;
+				cavium,t-pause   = <0>;
+				cavium,t-wait    = <100>;
+				cavium,t-page    = <35>;
+				cavium,t-rd-dly  = <0>;
+
+				cavium,bus-width = <8>;
+				cavium,ale-mode  = <1>;
+			};
+
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x800000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0 0x280000>;
+					read-only;
+				};
+				partition@280000 {
+					label = "kernel";
+					reg = <0x280000 0x200000>;
+				};
+				partition@480000 {
+					label = "cramfs";
+					reg = <0x480000 0x370000>;
+				};
+				partition@7f0000 {
+					label = "environment";
+					reg = <0x7f0000 0x10000>;
+					read-only;
+				};
+			};
+		};
+
+		smi0: mdio@1180000001800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00001800 0x0 0x40>;
+
+			phy0: ethernet-phy@0 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <0>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+				coma = <&gpio2 5 0>;	/* pin 5, not inverted */
+			};
+			phy1: ethernet-phy@1 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <1>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+			};
+			phy2: ethernet-phy@2 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <2>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+			};
+			phy3: ethernet-phy@3 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <3>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+			};
+			phy4: ethernet-phy@4 {
+				compatible = "marvell,88e1118";
+				reg = <4>;
+				marvell,reg-init =
+					/* Automatic MDI/MDIX */
+					/*<0 0x10 0xff9f 0x0060>,*/
+					/* Fix rx and tx clock transition timing */
+					<2 0x15 0xffcf 0x0>, /* Reg 2,21 Clear bits 4, 5 */
+					/* Adjust LED drive. */
+					/*<3 0x11 0 0x442a>,*/ /* Reg 3,17 <- 0442a */
+					/* irq, blink-activity, blink-link */
+					/*<3 0x10 0 0x0242>,*/ /* Reg 3,16 <- 0x0242 */
+					<0 0x0 0x7fff 0x8000>;  /* soft reset so mdix setting takes effect */
+				interrupt-parent = <&gpio>;
+				interrupts = <7 8>;	/* pin 4, active low */
+			};
+		};
+
+		smi1: mdio@1180000001900 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00001900 0x0 0x40>;
+			phy8: ethernet-phy@8 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <4>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+				coma = <&gpio2 6 0>;	/* pin 6, not inverted */
+			};
+			phy9: ethernet-phy@9 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <5>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+			};
+			phy10: ethernet-phy@10 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <6>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+			};
+			phy11: ethernet-phy@11 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "vitesse,vsc8574", "ethernet-phy-ieee802.3-c22";
+				reg = <7>;
+				interrupt-parent = <&gpio>;
+				interrupts = <6 8>;	/* pin 6, active low */
+			};
+			phy16: ethernet-phy@16 {
+				cavium,qlm-trim = "0,xaui";
+				compatible = "marvell,88x3140", "ethernet-phy-ieee802.3-c45";
+				reg = <0x10>;
+				interrupt-parent = <&gpio>;
+				interrupts = <5 0>;	/* pin 5, active low */
+			};
+		};
+
+		pip: pip@11800a0000000 {
+			compatible = "cavium,octeon-3860-pip";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0xa0000000 0x0 0x2000>;
+
+			interface@Q1 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy0>;
+				};
+				ethernet@1 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x1>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy1>;
+				};
+				ethernet@2 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x2>;
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy2>;
+				};
+				ethernet@3 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x3>;
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy3>;
+				};
+			};
+			interface@Q2 {
+				cavium,qlm-trim = "0,qsgmii";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>; /* interface */
+
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>;  /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy8>;
+				};
+				ethernet@1 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x1>;  /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy9>;
+				};
+				ethernet@2 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x2>;
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy10>;
+				};
+				ethernet@3 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x3>;
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy11>;
+				};
+			};
+
+			interface@X {
+				cavium,qlm-trim = "0,xaui";
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy16>;
+				};
+			};
+
+			interface@4 {
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <4>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy4>;
+				};
+			};
+                };
+
+		uctl@118006c000000 {
+			compatible = "cavium,octeon-7130-sata-uctl";
+			reg = <0x11800 0x6c000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			sata: sata@16c0000000000 {
+				compatible = "cavium,octeon-7130-ahci";
+				reg = <0x16c00 0x00000000 0x0 0x200>;
+				interrupt-parent = <&cibsata>;
+				interrupts = <2 4>; /* Bit: 2, level */
+				cavium,qlm-trim = "2,sata";
+				cavium,qlm-trim-alias = "sata";
+			};
+		};
+
+		uctl@1180068000000 {
+			compatible = "cavium,octeon-7130-usb-uctl";
+			reg = <0x11800 0x68000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* 50MHz, 100MHz and 125MHz allowed */
+			refclk-frequency = <100000000>;
+			/* Either "dlmc_ref_clk0" or "dlmc_ref_clk1" */
+			refclk-type-ss = "dlmc_ref_clk0";
+			/* Either "dlmc_ref_clk0" "dlmc_ref_clk1" or "pll_ref_clk" */
+			refclk-type-hs = "dlmc_ref_clk0";
+			/* Power is specified by three parts:
+			 * 1) GPIO handle (must be &gpio)
+			 * 2) GPIO pin number
+			 * 3) Active high (0) or active low (1)
+			 */
+			power = <&gpio 1 1>;
+
+			xhci@1680000000000 {
+				compatible = "cavium,octeon-7130-xhci","synopsys,dwc3";
+				reg = <0x16800 0x00000000 0x10 0x0>;
+				interrupt-parent = <&cibusb0>;
+				interrupts = <9 4>; /* Bit: 9, level */
+			};
+		};
+
+		uctl@1180069000000 {
+			compatible = "cavium,octeon-7130-usb-uctl";
+			reg = <0x11800 0x69000000 0x0 0x100>;
+			ranges; /* Direct mapping */
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* 50MHz, 100MHz and 125MHz allowed */
+			refclk-frequency = <100000000>;
+			/* Either "dlmc_ref_clk0" or "dlmc_ref_clk0" */
+			refclk-type-ss = "dlmc_ref_clk0";
+			/* Either "dlmc_ref_clk0" "dlmc_ref_clk1" or "pll_ref_clk" */
+			refclk-type-hs = "dlmc_ref_clk0";
+			/* Power is specified by three parts:
+			 * 1) GPIO handle (must be &gpio)
+			 * 2) GPIO pin number
+			 * 3) Active high (0) or active low (1)
+			 */
+			power = <&gpio 2 1>;
+
+			xhci@1690000000000 {
+				compatible = "cavium,octeon-7130-xhci","synopsys,dwc3";
+				reg = <0x16900 0x00000000 0x10 0x0>;
+				interrupt-parent = <&cibusb1>;
+				interrupts = <9 4>; /* Bit: 9, level */
+			};
+		};
+
+
+		twsi0: i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			interrupts = <0 45>;
+			clock-frequency = <100000>;
+
+			tmp@2c {
+				compatible = "analogdevices,adm1031";
+				reg = <0x2c>;
+				interrupt-parent = <&gpio>;
+				interrupts = <12 8>, <13 8>, <16 8>;
+			};
+			tlv-eeprom@54 {
+				compatible = "atmel,24c256";
+				reg = <0x54>;
+				pagesize = <64>;
+			};
+			rtc@68 {
+				compatible = "dallas,ds1337";
+				reg = <0x68>;
+				interrupt-parent = <&gpio>;
+				interrupts = <17 8>;
+			};
+			gpio1: gpio@20 {
+				compatible = "nxp,pca9534";
+				reg = <0x20>;
+				#gpio-cells = <2>;
+				gpio-controller;
+			};
+			gpio2: gpio@21 {
+				compatible = "nxp,pca9534";
+				reg = <0x21>;
+				#gpio-cells = <2>;
+				gpio-controller;
+			};
+		};
+
+		twsi1: i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			interrupts = <0 59>;
+			clock-frequency = <100000>;
+		};
+
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 34>;
+		};
+
+		uart1: serial@1180000000c00 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000c00 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 35>;
+		};
+
+		mmc: mmc@1180000002000 {
+			compatible = "cavium,octeon-6130-mmc";
+			reg = <0x11800 0x00002000 0x0 0x100>,
+			      <0x11800 0x00000168 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* EMM irq, DMA irq */
+			interrupts = <1 19>, <0 63>;
+
+			/* The board one slot and one soldered-on eMMC device */
+			mmc-slot@0 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <0>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <26000000>;
+				wp-gpios = <&gpio 4 0>;
+				cd-gpios = <&gpio 3 1>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+				/* Power on GPIO 8, active high */
+				power-gpios = <&gpio 8 0>;
+			};
+			mmc-slot@2 {
+				/* Soldered on eMMC device */
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <2>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <26000000>;
+				non-removable;
+				bus-width = <8>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+			};
+		};
+
+		spi: spi@1070000001000 {
+			compatible = "cavium,octeon-3010-spi";
+			reg = <0x10700 0x00001000 0x0 0x100>;
+			interrupts = <0 58>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			spi-max-frequency = <25000000>;
+
+			flash@0 {
+				compatible = "micron,n25q128a13","spi-flash";
+				reg = <0>;
+				spi-max-frequency = <2500000>;
+
+				pagesize = <256>;
+				size = <0x1000000>;
+				address-width = <24>;
+				cavium,pcm-trim = "0,not-pcm";
+			};
+		};
+
+		ocla0@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupt-parent = <&cibocla>;
+			interrupts = <8 1>,  /* Bit: 8, edge (fsm0) */
+				     <9 1>,  /* Bit: 9, edge (fsm1) */
+				     <11 1>; /* Bit: 11, edge (trigfull) */
+		};
+
+		dma0: dma-engine@1180000000100 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000100 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+		dma1: dma-engine@1180000000108 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000108 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+
+		nand-flash-interface@1070001000000 {
+			compatible = "cavium,octeon-5230-nand";
+			reg = <0x10700 0x01000000 0x0 0x100>,
+				<0x11800 0x00000168 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0 63>;
+
+			flash@2 {
+				compatible = "nand-flash";
+				reg = <2>;
+				/* soft_bch is used to support multi-bit ECC */
+				nand-ecc-mode = "hw_syndrome";
+
+				/* Number of bytes of data to perform ECC over */
+				nand-ecc-size = <512>;
+
+				/* nand-ecc-size and nand-ecc-bytes are
+				 * calculated based on the error management
+				 * requirements of the NAND device.
+				 *
+				 * Starting with OCTEON III, the size
+				 * calculation is ((15 * ECC_LEVEL) + 7) / 8.
+				 *
+				 * For example, if a device requires 24 bits
+				 * of ECC (regardless if the block size is
+				 * 512, 1024 or 2048 bytes) the ECC byte count
+				 * is (15 * 24 + 7) / 8 or 45.
+				 *
+				 * In this case the device needs 8 bits of
+				 * ECC per 512 bytes.
+				 */
+				nand-ecc-bytes = <15>;
+				/* With of NAND on bus, OCTEON supports both 8
+				 * and 16-bits
+				 */
+				nand-bus-width = <8>;
+			};
+		};
+
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		d1 {
+			label = "Yellow";
+			gpios = <&gpio 11 0>;
+			default-state = "keep";
+		};
+	};
+
+	aliases {
+		pip = &pip;
+		smi0 = &smi0;
+		smi1 = &smi1;
+		twsi0 = &twsi0;
+		twsi1 = &twsi1;
+		uart0 = &uart0;
+		uart1 = &uart1;
+		flash0 = &flash0;
+		emmc = &mmc;
+		spi = &spi;
+		sata = &sata;
+	};
+ };

@@ -1,0 +1,11 @@
+OUTPUT_FORMAT("elf32-tradbigmips", "elf32-tradbigmips",
+	      "elf32-tradlittlemips")
+OUTPUT_ARCH(mips)
+ENTRY(__boot_reset)
+SECTIONS
+{
+  . = 0xFFFFFFFF80000000 ;
+  .reset : { boot_reset2.o(.text) }
+  . = 0xFFFFFFFFBFC00000 ;
+  .boot_reset : { boot_reset.o(.text) }
+}

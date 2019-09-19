@@ -1,0 +1,11 @@
+#!/bin/sh
+source ./functions.sh
+
+assert rm -f $0.log
+assert mkfifo $0.log
+ls -l $0.log | grep -q prw-r--r--
+require [ $? -eq 0 ]
+assert rm -f $0.log
+assert mkfifo -m g-rw,o-r $0.log
+ls -l $0.log | grep -q prw-----w-
+require [ $? -eq 0 ]

@@ -1,0 +1,91 @@
+echo boot 2 kernels (big/little endian) with different FDTs
+echo This file (bootscript.in) translates to loadable bootscript by
+echo mkimage -T script -n two-kernel-big/litte-boot -d bootscript.in -C none bootscript
+echo .
+echo Usage:
+echo u-boot> dhcp
+echo u-boot> namedalloc __bootscript 0x2000
+echo u-boot> tftp $(named_block_addr) $(serverip):bootscript
+echo u-boot> source $(named_block_addr)
+echo // noisy because u-boot has no? comment convention!
+
+echo assumes 0x20000-byte __fdt @ 0x80000, check by 'namedprint | eyeballs'
+setenv __fdt_addr 0x80000
+setenv __fdt_size 0x20000
+
+echo alloc new fdt
+namedalloc __fdt_copy $(__fdt_size)
+setenv __fdt_copy_addr $(named_block_addr)
+setenv __fdt_copy_size $(named_block_size)
+echo TODO: 'make case for env-lookups like $(named.__fdt_copy.addr) and $(fdt.uart0.target)'
+
+echo fdt move $(__fdt_addr) $(__fdt_copy_addr) $(__fdt_copy_size)
+fdt move $(__fdt_addr) $(__fdt_copy_addr) $(__fdt_copy_size)
+
+echo set the TFTP names of two kernel images
+setenv k1 vmlinux.64be
+setenv k2 vmlinux.64le
+
+echo dedicate 560M total kernel mem 560M, so half (280M) for each, rest of mem is packet-space
+echo offset 280M is 11800000, so load 2nd kernel at 0x31800000
+setenv half_mem 0x11800000
+setenv load1 $(loadaddr)
+setenv load2 0x31800000
+echo loading $(k1)@$(load1) $(k2)@(load2)
+tftp $(load1) $(k1)
+tftp $(load2) $(k2)
+
+echo configure $(k2)@$(load2) with minimal devices
+
+echo fdt addr $(__fdt_copy_addr)
+fdt addr $(__fdt_copy_addr)
+echo fdt resize, to avoid FDT_ERR_NOSPACE
+fdt resize
+
+echo trimming fdt
+echo fdt rsvmem add $(load1) $(half_mem)
+fdt rsvmem add $(load1) $(half_mem)
+
+echo hardware split is based on Board-specific device-list from /proc/iomem ...
+echo drop ethernet mgmt0
+fdt rm /soc@0/ethernet@1070000100000
+echo drop pip
+fdt rm /soc@0/pip@11800a0000000
+echo drop smi0
+fdt rm /soc@0/mdio@1180000001800
+echo drop smi1
+fdt rm /soc@0/mdio@1180000001900
+echo drop i2c1000
+fdt rm /soc@0/i2c@1180000001000
+echo drop i2c1200
+fdt rm /soc@0/i2c@1180000001200
+echo drop uart0
+fdt rm /soc@0/serial@1180000000800
+echo drop bootbus
+fdt rm /soc@0/bootbus@1180000000000
+echo drop gpio-leds
+fdt rm /gpio-leds
+
+echo first load $(k2)@$(load2) on high-number CPUs, but do not run ...
+echo bootoctlinux $(load2) coremask=0x3e0 endbootargs mem=280m@$(load2) nousb pcie-octeon.pcie_disable=1
+bootoctlinux $(load2) coremask=0x3e0 endbootargs mem=280m@$(load2) nousb pcie-octeon.pcie_disable=1
+
+echo switch back to primary fdt, remove high-kernel resources
+echo fdt addr $(__fdt_addr)
+fdt addr $(__fdt_addr)
+echo fdt resize, to avoid FDT_ERR_NOSPACE
+fdt resize
+
+echo fdt rsvmem add $(load2) $(half_mem)
+fdt rsvmem add $(load2) $(half_mem)
+
+echo drop uart1
+fdt rm /soc@0/serial@1180000000c00
+echo drop ethernet mgmt1
+fdt rm /soc@0/ethernet@1070000100800
+
+echo last load $(k1)@$(load1) with most devices, low-number CPUs, and start all ...
+echo bootoctlinux $(load1) coremask=0x1f endbootargs mem=280m@$(load1)
+bootoctlinux $(load1) coremask=0x1f endbootargs mem=280m@$(load1)
+
+echo NOTREACHED. WTF.

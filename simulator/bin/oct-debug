@@ -1,0 +1,165 @@
+#!/bin/bash
+
+# Copyright (c) 2003-2004, Cavium Inc.. All rights reserved.
+#  
+# This Software is the property of Cavium Inc..  The Software and all 
+# accompanying documentation are copyrighted.  The Software made available 
+# here constitutes the proprietary information of Cavium Inc..  You 
+# agree to take reasonable steps to prevent the disclosure, unauthorized use 
+# or unauthorized distribution of the Software.  You shall use this Software 
+# solely with Cavium hardware.  
+#  
+# Except as expressly permitted in a separate Software License Agreement 
+# between You and Cavium Inc., you shall not modify, decompile, 
+# disassemble, extract, or otherwise reverse engineer this Software.  You 
+# shall not make any copy of the Software or its accompanying documentation, 
+# except for copying incident to the ordinary and intended use of the 
+# Software and the Underlying Program and except for the making of a single 
+# archival copy.  
+#  
+# This Software, including technical data, may be subject to U.S.  export 
+# control laws, including the U.S.  Export Administration Act and its 
+# associated regulations, and may be subject to export or import regulations 
+# in other countries.  You warrant that You will comply strictly in all 
+# respects with all such regulations and acknowledge that you have the 
+# responsibility to obtain licenses to export, re-export or import the 
+# Software.  
+#  
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" 
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR 
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT 
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY 
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT 
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES 
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR 
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET 
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT 
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.  
+
+# Usage oct-debug executable [serial_device] sim_options
+
+# If serial_device is not provided the debugger will spawn the simulator
+# and the communication between debugger and simulator will be over TCP port.
+
+# If serial_device is specified the sim_options are not used.
+
+declare -a args[30]
+
+all_args=
+t=0
+program="$1"
+device="tcp::65259"
+target="octeon"
+pci_bootcmd=
+load="load"
+pass_args=0  # 0 = sim, 1 = serial, 2 = pci
+old_debugger_bootcmd=
+spawn_sim=
+cmdfile=/tmp/gdb_command-$$.txt
+
+if [ $# == 0 -o $1 -a $1 == "--help" ] ; then
+  echo
+  echo "Usage: oct-debug <executable> <serial_device>"
+  echo "       oct-debug <executable> <simulator_options>"
+  echo "       oct-debug <executable> pci [PCI_BOOTCMD=pci_bootcmd] <pci-options>"
+  echo " "
+  echo "       <executable>		  Mips ELF executable to debug"
+  echo "       <serial_device>            Device name to debug over serial port"
+  echo "                      		  For example: /dev/ttyUSB0" 
+  echo "       <simulator-options>	  Options to invoke the simulator with."
+  echo "       pci                        To debug over PCI."
+  echo "       [PCI_BOOTCMD=pci_bootcmd]  Set boot command (shell command)"
+  echo "                                  needed for PCI boot"
+  echo "       <pci-options>              Options to boot the program over PCI." 
+  echo "                                  For example: bootoct 0x100000 numcores=2"
+  echo ""
+  echo " Note: When debugging over serial port you must load the program and boot"
+  echo "       it before starting the debugger. Remember to specify the \"debug\" "
+  echo "       option on the bootloader \"bootoct\" command."
+  echo ""
+  exit 0;
+fi
+
+# if 2nd option is not passed, assuming it is simulator
+if [ -z $2 ]; then
+  set $2 = "-quiet -noperf"
+fi
+
+if [ ${2:1:3} == "dev" ]; then
+  device="$2"
+  pass_args=1
+  shift
+fi
+
+if [ ${2:0:3} == "pci" ]; then
+  target="octeonpci"
+  load=""
+  pass_args=2
+  if [ ! -z $3 ]; then
+     if [ ${3:0:11} == "PCI_BOOTCMD" ]; then
+        pci_bootcmd="set pci-bootcmd `echo $3 | cut -d= -f2`"
+        shift 
+      fi
+  fi
+  shift
+fi
+
+while [ ! -z "$1" ]; 
+do
+  shift 
+  args[$t]=$1;
+  case "${args[$t]}" in
+    *appargs*)  args[$t]=\"${args[$t]}\"
+		;;
+    *uart1*) portno=`echo ${args[$t]} | cut -d= -f2`
+	     device="tcp::$portno"
+	     ;;
+    *) ;;
+  esac
+  all_args="$all_args ${args[$t]}"
+  t=$t+1
+done
+
+if mipsisa64-octeon-elf-ddd -v &> /dev/null
+then
+    debugCmd="mipsisa64-octeon-elf-ddd --debugger mipsisa64-octeon-elf-gdb --command ${cmdfile} ${program}"
+else
+    echo "******************************************************************"
+    echo "The \"ddd\" debugger isn't installed. Defaulting to the command line"
+    echo "******************************************************************"
+    debugCmd="mipsisa64-octeon-elf-gdb -x ${cmdfile} ${program}"
+fi
+
+if [ $pass_args == 0 ]; then
+  device="$device -debug ${all_args}"
+  spawn_sim="set spawn-sim 1"
+elif [ $pass_args == 2 ]; then 
+  gdb_version=`mipsisa64-octeon-elf-gdb -v | grep 6.3`
+  if [ x$gdb_version == x ]; then
+     device=${all_args}
+     old_debugger_bootcmd=
+     old_pci_bootcmd=
+  else
+     old_debugger_bootcmd=${all_args}
+     old_pci_bootcmd=${pci_bootcmd}
+     pci_bootcmd=
+     device=
+  fi
+fi
+
+cat > ${cmdfile} <<END
+   ${pci_bootcmd}
+   ${spawn_sim}
+   target ${target} $device
+   ${old_pci_bootcmd}
+   ${load}
+   set step-all on
+   set active-cores
+   set focus 0
+   break main
+   run ${old_debugger_bootcmd}
+   set step-all off
+END
+
+${debugCmd}
+

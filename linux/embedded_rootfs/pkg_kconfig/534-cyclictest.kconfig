@@ -1,0 +1,6 @@
+config CONFIG_cyclictest
+	bool "cyclictest"
+	default n
+	help
+		Tool used for performance testing on RT kernel	
+

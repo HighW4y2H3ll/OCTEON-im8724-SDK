@@ -1,0 +1,73 @@
+// Register Definition File for MAJIC and EJTAG resources
+// ======================================================
+//
+// JTAG Initialization buffers
+//
+// Refer to "MAJIC Support for Multi-TAP JTAG Configurations" application note
+// for information on special JTAG initialization support.
+//
+REG = MAJIC_JTAG_INIT0      0x10000000 MAJIC_DA 4
+REG = MAJIC_JTAG_INIT1      0x11000000 MAJIC_DA 4
+REG = MAJIC_JTAG_DIMENSION  0x12000000 MAJIC_DA 4
+//
+// User defined On-Stop and Idle-Mode command descriptors
+// (see bin\cmd_desc.cmd)
+//
+REG = MAJIC_ON_STOP_CMD     0xD0000000 MAJIC_DA 4
+REG = MAJIC_IDLE_MODE_CMD   0xD1000000 MAJIC_DA 4
+REG = MAJIC_ON_GO_CMD	    0xD2000000 MAJIC_DA 4
+REG = MAJIC_ON_RESET_CMD    0xD3000000 MAJIC_DA 4
+//
+// Writing a non-zero byte to MAJIC_TRIGGERS sets the MAJIC probe's
+// trigger output.  Writing a zero byte resets the trigger output.
+// Reading a byte returns the trigger input state in bit 0.
+//
+REG = MAJIC_TRIGGERS        0xDE000000 MAJIC_DA 1
+//
+// Writing a string to MAJIC_VIRTUAL_TERM sends the string out the
+// MAJIC probe's serial port (assuming the ice_virtual_term option
+// is enabled).
+//
+REG = MAJIC_VIRTUAL_TERM    0xDF000000 MAJIC_DA 1
+//
+// MAJIC Internal Resources
+//
+REG = MAJIC_CAP_ENDIAN      0xC1000001 MAJIC_INT 1  // BE=1, LE=2
+REG = MAJIC_CPUID           0xC1000003 MAJIC_INT 1
+REG = MAJIC_DO_CPU_STATE    0xC1100640 MAJIC_INT 1  // RUN=0, HALT=1, SLEEP=2, DOZE=3, OFF=4, Disconnected=5
+REG = MAJIC_DO_IC_MSIZE     0xC1100660 MAJIC_INT 4
+REG = MAJIC_DO_IC_SETS      0xC1100670 MAJIC_INT 4
+REG = MAJIC_DO_IC_LSIZE     0xC1100680 MAJIC_INT 4
+REG = MAJIC_DO_DC_MSIZE     0xC1100690 MAJIC_INT 4
+REG = MAJIC_DO_DC_SETS      0xC11006A0 MAJIC_INT 4
+REG = MAJIC_DO_DC_LSIZE     0xC11006B0 MAJIC_INT 4
+REG = MAJIC_DO_IJTS         0xC1100710 MAJIC_INT 4
+REG = MAJIC_DO_ICE_VTERM    0xC1100860 MAJIC_INT 1  // OFF=0, ON=1
+//
+// EJTAG Scan Registers
+//
+REG = EJID   0x00000000 MAJIC_DA 4
+REG = EJIMP  0x00000004 MAJIC_DA 4
+REG = EJC    0x00000008 MAJIC_DA 4
+REG = EJA    0x0000000C MAJIC_DA 4
+REG = EJDA   0x00000010 MAJIC_DA 4
+REG = EJPA   0x00000014 MAJIC_DA 4
+REG = EJDD   0x00000018 MAJIC_DA 4
+REG = EJPD   0x0000001C MAJIC_DA 4
+//
+REG = EJDCR    0xFF300000 PHYSICAL 4
+REG = EJIBS    0xFF300004 PHYSICAL 4
+REG = EJDBS    0xFF300008 PHYSICAL 4
+REG = EJBBS    0xFF30000C PHYSICAL 4
+REG = EJ20IBA0 0xFF300100 PHYSICAL 4	// EJTAG 2.0 HWBP 0 Address
+REG = EJ20IBC0 0xFF300104 PHYSICAL 4	// EJTAG 2.0 HWBP 0 Control
+REG = EJ20IBM0 0xFF300108 PHYSICAL 4	// EJTAG 2.0 HWBP 0 Mask
+//
+REG_FIELD = EJC ROcc 31 31, PRNW 19 19, PrAcc 18 18, DmaAcc 17 17, PrRst 16 16, PrbEn 15 15, DAbort 13 13, JtagBrk 12 12, DStrt 11 11, DErr 10 10, DRNW 9 9, DSz 8 7, DLock 5 5, DInc 4 4, BrkSt 3 3, ClkEn 0 0
+REG_FIELD = EJIMP LEXRA 29 26, ASIDSZ 22 21, SDBBP 23 23, MIPS16 16 16, NoPCT 15 15, NoDMA 14 14, TPCW 13 11, PCSTW 10 8, NoBB 7 7, NoDB 6 6, NoIB 5 5
+REG_FIELD = EJDCR DZS 31 31, HIS 30 30, END 29 29, MINT 4 4, MNMI 3 3, MP 2 2, MRST 1 1, TM 0 0
+REG_FIELD = EJIBS BCN 27 24, BS 15 0
+REG_FIELD = EJDBS BCN 27 24, BS 15 0
+REG_FIELD = EJBBS BCN 27 24, BS 15 0
+//
+// end

@@ -1,0 +1,18 @@
+#!/bin/sh
+source ./functions.sh
+cat > awk.txt << EOF
+ITS
+MY
+STYLE
+EOF
+
+cat >awk_cmp.txt <<EOF
+ITS
+STYLE
+EOF
+
+assert awk -v var="MY" '{ if ( $0 != var )  print $0 }' awk.txt > awk_out.txt
+assert cmp -s awk_out.txt awk_cmp.txt
+require_good
+assert rm -f awk_*
+

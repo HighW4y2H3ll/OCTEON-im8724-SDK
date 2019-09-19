@@ -1,0 +1,36 @@
+#!/bin/sh
+
+source ./functions.sh
+
+# skip the test for large pagesize 
+check_pagesize
+
+# skip the test, doesn't have enough memory to run
+have_cn50xx
+require [ $? != 0 ]
+
+require test -f ./hugetlb-use-fs
+
+# Make sure Huge TLB is enabled
+require grep -q "Hugepagesize:" /proc/meminfo
+
+# Get the configured huge page size
+hpgsz=`grep Hugepagesize: /proc/meminfo | awk ' { print $2; } ' `
+
+# Assume test programs map 128MB of memory
+# Use the page size to figure out how many to allocate
+let nr_hpgs=131072/$hpgsz
+
+assert echo $nr_hpgs > /proc/sys/vm/nr_hugepages
+
+assert cat /proc/meminfo > $0.log 2>&1
+assert grep -q "HugePages_Total:[ \t]*$nr_hpgs" $0.log
+assert grep -q "HugePages_Free:[ \t]*$nr_hpgs" $0.log
+assert ./hugetlb-use-fs > $0.log
+assert grep -q "Returned address is 0x" $0.log
+assert grep -q "First hex is 0" $0.log
+assert grep -q "First hex is " $0.log
+assert cat /proc/meminfo >> $0.log
+
+assert grep -q "HugePages_Free:[ \t]*$nr_hpgs" $0.log
+

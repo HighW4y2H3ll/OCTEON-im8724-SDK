@@ -1,0 +1,19 @@
+#!/bin/sh
+source ./functions.sh
+
+lsmod | grep -q octeon_ethernet
+if [ $? != 0 ]; then
+   test -f /lib/modules/*-Cavium-Octeon+/drivers/net/ethernet/octeon/octeon-ethernet.ko
+   if [ $? == 0 ];then
+      modprobe octeon-ethernet
+   fi
+fi
+
+assert ifconfig -a > $0.log
+require grep -q "eth0" $0.log
+assert ifconfig eth0 10.1.1.1 up
+assert nc -i 20 -w 20 10.1.1.1 23 &
+assert netstat -tan >> $0.log
+grep -q '10.1.1.1:23' $0.log
+require [ $? -eq 0 ] 
+killall nc

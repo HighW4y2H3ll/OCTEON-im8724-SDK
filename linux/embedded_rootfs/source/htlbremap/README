@@ -1,0 +1,7 @@
+htlbremap is a shared library that you can use to remap the
+application (text, data and heap) into huge TLB pages.  This will
+significantly reduce the number of pages used by the application and
+thus the number of TLB refills needed.
+
+For further details please refer to the Linux Userspace on Octeon
+section in the SDK documentation.

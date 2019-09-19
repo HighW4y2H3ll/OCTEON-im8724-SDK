@@ -1,0 +1,7 @@
+config CONFIG_python
+	bool "python"
+	default n
+	help
+		Include the Python 2.7.2 package. The python binary
+		would go in to /usr/bin directory.
+		

@@ -1,0 +1,2 @@
+bootcmd=bootoctlinux 0x11000000 coremask=0x2 endbootargs rw root=1f00 slram=root,0x40000000,+1073741824; bootoct 0x10000000 coremask=0x1
+

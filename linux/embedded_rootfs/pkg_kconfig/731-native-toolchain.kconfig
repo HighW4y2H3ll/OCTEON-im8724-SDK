@@ -1,0 +1,6 @@
+config CONFIG_native-toolchain
+	bool "Native toolchain"
+	default n
+	help
+		Include native gcc toolchain
+

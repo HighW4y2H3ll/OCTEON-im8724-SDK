@@ -1,0 +1,8 @@
+#!/bin/sh
+
+source ./functions.sh
+
+require test -f /usr/bin/objdump
+assert objdump -h `which objdump` | grep -q "\.text"
+assert objdump -h `which objdump` | grep -q "\.init"
+

@@ -1,0 +1,1380 @@
+/dts-v1/;
+/*
+ * Cavium Inc. SFF CN7800
+ */
+/ {
+	model = "cavium,sff7800";
+	compatible = "cavium,sff7800";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	soc@0 {
+		interrupt-parent = <&ciu3>;
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+		cavium,node-trim = "0,soc";
+
+		ciu3: interrupt-controller@1010000000000 {
+			compatible = "cavium,octeon-7890-ciu3";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Source number (20 significant bits)
+			 * 2) Trigger type: (4 == level, 1 == edge)
+			 */
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x10100 0x00000000 0x0 0xb0000000>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+			ranges = <0 0  0x10000 0x00000000  0>,
+				 <1 0  0x10000 0x10000000  0>,
+				 <2 0  0x10000 0x20000000  0>,
+				 <3 0  0x10000 0x30000000  0>,
+				 <4 0  0x10000 0x40000000  0>,
+				 <5 0  0x10000 0x50000000  0>,
+				 <6 0  0x10000 0x60000000  0>,
+				 <7 0  0x10000 0x90000000  0>;
+
+		};
+
+		serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0x08000 4>;
+		};
+
+		gpio: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-7890-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0x03000 4>, <0x03001 4>, <0x03002 4>, <0x03003 4>,
+				     <0x03004 4>, <0x03005 4>, <0x03006 4>, <0x03007 4>,
+				     <0x03008 4>, <0x03009 4>, <0x0300a 4>, <0x0300b 4>,
+				     <0x0300c 4>, <0x0300d 4>, <0x0300e 4>, <0x0300f 4>;
+		};
+
+		/* BGX 2 */
+		ethernet-mac-nexus@11800e2000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe2000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cavium,link-status-led = <&p0_link_led>;
+			cavium,rx-activity-led = <&p0_act_led>;
+			cavium,rx-activity-blink-rate = <4>; /* 4 hz */
+			/* GPIO clock generator number, can be 0-3 */
+			cavium,rx-timer = <3>;
+			cavium,link-poll-interval-ms = <1000>;
+			cavium,activity-poll-interval-ms = <250>;
+
+			eth0: ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp0>;
+			};
+			eth1: ethernet-mac@1 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp0>;
+				cavium,qlm-trim = "4,xfi";
+			};
+			eth2: ethernet-mac@2 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp0>;
+				cavium,qlm-trim = "4,xfi";
+			};
+			eth3: ethernet-mac@3 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp0>;
+				cavium,qlm-trim = "4,xfi";
+			};
+		};
+
+		/* BGX 3 */
+		ethernet-mac-nexus@11800e3000000 {
+			compatible = "cavium,octeon-7890-bgx";
+			reg = <0x11800 0xe3000000 0x0 0x1000000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cavium,qsfp-lp_mode = <&gpio21 3 0>;
+			cavium,qsfp-select = <&gpio21 7 0>;
+			cavium,qsfp-mod_prs = <&gpio 11 0>;
+			cavium,qsfp-interrupt = <&gpio21 1 0>;
+			cavium,qsfp-reset = <&gpio21 15 0>;
+			cavium,link-status-led = <&p1_link_led>;
+			cavium,rx-activity-led = <&p1_act_led>;
+			cavium,rx-activity-blink-rate = <4>; /* 4 hz */
+			/* GPIO clock generator number, can be 0-3 */
+			cavium,rx-timer = <3>;
+			cavium,link-poll-interval-ms = <1000>;
+			cavium,activity-poll-interval-ms = <250>;
+			/* EEPROM of SFP+ module */
+			cavium,sfp-slot-eeprom = <&qsfp1>;
+			/* ASIC of SFP+ module */
+			cavium,sfp-slot-asic = <&qsfp1alerts>;
+
+			eth4: ethernet-mac@0 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <0>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp1>;
+			};
+			eth5: ethernet-mac@1 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <1>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp1>;
+				cavium,qlm-trim = "5,xfi";
+			};
+			eth6: ethernet-mac@2 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <2>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp1>;
+				cavium,qlm-trim = "5,xfi";
+			};
+			eth7: ethernet-mac@3 {
+				compatible = "cavium,octeon-7890-bgx-port";
+				reg = <3>;
+				local-mac-address = [ 00 00 00 00 00 00 ];
+				qsfp-slot = <&qsfp1>;
+				cavium,qlm-trim = "5,xfi";
+			};
+		};
+
+		i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			cavium,cpu-trim = "0,notrev1.0";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b000 1>, <0x0b001 1>, <0x0b002 1>;
+			clock-frequency = <100000>;
+
+			tmp@4c {
+				compatible = "nxp,sa56004";
+				reg = <0x4c>;
+				interrupt-parent = <&gpio>;
+				interrupts = <2 8>;
+			};
+			tlv-eeprom@56 {
+				compatible = "atmel,24c256";
+				reg = <0x56>;
+				pagesize = <64>;
+			};
+			qsfpeeprom0: eeprom@50 {
+				compatible = "atmel,24c01";
+				reg = <0x50>;
+			};
+			qsfp0alerts: eeprom@51 {
+				/* Need to fix compatible string */
+				compatible = "atmel,24c01";
+				reg = <0x51>;
+			};
+		};
+
+		i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-7890-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			/* INT_ST, INT_TS, INT_CORE */
+			interrupts = <0x0b100 1>, <0x0b101 1>, <0x0b102 1>;
+			clock-frequency = <100000>;
+
+			gpio21: gpio@21 {
+				compatible = "nxp,tca9555","tca9555", "pca9555";
+				reg = <0x21>;
+				gpio-controller;
+				#gpio-cells = <2>;
+			};
+			vitesse@10 {	/* RX QSFP 0 */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "vitesse,vsc7224";
+				reg = <0x10>;
+				reset = <&gpio21 9 0>;
+				los = <&gpio 5 8>;
+				vitesse,reg-init =
+					/* Page select FSYNC0 (0x30) */
+					<0x7f 0x0030>,
+					/* Set FSYNC0 for 10.3125Gbps */
+					<0x80 0x2841>,	/* See Table 3. */
+					<0x81 0x0008>,
+					<0x82 0xc000>,
+					<0x83 0x0010>,
+					<0x84 0x1d00>,
+					/* All channels are set equally */
+					<0x7f 0x0050>,
+					/* Shrink EQ_BUFF */
+					<0x82 0x0014>,
+					/* Set EQVGA_ADAP = 1 (enable EQVGA circuitry),
+					 * USE_UNIT_GAIN = 1 (EQVGA is in unity gain),
+					 * USE_LPF = 0 (VGA adapt not using LPF),
+					 * USE_EQVGA = 1 */
+					<0x89 0x7f13>,
+					/* Select min DFE Delay (DFE_DELAY) */
+					<0x90 0x5785>,
+					/* Set DFE 1-3 limit (DXMAX) = 32dec,
+					 * AP Max limit = 127 decimal
+					 */
+					<0x92 0x207f>,
+					/* Set AP Min limit = 32 decimal */
+					<0x93 0x2000>,
+					/* Set DFE Averaging to the slowest (DFE_AVG) */
+					<0x94 0x0031>,
+					/* Set Inductor Bypass OD_IND_BYP = 0 & fastest Rise/Fall */
+					<0x9c 0x0000>,
+					/* Setting DFE Boost = none. Must set for
+					 * rev C (if DFE in adapt mode)
+					 */
+					<0xaa 0x0888>,
+					/* Setting EQ Min = 8 & Max limit = 72 dec.
+					 * Must set for rev C, otherwise EQ is 0
+					 * (if EQ is in adaptive mode)
+					 */
+					<0xa8 0x2408>,
+					/* Setting EQVGA = 96, when in EQVGA manual mode */
+					<0xa9 0x0060>,
+					/* Setting SW_BFOCM, bits 15:14 to 01 */
+					<0x87 0x4021>,
+					/* Turn off adaptive input equalization
+					 * and VGA adaptive algorithm control.
+					 */
+					<0x89 0x7313>,
+					/* Turn on adaptive input equalization
+					 * and VGA adaptive algorithm control.
+					 */
+					<0x89 0x7f13>;
+				vitesse-channel@0 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <0>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x0>;
+
+					qsfp-mac = <&eth0>;
+				};
+				vitesse-channel@1 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x0>;
+
+					cavium,qlm-trim = "4,xlaui";
+					qsfp-mac = <&eth0>;
+				};
+				vitesse-channel@2 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x0>;
+
+					cavium,qlm-trim = "4,xlaui";
+					qsfp-mac = <&eth0>;
+				};
+				vitesse-channel@3 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x0>;
+
+					cavium,qlm-trim = "4,xlaui";
+					qsfp-mac = <&eth0>;
+				};
+				vitesse-channel@11 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x0>;
+
+					cavium,qlm-trim = "4,xfi";
+					qsfp-mac = <&eth1>;
+				};
+				vitesse-channel@12 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x0>;
+
+					cavium,qlm-trim = "4,xfi";
+					qsfp-mac = <&eth2>;
+				};
+				vitesse-channel@13 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x0>;
+
+					cavium,qlm-trim = "4,xfi";
+					qsfp-mac = <&eth3>;
+				};
+			};
+			vitesse@11 {	/* TX QSFP 0 */
+				compatible = "vitesse,vsc7224";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x11>;
+				reset = <&gpio21 10 0>;
+				los = <&gpio 6 8>;
+				vitesse,reg-init =
+					<0x7f 0x0040>,
+					/* 15:0 Power down crystal osc,
+					 * 14:1 Enable reference clock input
+					 * 13:0 Disable internal bias
+					 * 12:0 Disable complement internal bias
+					 * 11:0 Input from reference clock input
+					 */
+					<0x82 0xb000>,
+					/* Clear all masks */
+					/* Page select FSYNC0 (0x30) */
+					<0x7f 0x0030>,
+					/* Set FSYNC0 for 10.3125Gbps */
+					<0x80 0x2841>,	/* See Table 3. */
+					<0x81 0x0008>,
+					<0x82 0xc000>,
+					<0x83 0x0010>,
+					<0x84 0x1d00>,
+					/* All channels are set equally */
+					<0x7f 0x0050>,
+					/* Shrink EQ_BUFF */
+					<0x82 0x0014>,
+					/* Set EQVGA_ADAP = 1 (enable EQVGA circuitry),
+					 * USE_UNIT_GAIN = 1 (EQVGA is in unity gain),
+					 * USE_LPF = 0 (VGA adapt not using LPF),
+					 * USE_EQVGA = 1 */
+					<0x89 0x7f13>,
+					/* Select min DFE Delay (DFE_DELAY) */
+					<0x90 0x5785>,
+					/* Set DFE 1-3 limit (DXMAX) = 32dec,
+					 * AP Max limit = 127 decimal
+					 */
+					<0x92 0x207f>,
+					/* Set AP Min limit = 32 decimal */
+					<0x93 0x2000>,
+					/* Set DFE Averaging to the slowest (DFE_AVG) */
+					<0x94 0x0031>,
+					/* Set Inductor Bypass OD_IND_BYP = 0 & fastest Rise/Fall */
+					<0x9c 0x0000>,
+					/* Setting DFE Boost = none. Must set for
+					 * rev C (if DFE in adapt mode)
+					 */
+					<0xaa 0x0888>,
+					/* Setting EQ Min = 8 & Max limit = 72 dec.
+					 * Must set for rev C, otherwise EQ is 0
+					 * (if EQ is in adaptive mode)
+					 */
+					<0xa8 0x2408>,
+					/* Setting EQVGA = 96, when in EQVGA manual mode */
+					<0xa9 0x0060>,
+					/* Setting SW_BFOCM, bits 15:14 to 01 */
+					<0x87 0x4021>,
+					/* Turn off adaptive input equalization
+					 * and VGA adaptive algorithm control.
+					 */
+					<0x89 0x7313>,
+					/* Turn on adaptive input equalization
+					 * and VGA adaptive algorithm control.
+					 */
+					<0x89 0x7f13>;
+				vitesse-channel@0 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <0>;
+					direction-tx;
+					qsfp-mac = <&eth0>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@1 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+					direction-tx;
+					cavium,qlm-trim = "4,xlaui";
+					qsfp-mac = <&eth0>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@2 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+					direction-tx;
+					cavium,qlm-trim = "4,xlaui";
+					qsfp-mac = <&eth0>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@3 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					direction-tx;
+					cavium,qlm-trim = "4,xlaui";
+					qsfp-mac = <&eth0>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@11 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+					direction-tx;
+					cavium,qlm-trim = "4,xfi";
+					qsfp-mac = <&eth1>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					<1 0x0018 0x000f 0x0004>,
+					<3 0x0014 0x000b 0x0004>,
+					<5 0x0014 0x0009 0x0006>,
+					<7 0x0014 0x000f 0x0000>,
+					<10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@12 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+					direction-tx;
+					cavium,qlm-trim = "4,xfi";
+					qsfp-mac = <&eth2>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					<1 0x0018 0x000f 0x0004>,
+					<3 0x0014 0x000b 0x0004>,
+					<5 0x0014 0x0009 0x0006>,
+					<7 0x0014 0x000f 0x0000>,
+					<10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@13 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					direction-tx;
+					cavium,qlm-trim = "4,xfi";
+					qsfp-mac = <&eth3>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					<1 0x0018 0x000f 0x0004>,
+					<3 0x0014 0x000b 0x0004>,
+					<5 0x0014 0x0009 0x0006>,
+					<7 0x0014 0x000f 0x0000>,
+					<10 0x0012 0x000b 0x0013>;
+				};
+			};
+			vitesse@12 {	/* RX QSFP 1 */
+				compatible = "vitesse,vsc7224";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x12>;
+				reset = <&gpio21 11 0>;
+				los = <&gpio 7 8>;
+				vitesse,reg-init =
+				<0x7f 0x0040>,
+				/* 15:0 Power down crystal osc,
+				 * 14:1 Enable reference clock input
+				 * 13:0 Disable internal bias
+				 * 12:0 Disable complement internal bias
+				 * 11:0 Input from reference clock input
+				 */
+				<0x82 0xb000>,
+				/* Page select FSYNC0 (0x30) */
+				<0x7f 0x0030>,
+				/* Set FSYNC0 for 10.3125Gbps */
+				<0x80 0x2841>,	/* See Table 3. */
+				<0x81 0x0008>,
+				<0x82 0xc000>,
+				<0x83 0x0010>,
+				<0x84 0x1d00>,
+				/* All channels are set equally */
+				<0x7f 0x0050>,
+				/* Shrink EQ_BUFF */
+				<0x82 0x0014>,
+				/* Select min DFE Delay (DFE_DELAY) */
+				<0x89 0x7f13>,
+				<0x90 0x5785>,
+				/* Set DFE 1-3 limit (DXMAX) = 32dec,
+				 * AP Max limit = 127 decimal
+				 */
+				<0x92 0x207f>,
+				/* Set AP Min limit = 32 decimal */
+				<0x93 0x2000>,
+				/* Set DFE Averaging to the slowest (DFE_AVG) */
+				<0x94 0x0031>,
+				/* Set Inductor Bypass OD_IND_BYP = 0 & fastest Rise/Fall */
+				<0x9c 0x0000>,
+				/* Setting DFE Boost = none. Must set for
+				 * rev C (if DFE in adapt mode)
+				 */
+				<0xaa 0x0888>,
+				/* Setting EQ Min = 8 & Max limit = 72 dec.
+				 * Must set for rev C, otherwise EQ is 0
+				 * (if EQ is in adaptive mode)
+				 */
+				<0xa8 0x2408>,
+				/* Setting EQVGA = 96, when in EQVGA manual mode */
+				<0xa9 0x0060>,
+				/* Setting SW_BFOCM, bits 15:14 to 01 */
+				<0x87 0x4021>,
+				/* Turn off adaptive input equalization
+				 * and VGA adaptive algorithm control.
+				 */
+				<0x89 0x7313>,
+				/* Turn on adaptive input equalization
+				 * and VGA adaptive algorithm control.
+				 */
+				<0x89 0x7f13>;
+
+				vitesse-channel@0 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <0>;
+
+					/* Ignore mod_abs and module */
+					direction-rx;
+
+					/* Disable pre-tap */
+					pretap-disable;
+
+					/* Disable post-tap */
+					posttap-disable;
+
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x00>;
+
+					cavium,qlm-trim = "4,xlaui";
+					qsfp-mac = <&eth4>;
+				};
+				vitesse-channel@1 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+
+					/* Ignore mod_abs and module */
+					direction-rx;
+
+					/* Disable pre-tap */
+					pretap-disable;
+
+					/* Disable post-tap */
+					posttap-disable;
+
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x00>;
+
+					cavium,qlm-trim = "5,xlaui";
+					qsfp-mac = <&eth4>;
+				};
+				vitesse-channel@2 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+
+					/* Ignore mod_abs and module */
+					direction-rx;
+
+					/* Disable pre-tap */
+					pretap-disable;
+
+					/* Disable post-tap */
+					posttap-disable;
+
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x00>;
+
+					cavium,qlm-trim = "5,xlaui";
+					qsfp-mac = <&eth4>;
+				};
+				vitesse-channel@3 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x00>;
+
+					cavium,qlm-trim = "5,xlaui";
+					qsfp-mac = <&eth4>;
+				};
+				vitesse-channel@11 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+
+					/* Ignore mod_abs and module */
+					direction-rx;
+
+					/* Disable pre-tap */
+					pretap-disable;
+
+					/* Disable post-tap */
+					posttap-disable;
+
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x00>;
+
+					cavium,qlm-trim = "5,xfi";
+					qsfp-mac = <&eth5>;
+				};
+				vitesse-channel@12 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+
+					/* Ignore mod_abs and module */
+					direction-rx;
+
+					/* Disable pre-tap */
+					pretap-disable;
+
+					/* Disable post-tap */
+					posttap-disable;
+
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x00>;
+
+					cavium,qlm-trim = "5,xfi";
+					qsfp-mac = <&eth6>;
+				};
+				vitesse-channel@13 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					/* Ignore mod_abs and module */
+					direction-rx;
+					/* Disable pre-tap */
+					pretap-disable;
+					/* Disable post-tap */
+					posttap-disable;
+					/* Taps has the following fields:
+					 * - cable length (ignored for rx)
+					 * - main tap value
+					 * - pre tap value
+					 * - post tap value
+					 *
+					 * NOTE: if taps are disabled then they
+					 *       are not programmed.
+					 */
+					taps = <0 0x13 0x0f 0x00>;
+
+					cavium,qlm-trim = "5,xfi";
+					qsfp-mac = <&eth7>;
+				};
+			};
+			vitesse@13 {	/* TX QSFP 1 */
+				compatible = "vitesse,vsc7224";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x13>;
+				reset = <&gpio21 12 0>;
+				los = <&gpio 9 8>;
+				vitesse,reg-init =
+					<0x7f 0x0040>,
+					/* 15:0 Power down crystal osc,
+					 * 14:1 Enable reference clock input
+					 * 13:0 Disable internal bias
+					 * 12:0 Disable complement internal bias
+					 * 11:0 Input from reference clock input
+					 */
+					<0x82 0xb000>,
+					/* Page select FSYNC0 (0x30) */
+					<0x7f 0x0030>,
+					/* Set FSYNC0 for 10.3125Gbps */
+					<0x80 0x2841>,	/* See Table 3. */
+					<0x81 0x0008>,
+					<0x82 0xc000>,
+					<0x83 0x0010>,
+					<0x84 0x1d00>,
+					/* All channels are set equally */
+					<0x7f 0x0050>,
+					/* Shrink EQ_BUFF */
+					<0x82 0x0014>,
+					/* Select min DFE Delay (DFE_DELAY) */
+					<0x89 0x7f13>,
+					<0x90 0x5785>,
+					/* Set DFE 1-3 limit (DXMAX) = 32dec,
+					 * AP Max limit = 127 decimal
+					 */
+					<0x92 0x207f>,
+					/* Set AP Min limit = 32 decimal */
+					<0x93 0x2000>,
+					/* Set DFE Averaging to the slowest (DFE_AVG) */
+					<0x94 0x0031>,
+					/* Set Inductor Bypass OD_IND_BYP = 0 & fastest Rise/Fall */
+					<0x9c 0x0000>,
+					/* Setting DFE Boost = none. Must set for
+					 * rev C (if DFE in adapt mode)
+					 */
+					<0xaa 0x0888>,
+					/* Setting EQ Min = 8 & Max limit = 72 dec.
+					 * Must set for rev C, otherwise EQ is 0
+					 * (if EQ is in adaptive mode)
+					 */
+					<0xa8 0x2408>,
+					/* Setting EQVGA = 96, when in EQVGA manual mode */
+					<0xa9 0x0060>,
+					/* Setting SW_BFOCM, bits 15:14 to 01 */
+					<0x87 0x4021>,
+					/* Turn off adaptive input equalization
+					 * and VGA adaptive algorithm control.
+					 */
+					<0x89 0x7313>,
+					/* Turn on adaptive input equalization
+					 * and VGA adaptive algorithm control.
+					 */
+					<0x89 0x7f13>;
+
+				vitesse-channel@0 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <0>;
+					direction-tx;
+					qsfp-mac = <&eth4>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@1 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+					direction-tx;
+					cavium,qlm-trim = "5,xlaui";
+					qsfp-mac = <&eth4>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@2 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+					direction-tx;
+					cavium,qlm-trim = "5,xlaui";
+					qsfp-mac = <&eth4>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@3 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					direction-tx;
+					cavium,qlm-trim = "5,xlaui";
+					qsfp-mac = <&eth4>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					       <1 0x0018 0x000f 0x0004>,
+					       <3 0x0014 0x000b 0x0004>,
+					       <5 0x0014 0x0009 0x0006>,
+					       <7 0x0014 0x000f 0x0000>,
+					       <10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@11 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <1>;
+					direction-tx;
+					cavium,qlm-trim = "5,xfi";
+					qsfp-mac = <&eth5>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					<1 0x0018 0x000f 0x0004>,
+					<3 0x0014 0x000b 0x0004>,
+					<5 0x0014 0x0009 0x0006>,
+					<7 0x0014 0x000f 0x0000>,
+					<10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@12 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <2>;
+					direction-tx;
+					cavium,qlm-trim = "5,xfi";
+					qsfp-mac = <&eth6>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					<1 0x0018 0x000f 0x0004>,
+					<3 0x0014 0x000b 0x0004>,
+					<5 0x0014 0x0009 0x0006>,
+					<7 0x0014 0x000f 0x0000>,
+					<10 0x0012 0x000b 0x0013>;
+				};
+				vitesse-channel@13 {
+					compatible = "vitesse,vsc7224-channel";
+					reg = <3>;
+					direction-tx;
+					cavium,qlm-trim = "5,xfi";
+					qsfp-mac = <&eth7>;
+					/* TAP settings.  The format of this is as
+					 * follows:
+					 * - cable length in meters, 0 = active or
+					 *   optical module
+					 * - maintap value
+					 * - pretap value
+					 * - posttap value
+					 *
+					 * For the cable length, the value will apply
+					 * for that cable length and greater until the
+					 * next largest cable length specified.  These
+					 * values must be ordered first by channel mask
+					 * then by cable length.  These are typically
+					 * set for the transmit channels, not the
+					 * receive channels.
+					 */
+					taps = <0 0x0013 0x000f 0x0000>,
+					<1 0x0018 0x000f 0x0004>,
+					<3 0x0014 0x000b 0x0004>,
+					<5 0x0014 0x0009 0x0006>,
+					<7 0x0014 0x000f 0x0000>,
+					<10 0x0012 0x000b 0x0013>;
+				};
+			};
+			qsfpeeprom1: eeprom@50 {
+				compatible = "atmel,24c01";
+				reg = <0x50>;
+			};
+			qsfp1alerts: eeprom@51 {
+				compatible = "atmel,24c01";
+				reg = <0x51>;
+			};
+		};
+
+		mmc: mmc@1180000002000 {
+			compatible = "cavium,octeon-7890-mmc";
+			reg = <0x11800 0x00002000 0x0 0x100>,
+			      <0x11800 0x00000180 0x0 0x20>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* EMM_INT_BUF_DONE,
+			   EMM_INT_CMD_DONE,
+			   EMM_INT_DMA_DONE,
+			   EMM_INT_CMD_ERR,
+			   EMM_INT_DMA_ERR,
+			   EMM_INT_SWITCH_DONE,
+			   EMM_INT_SWITCH_ERR,
+			   EMM_DMA_DONE,
+			   EMM_DMA_FIFO*/
+			interrupts = <0x09040 1>,
+				     <0x09041 1>,
+				     <0x09042 1>,
+				     <0x09043 1>,
+				     <0x09044 1>,
+				     <0x09045 1>,
+				     <0x09046 1>,
+				     <0x09000 1>,
+				     <0x09001 1>;
+
+			/* Power on GPIO 8, active high */
+			power-gpios = <&gpio 8 0>;
+
+			/* The board only has a single MMC slot */
+			mmc-slot@0 {
+				compatible = "cavium,octeon-6130-mmc-slot";
+				reg = <0>;
+				voltage-ranges = <3300 3300>;
+				spi-max-frequency = <35000000>;
+				/* bus width can be 1, 4 or 8 */
+				cavium,bus-max-width = <8>;
+			};
+		};
+
+		spi: spi@1070000001000 {
+			compatible = "cavium,octeon-3010-spi";
+			reg = <0x10700 0x00001000 0x0 0x100>;
+			interrupts = <0x05001 1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			spi-max-frequency = <25000000>;
+		};
+
+		ocla0@11800A8000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa8000000 0x0 0x500000>;
+			interrupts = <0xa800c 1>, /* Fsm0 */
+				     <0xa800d 1>, /* Fsm1 */
+				     <0xa800f 1>; /* Trigfull */
+		};
+
+		ocla1@11800A9000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xa9000000 0x0 0x500000>;
+			interrupts = <0xa900c 1>, /* Fsm0 */
+				     <0xa900d 1>, /* Fsm1 */
+				     <0xa900f 1>; /* Trigfull */
+		};
+
+		ocla2@11800AA000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xaa000000 0x0 0x500000>;
+			interrupts = <0xaa00c 1>, /* Fsm0 */
+				     <0xaa00d 1>, /* Fsm1 */
+				     <0xaa00f 1>; /* Trigfull */
+		};
+
+		ocla3@11800AB000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xab000000 0x0 0x500000>;
+			interrupts = <0xab00c 1>, /* Fsm0 */
+				     <0xab00d 1>, /* Fsm1 */
+				     <0xab00f 1>; /* Trigfull */
+		};
+
+		ocla4@11800AC000000 {
+			compatible = "cavium,octeon-7130-ocla";
+			reg = <0x11800 0xac000000 0x0 0x500000>;
+			interrupts = <0xac00c 1>, /* Fsm0 */
+				     <0xac00d 1>, /* Fsm1 */
+				     <0xac00f 1>; /* Trigfull */
+		};
+		leds: leds {
+			compatible = "gpio-leds";
+			d1_led: d1 {
+				label = "d1:orange";
+				gpios = <&gpio21 8 0>;
+				linux,default-trigger = "input";
+				default-state = "keep";
+			};
+			p0_act_led: p0_act {
+				label = "port0_act";
+				gpios = <&gpio 14 0>;
+			};
+			p0_link_led: p0_link {
+				label = "port0_link";
+				gpios = <&gpio 15 0>;
+			};
+			p1_act_led: p1_act {
+				label = "port1_act";
+				gpios = <&gpio 16 0>;
+			};
+			p1_link_led: p1_link {
+				label = "port1_link";
+				gpios = <&gpio 17 0>;
+			};
+		};
+		qsfp0: qsfp-slot@0 {
+			/* Top QSFP slot */
+			compatible = "ethernet,qsfp-slot";
+			/* lp_mode pin connected to gpio21 pin 2, not inverted */
+			lp_mode = <&gpio21 2 0>;
+			/* select pin connected to gpio21 pin 6, not inverted */
+			select = <&gpio21 6 0>;
+			/* module present pin connected to gpio pin 10, not
+			 * inverted
+			 */
+			mod_prs = <&gpio 10 0>;
+			/* interrupt pin connected to gpio21 pin 0, not inverted */
+			interrupt = <&gpio21 0 0>;
+			/* reset pin connected to gpio21 pin 14, not inverted */
+			reset = <&gpio21 14 0>;
+			eeprom = <&qsfpeeprom0>;
+			diag = <&qsfp0alerts>;
+		};
+		qsfp1: qsfp-slot@1 {
+			/* Bottom QSFP slot */
+			compatible = "ethernet,qsfp-slot";
+			/* lp_mode pin connected to gpio21 pin 3, not inverted */
+			lp_mode = <&gpio21 3 0>;
+			/* select pin connected to gpio21 pin 7, not inverted */
+			select = <&gpio21 7 0>;
+			/* module present pin connected to gpio pin 11, not
+			 * inverted
+			 */
+			mod_prs = <&gpio 11 0>;
+			/* interrupt pin connected to gpio21 pin 1, not inverted */
+			interrupt = <&gpio21 1 0>;
+			/* reset pin connected to gpio21 pin 15, not inverted */
+			reset = <&gpio21 15 0>;
+			eeprom = <&qsfpeeprom1>;
+			diag = <&qsfp1alerts>;
+		};
+	};
+};

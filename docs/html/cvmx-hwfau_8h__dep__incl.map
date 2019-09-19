@@ -1,0 +1,26 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$cvmx-fau_8h.html" title="Interface to the hardware Fetch and Add Unit." alt="" coords="400,83,499,112"/>
+<area shape="rect" id="node26" href="$cvmx-hwpko_8h.html" title="Interface to the hardware Packet Output unit." alt="" coords="1553,83,1671,112"/>
+<area shape="rect" id="node5" href="$cvmx-app-init-linux_8c.html" title="Simple executive application initialization for Linux user space." alt="" coords="645,160,808,189"/>
+<area shape="rect" id="node7" href="$cvmx-app-init_8c.html" title="Main entry point for all simple executive based programs." alt="" coords="832,160,960,189"/>
+<area shape="rect" id="node9" href="$cvmx-dfa_8c.html" title="Support library for the CN31XX, CN38XX, and CN58XX hardware DFA engine." alt="" coords="5,237,104,267"/>
+<area shape="rect" id="node11" href="$cvmx-dfa_8h.html" title="Interface to the CN31XX, CN38XX, and CN58XX hardware DFA engine." alt="" coords="48,160,147,189"/>
+<area shape="rect" id="node18" href="$cvmx-fau-compat_8c.html" title="cvmx&#45;fau&#45;compat.c" alt="" coords="221,160,376,189"/>
+<area shape="rect" id="node20" href="$cvmx-fau_8c.html" title="cvmx&#45;fau.c" alt="" coords="400,160,499,189"/>
+<area shape="rect" id="node22" href="$cvmx-hfa_8c.html" title="Support library for the CN63XX, CN68XX hardware HFA engine." alt="" coords="523,160,621,189"/>
+<area shape="rect" id="node24" href="$cvmx-pko3-compat_8c.html" title="cvmx&#45;pko3&#45;compat.c" alt="" coords="912,237,1077,267"/>
+<area shape="rect" id="node13" href="$cvmx-config-init_8c.html" title="cvmx&#45;config&#45;init.c" alt="" coords="248,237,392,267"/>
+<area shape="rect" id="node16" href="$cvmx-helper-fpa_8c.html" title="Helper functions for FPA setup." alt="" coords="635,237,779,267"/>
+<area shape="rect" id="node28" href="$cvmx-helper-errata_8c.html" title="Fixes and workaround for Octeon chip errata." alt="" coords="1355,160,1520,189"/>
+<area shape="rect" id="node30" href="$cvmx-helper-ilk_8c.html" title="Functions for ILK initialization, configuration, and monitoring." alt="" coords="1544,160,1680,189"/>
+<area shape="rect" id="node32" href="$cvmx-helper-npi_8c.html" title="Functions for NPI initialization, configuration, and monitoring." alt="" coords="1704,160,1845,189"/>
+<area shape="rect" id="node34" href="$cvmx-helper-pko_8c.html" title="Helper Functions for the PKO." alt="" coords="1869,160,2016,189"/>
+<area shape="rect" id="node36" href="$cvmx-helper-rgmii_8c.html" title="Functions for RGMII/GMII/MII initialization, configuration, and monitoring." alt="" coords="2040,160,2195,189"/>
+<area shape="rect" id="node38" href="$cvmx-helper-util_8c.html" title="Small helper utilities." alt="" coords="2219,160,2363,189"/>
+<area shape="rect" id="node40" href="$cvmx-ilk_8c.html" title="Support library for the ILK." alt="" coords="2387,160,2477,189"/>
+<area shape="rect" id="node42" href="$cvmx-pko_8h.html" title="cvmx&#45;pko.h" alt="" coords="1232,160,1331,189"/>
+<area shape="rect" id="node51" href="$cvmx-pko3_8c.html" title="cvmx&#45;pko3.c" alt="" coords="984,160,1091,189"/>
+<area shape="rect" id="node53" href="$cvmx-spi_8c.html" title="Support library for the SPI." alt="" coords="1115,160,1208,189"/>
+<area shape="rect" id="node46" href="$cvmx-helper_8c.html" title="Helper functions for common, but complicated tasks." alt="" coords="1156,237,1273,267"/>
+<area shape="rect" id="node48" href="$cvmx-pko_8c.html" title="Support library for the hardware Packet Output unit." alt="" coords="1297,237,1396,267"/>
+</map>

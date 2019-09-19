@@ -1,0 +1,35 @@
+#!/bin/sh
+
+source ./functions.sh
+
+cat > $0.log << EOF
+boot
+book
+booze
+machine
+boots
+bungie
+bark
+aardvark
+broken
+robots
+EOF
+
+for i in `grep -c boo $0.log | awk '{ print $1 }'`
+do
+require [ $i -eq 4 ]
+done
+
+for i in `egrep -vc '^b' $0.log | awk '{ print $1 }'`
+do                                                   
+require [ $i -eq 3 ]                                 
+done                                                 
+                                                     
+for i in `egrep -vc '^.b' $0.log | awk '{ print $1 }'`
+do                                                    
+require [ $i -eq 10 ]                                 
+done                                                  
+                                                      
+egrep -v '^.b'  $0.log > $0.egrep.log                
+diff  -q $0.log $0.egrep.log                          
+require [ $? -eq 0 ] 

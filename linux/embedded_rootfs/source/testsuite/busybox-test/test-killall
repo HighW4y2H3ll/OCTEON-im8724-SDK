@@ -1,0 +1,10 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert ping 127.0.0.1 >/dev/null &
+assert ping 127.0.0.1 >/dev/null &
+sleep 2
+killall -9  ping
+pidof ping
+require [ $? != 0 ]

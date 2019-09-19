@@ -1,0 +1,102 @@
+// $Id: struct.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Draw structograms
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "std.vsl"
+#include "tab.vsl"
+#include "slopes.vsl"
+
+// Version
+struct_version() = "$Revision: 14384 $";
+
+// Structograms
+
+// framedListStruct() creates a vertical list, separated by horizontal lines
+
+_framedListStruct(stmt) = stmt;
+_framedListStruct(stmt, ...) = 
+  _framedListStruct(stmt)
+| hrule()
+| _framedListStruct(...);
+
+framedListStruct(...) = 
+  vfix(_framedListStruct(...));
+
+
+// topLoopStruct() creates a while loop
+
+topLoopStruct(cond, body) =
+  cond
+| indent(hrule() | vrule() & body);
+
+
+// bottomLoopStruct() creates a do-while loop
+
+bottomLoopStruct(body, cond) =
+  indent(vrule() & body | hrule())
+| cond;
+
+
+// topBottomLoopStruct() creates a loop with entry and exit conditions
+
+topBottomLoopStruct(cond1, body, cond2) =
+  cond1
+| indent(hrule() | vrule() & body | hrule())
+| cond2;
+
+
+// fallStruct() creates a box separated by a diagonal line `\'
+// riseStruct() creates a box separated by a diagonal line `/'
+
+_fallStruct(sw, ne) =
+  fall() ^ sw_flush(sw) ^ ne_flush(ne) ^ (sw + ne + rulethickness()) 
+| hrule();
+fallStruct(sw, ne) = _fallStruct(sw, ne);
+
+_riseStruct(nw, se) = 
+  rise() ^ nw_flush(nw) ^ se_flush(se) ^ (nw + se + rulethickness())
+| hrule();
+riseStruct(nw, se) = _riseStruct(nw, se);
+
+
+// testStruct() creates a test box
+
+testStruct(cond, leftbody, rightbody, leftlabel, rightlabel) =
+
+  let width = hspace(leftlabel | leftbody | rightlabel | rightbody | cond) in
+
+  let height = vspace((leftlabel & rightlabel) | cond) in
+
+  let ltop = width ^ fall() ^ sw_flush(leftlabel),
+	  rtop = width ^ rise() ^ se_flush(rightlabel),
+      top = ((ltop & rtop) ^ n_flush(cond)) ^ height in
+
+  let lbottom = leftbody ^ width,
+	  rbottom = rightbody ^ width,
+	  bottom = (lbottom & vrule() & rbottom) in
+
+  top | hrule() | bottom;

@@ -1,0 +1,750 @@
+#!/usr/bin/python
+# Copyright (c) 2003-2005, Cavium Inc.. All rights reserved.
+#
+# This Software is the property of Cavium Inc..  The Software and all
+# accompanying documentation are copyrighted.  The Software made available
+# here constitutes the proprietary information of Cavium Inc..  You
+# agree to take reasonable steps to prevent the disclosure, unauthorized use
+# or unauthorized distribution of the Software.  You shall use this Software
+# solely with Cavium hardware.
+#
+# Except as expressly permitted in a separate Software License Agreement
+# between You and Cavium Inc., you shall not modify, decompile,
+# disassemble, extract, or otherwise reverse engineer this Software.  You
+# shall not make any copy of the Software or its accompanying documentation,
+# except for copying incident to the ordinary and intended use of the
+# Software and the Underlying Program and except for the making of a single
+# archival copy.
+#
+# This Software, including technical data, may be subject to U.S.  export
+# control laws, including the U.S.  Export Administration Act and its
+# associated regulations, and may be subject to export or import regulations
+# in other countries.  You warrant that You will comply strictly in all
+# respects with all such regulations and acknowledge that you have the
+# responsibility to obtain licenses to export, re-export or import the
+# Software.
+#
+# TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
+# AND WITH ALL FAULTS AND CAVIUM MAKES NO PROMISES, REPRESENTATIONS OR
+# WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT
+# TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY
+# REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT
+# DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES
+# OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR
+# PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET
+# POSSESSION OR CORRESPONDENCE TO DESCRIPTION.  THE ENTIRE RISK ARISING OUT
+# OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.
+#
+# File version info: $Id: viewzilla 69916 2012-02-14 14:47:03Z bprakash $
+
+#
+# Fast Viewzilla Viewer
+#
+import sys
+import re
+import time
+from viewzillalib import Viewzilla
+from viewzillalib import HardwareInfo
+from debuglib import DebugInfo
+from debuglib import DebugLineInfo
+from debuglib import DebugObjectInfo
+from debuglib import getSdkVersion
+from gdbstub import toHex
+from gdbstub import fromHex
+try:
+    import tkSimpleDialog
+    import tkMessageBox
+    from Tkinter import *
+except:
+    print "The python module Tkinter is not installed properly. Tkinter is"
+    print "required for this program."
+    print
+    print "Redhat 9"
+    print "    You need tkinter-2.2.2-26. This can be found on the Redhat"
+    print "    install CD 3"
+    print
+    print "    $ rpm -i /mnt/cdrom/RedHat/RPMS/tkinter-2.2.2-26.i386.rpm"
+    print
+    print "Redhat 7.3"
+    print "    You need tkinter-2.2.2-16. This can be found on the Redhat"
+    print "    install CD 3"
+    print
+    print "    $ rpm -i /mnt/cdrom/RedHat/RPMS/tkinter2-2.2-16.i386.rpm"
+    print
+    print "Fedora Core 2"
+    print "    Install tkinter using the Yumm package manager"
+    print
+    print "    $ yum install tkinter"
+    print
+    print "Debian"
+    print "    Install tkinter using the aptitude package manager"
+    print
+    print "    $ aptitude install python-tk"
+    print
+    sys.exit(-1)
+
+class Application(Frame):
+    #
+    # Initialize the application
+    #   filename = Name of the viewzilla file to open
+    #   master = Tk window to put everything in. None means create a new window
+    #
+    def __init__(self, master, filename="octeon.vz"):
+        Frame.__init__(self, master)                # I'm the top level frame for this app
+        master.title("Viewzilla 2 - " + filename)   # Set the window title
+        self.dbg = DebugInfo()                      # Used to store debug information
+        self.viewzilla = Viewzilla(filename)        # This object does all the file processing
+        self.first_cycle = self.viewzilla.getFirstCycle()
+        self.last_cycle = self.viewzilla.getLastCycle()
+        self.sections = {}
+        self.hw_labels = []
+        self.xstart = 80                            # Pixels to leave for the hardware labels
+        self.ystep = 12                             # Step between each line in pixels
+        self.zoom = 7                               # The current zoom setting
+        self.cycle = 0                              # The starting cycle
+        self.view = IntVar()                        # state variable for view
+        self.selected = (None, 0)                   # Nothing selected
+        self.search = None                          # No search to continue
+        self.createWidgets()                        # Create the GUI
+        self.view.set(1)                            # Start off showing one processor
+        self.grid(row=0, column=0, stick=NW+SE)     # Put the frame in grid 0,0
+        master.grid_columnconfigure(0, weight=1)    # Resize with the master window
+        master.grid_rowconfigure(0, weight=1)       # Resize with the master window
+        master.grid_propagate(0)                    # Don't change the master's size based on contents
+        master["width"] = 700                       # Starting width
+        master["height"] = 500                      # Starting height
+        master.config(menu=self.MENU)               # Attach the menu
+        master.bind("f", self.doStartSearch)
+        master.bind("/", self.doStartSearch)
+        master.bind("g", self.doSearch)
+        master.bind("n", self.doSearch)
+        master.bind("<Left>", self.doBackwardStep)
+        master.bind("<Right>", self.doForwardStep)
+        master.bind("j", self.doBackwardStep)
+        master.bind("k", self.doForwardStep)
+        self.changeSectionView()
+        self.cycleChange(None)
+
+    #
+    # Create all the Tk widgets for the main window
+    #
+    def createWidgets(self):
+        self.MENU = Menu(self)
+        filemenu = Menu(self.MENU, tearoff=0)
+        filemenu.add_command(label="Find", command=self.doStartSearch, accelerator="Control-F,/")
+        filemenu.add_command(label="Find Next", command=self.doSearch, accelerator="Control-G,n")
+        filemenu.add_command(label="Quit", command=self.quit)
+        self.MENU.add_cascade(label="File", menu=filemenu)
+        showmenu = Menu(self.MENU, tearoff=1)
+        showmenu.add_radiobutton(label="Source", command=self.setView, variable=self.view, value=0)
+        showmenu.add_radiobutton(label="Processor Instructions", command=self.setView, variable=self.view, value=1)
+        showmenu.add_radiobutton(label="All Processor Instructions", command=self.setView, variable=self.view, value=2)
+        showmenu.add_command(label="Highlight Next", command=self.doForwardStep, accelerator="->,k")
+        showmenu.add_command(label="Highlight Previous", command=self.doBackwardStep, accelerator="<-,j")
+        self.setupSectionCheckboxes(showmenu)
+        self.MENU.add_cascade(label="Show", menu=showmenu)
+
+        self.DESCRIPTION = Label(self, text="\n", justify=LEFT, anchor=NW)
+        self.DESCRIPTION.grid(row=0, column=1, stick=NW+SE)
+
+        self.START_CYCLE = Entry(self, width=10)
+        self.START_CYCLE.bind("<KeyRelease>", self.cycleChange)
+        self.START_CYCLE.grid(row=0, column=0, sticky=W)
+        self.START_CYCLE.insert(END, str(self.first_cycle))
+
+        self.STOP_CYCLE = Label(self, text="Last")
+        self.STOP_CYCLE.grid(row=0, column=2, sticky=E)
+
+        self.CANVAS_SCROLL = Scrollbar(self)
+        self.CANVAS_SCROLL.grid(row=1, column=3, stick=NW+S)
+
+        self.CANVAS = Canvas(self, background="black", confine=Y, yscrollcommand=self.CANVAS_SCROLL.set)
+        self.CANVAS.grid(row=1, column=0, columnspan=3, stick=NW+SE)
+        self.CANVAS_SCROLL.config(command=self.CANVAS.yview)
+        self.CANVAS.bind("<Motion>", self.mouseOver)
+        self.CANVAS.bind("<ButtonRelease-1>", self.mouseClick)
+
+        Label(self, text="Zoom").grid(row=0, column=4)
+        self.ZOOM = Scale(self, command=self.zoomChange, from_=20, to=1,
+                orient=VERTICAL, showvalue=N)
+        self.ZOOM.grid(row=1, column=4, stick=N+S)
+        self.ZOOM.set(self.zoom)
+
+        self.CYCLE = Scrollbar(self, orient=HORIZONTAL, command=self.cycleScroll)
+        self.CYCLE.grid(row=2, column=0, columnspan=3, stick=W+E)
+        self.CYCLE.set(0,.1)
+
+        frame = Frame(self)
+        frame.grid(row=3, column=0, columnspan=3, stick=NW+SE)
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_propagate(1)
+
+        self.SOURCE_SCROLL = Scrollbar(frame)
+        self.SOURCE_SCROLL.grid(row=0, column=1, stick=NW+S)
+
+        self.SOURCE = Text(frame, yscrollcommand=self.SOURCE_SCROLL.set, height=15)
+        self.SOURCE.grid(row=0, column=0, stick=NW+SE)
+        self.SOURCE.tag_config("a", foreground="white", background="blue")
+        self.SOURCE.tag_config("source", foreground="darkgreen")
+        self.SOURCE_SCROLL.config(command=self.SOURCE.yview)
+
+        self.DEBUG_INFO_SCROLL = Scrollbar(self)
+        self.DEBUG_INFO_SCROLL.grid(row=3, column=3, stick=NW+S)
+
+        self.DEBUG_INFO_HSCROLL = Scrollbar(frame, orient=HORIZONTAL)
+        self.DEBUG_INFO_HSCROLL.grid(row=1, column=2, stick=NW+E)
+
+        self.DEBUG_INFO = Text(frame, xscrollcommand=self.DEBUG_INFO_HSCROLL.set, yscrollcommand=self.DEBUG_INFO_SCROLL.set, width=30, height=15, wrap=NONE)
+        self.DEBUG_INFO.grid(row=0, column=2, stick=NW+SE)
+        self.DEBUG_INFO_SCROLL.config(command=self.DEBUG_INFO.yview)
+        self.DEBUG_INFO_HSCROLL.config(command=self.DEBUG_INFO.xview)
+
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        #self.grid_rowconfigure(4, weight=1)
+        self.bind("<Configure>", self.onResize)
+
+    #
+    # Create the checkbox list for each hardware section
+    #
+    def setupSectionCheckboxes(self, menu):
+        for hw_label in self.viewzilla.hw_labels:
+            section = hw_label.split("_")[0]
+            if not section in self.sections:
+                self.sections[section] = IntVar()
+                self.sections[section].set(1)
+                menu.add_checkbutton(label=section, command=self.changeSectionView, variable=self.sections[section], onvalue=1, offvalue=0)
+
+    #
+    # Called when the user changes the sections viewed
+    #
+    def changeSectionView(self):
+        self.hw_labels = []
+        for hw_label in self.viewzilla.hw_labels:
+            section = hw_label.split("_")[0]
+            if self.sections[section].get():
+                self.hw_labels.append(hw_label)
+        if not self.hw_labels:
+            self.hw_labels.append(self.viewzilla.hw_labels[0])
+        if self.selected[0] and self.selected[0] not in self.hw_labels:
+            self.selected = (None, 0)
+            self.after_idle(self.updateTextWindow)
+        self.after_idle(self.updateDisplay)
+
+    #
+    # Called when the user changes the source view
+    #
+    def setView(self):
+        self.after_idle(self.updateTextWindow)
+
+    #
+    # Called when the zoom slider changes
+    #
+    def zoomChange(self, zoom):
+        self.zoom = int(zoom)
+        self.after_idle(self.updateDisplay)
+
+    #
+    # Called when the cycle slider changes
+    #
+    def cycleChange(self, event):
+        try:
+            self.cycle = long(self.START_CYCLE.get())
+            # If we're at the end of the file check if it has grown
+            if self.cycle == self.last_cycle:
+                self.last_cycle = self.viewzilla.getLastCycle()
+        except:
+            return
+        self.CYCLE.set(float(self.cycle - self.first_cycle) / float(self.last_cycle-self.first_cycle+1), float(self.viewzilla.view_cycles) / float(self.last_cycle-self.first_cycle+1))
+        self.after_idle(self.updateDisplay)
+        self.after_idle(self.updateTextWindow)
+
+    #
+    # Called when the cycle scrollbar is moved
+    #
+    def cycleScroll(self, moveType, value, units=None):
+        try:
+            current_cycle = long(self.START_CYCLE.get())
+        except:
+            current_cycle = 0
+        if moveType == "moveto":
+            current_cycle = long((self.last_cycle - self.first_cycle) * float(value) + self.first_cycle)
+        elif units == "pages":
+            current_cycle += long(value) * self.viewzilla.view_cycles * 3 / 4
+        else:
+            current_cycle += long(value)
+        if current_cycle < self.first_cycle:
+            current_cycle = self.first_cycle
+        if current_cycle > self.last_cycle:
+            current_cycle = self.last_cycle
+        self.START_CYCLE.delete(0,END)
+        self.START_CYCLE.insert(END, str(current_cycle))
+        self.cycleChange(None)
+
+    #
+    # Called when the window resizes
+    #
+    def onResize(self, event):
+        self.after_idle(self.updateDisplay)
+
+    #
+    # Given an event, determine which hardware unit and cycle the cursor is
+    # over
+    #
+    def getMouseLoc(self, event):
+        # Get the mouse location in drawing coordinates
+        scroll_region = [int(x) for x in self.CANVAS["scrollregion"].split()]
+        scroll_offset = self.CANVAS_SCROLL.get()[0] * (scroll_region[3] - scroll_region[1])
+        canvasx = event.widget.canvasx(event.x) - 1
+        canvasy = event.widget.canvasx(event.y) - 1 + scroll_offset + scroll_region[1]
+
+        # Get the width of the area used for the boxes. We use this
+        # to determine how many cycles to show (view_cycles)
+        canvas_width = self.CANVAS.winfo_width() - self.xstart
+
+        # Determine the step between each box
+        xstep = canvas_width / self.viewzilla.view_cycles
+
+        hw_index = int(canvasy / self.ystep)
+
+        if hw_index >=0 and hw_index < len(self.hw_labels):
+            # Calculate the cycle offset
+            cycle = int((canvasx - self.xstart) / xstep)
+            # Make sure the cycle offset is valid
+            if cycle >= 0 and cycle < self.viewzilla.view_cycles:
+                return (self.hw_labels[hw_index], cycle)
+        # Location wasn't found
+        return (None, 0)
+
+
+    #
+    # Show the source file for the given address
+    #
+    def showSource(self, address):
+        self.showDebugInfo(address)
+        info = self.dbg.getDebugLineInfo(address)
+        if info == None:
+            self.SOURCE.insert(END, "Source information not available")
+            if self.dbg.addressInfo.getCount() == 0:
+                self.SOURCE.insert(END, "\n1) Compile your application with debugging symbols (-g)." +
+                                        "\n2) Supply the ELF as an argument to this program.")
+            return
+        try:
+            infile = open(info.sourcefile, "r")
+            lines = infile.readlines()
+            infile.close()
+            self.SOURCE.insert(END, "".join(lines[0:info.row-1]))
+            self.SOURCE.insert(END, lines[info.row-1], "a")
+            self.SOURCE.see(END)
+            if info.row < len(lines):
+                self.SOURCE.insert(END, "".join(lines[info.row:]))
+        except:
+            self.SOURCE.insert(END, "Error loading the source\n" + info.sourcefile)
+
+    #
+    # Recursively format the debugging information for display
+    #
+    def displayDebugNode(self, node, address, indent=""):
+        result = ""
+        if node.object_type in ["DW_TAG_inlined_subroutine", "DW_TAG_subprogram"]:
+            result += indent + node.get("DW_AT_name", "") + "():\n"
+            frame = node.get("DW_AT_frame_base", "")
+            if frame:
+                result += indent + "  frame ptr = " + frame + "\n"
+            for c in node.children():
+                if c.object_type in ["DW_TAG_variable", "DW_TAG_formal_parameter"]:
+                    location = c.get("DW_AT_location","")
+                    if location:
+                        result += indent + "  " + c.get("DW_AT_name", "") + " = " + location + "\n"
+        for c in node.children():
+            if c.containsPC(address):
+                result += self.displayDebugNode(c, address, indent)
+        return result
+
+    #
+    # Display the DWARF debugging information available for the given address
+    #
+    def showDebugInfo(self, address):
+        if self.dbg.objectInfo:
+            for c in self.dbg.objectInfo.children():
+                if c.containsPC(address):
+                    self.DEBUG_INFO.insert(END, self.displayDebugNode(c, address))
+        else:
+            self.DEBUG_INFO.insert(END, "Detail DWARF debugging\n"
+                                        "information isn't loaded.\n"
+                                        "Use the \"--dwarf\" option\n"
+                                        "to load it.")
+
+    #
+    # Show the instructions for a set of processors
+    #
+    def showInstructions(self, hw_name, cycle, cores):
+        # Loop through all the data getting instructions
+        last_info = DebugLineInfo(0, "", 1)
+        for c in xrange(self.viewzilla.view_cycles):
+            for p in cores:
+                # If the simulation was noperf then each core has a single
+                # pipe named PP#_ISS. If was a perf simulation then the pipes
+                # are named PP#_ISS0 and PP#_ISS1. For Octeon II, we need to
+                # display PP#_ISS1 before PP#_ISS0 if the hardware swapped the
+                # pipes (color is lightblue).
+                pipe_noperf = "PP%d_ISS" % p
+                pipe_perf0 = "PP%d_ISS0" % p
+                pipe_perf1 = "PP%d_ISS1" % p
+                if pipe_noperf in self.viewzilla.hardware:
+                    pipe_list = [pipe_noperf]
+                elif pipe_perf1 in self.viewzilla.hardware:
+                    if self.viewzilla.hardware[pipe_perf1].color[c] == "lightblue":
+                        pipe_list = [pipe_perf1, pipe_perf0]
+                    else:
+                        pipe_list = [pipe_perf0, pipe_perf1]
+                else:
+                    pipe_list = [pipe_perf0]
+                # pipe_list contains the name for each pipe we should display
+                # in the order they should show up on the screen
+                for pipe_name in pipe_list:
+                    # Get references to the pipe
+                    if pipe_name in self.viewzilla.hardware:
+                        pipe = self.viewzilla.hardware[pipe_name]
+                    else:
+                        continue
+                    if pipe.label[c]:
+                        pipe_parse = re.match("PP[0-9]+:([0-9a-fA-F]+)", pipe.label[c])
+                        if pipe_parse:
+                            address = fromHex(pipe_parse.group(1))
+                            if hw_name == pipe_name and cycle==c:
+                                self.showDebugInfo(address)
+                            info = self.dbg.getDebugLineInfo(address)
+                        else:
+                            info = None
+                        if info and ((info.sourcefile != last_info.sourcefile) or (info.row != last_info.row)):
+                            last_info = info
+                            try:
+                                infile = open(info.sourcefile, "r")
+                                lines = infile.readlines()
+                                infile.close()
+                                source_line = lines[info.row-1]
+                            except:
+                                source_line = "Source Unavailable\n"
+                            if len(info.sourcefile) < 20:
+                                prefix = info.sourcefile.rjust(20) + ":" + str(info.row).rjust(4) + " "
+                            else:
+                                prefix = info.sourcefile[-20:] + ":" + str(info.row).rjust(4) + " "
+                            self.SOURCE.insert(END, prefix + source_line, "source")
+                    # Highlight this instruction if it is pointed to
+                    if hw_name == pipe_name and cycle==c:
+                        self.SOURCE.insert(END, pipe.label[c] + "\n", "a")
+                        self.SOURCE.see(END)
+                    elif pipe.label[c]:
+                        self.SOURCE.insert(END, pipe.label[c] + "\n")
+
+    #
+    # Update the source / instruction window
+    #
+    def updateTextWindow(self):
+        self.SOURCE.delete(1.0,END)
+        self.DEBUG_INFO.delete(1.0,END)
+        hw_name = self.selected[0]
+        cycle = self.selected[1] - self.cycle
+        if cycle < 0:
+            cycle = 0;
+        if hw_name and hw_name.startswith("PP"):
+            match = re.match("PP([0-9]+)", hw_name)
+            processor = int(match.group(1))
+            if self.view.get() == 0:
+                label = self.viewzilla.hardware[hw_name].label[cycle]
+                match = re.match("PP[0-9]+:([0-9a-fA-F]+)", label)
+                if match:
+                    self.showSource(fromHex(match.group(1)))
+            elif self.view.get() == 1:
+                self.showInstructions(hw_name, cycle, [processor])
+            else:
+                self.showInstructions(hw_name, cycle, range(64)) # Will work for up to 64 cores
+
+    #
+    # Called when the mouse moves over the drawing canvas
+    #
+    def mouseOver(self, event):
+        # Get the hardware unit and cycle for the mouse location
+        (hw_name, cycle) = self.getMouseLoc(event)
+        if hw_name:
+            # Show the description of the box
+            if self.selected[1]:
+                self.DESCRIPTION["text"] = ("Cycle: " + str(cycle + self.cycle) +
+                    "\tMark: " + str(self.selected[1]) + "\tDelta: " +
+                    str(cycle + self.cycle - self.selected[1]) + "\n" +
+                    self.viewzilla.hardware[hw_name].label[cycle])
+            else:
+                self.DESCRIPTION["text"] = ("Cycle: " + str(cycle + self.cycle) + "\n" +
+                    self.viewzilla.hardware[hw_name].label[cycle])
+
+    #
+    # Called when the mouse clicks over the drawing canvas
+    #
+    def mouseClick(self, event):
+        # Get the hardware unit and cycle for the mouse location
+        (hw_name, cycle) = self.getMouseLoc(event)
+        self.selected = (hw_name, cycle + self.cycle)
+        self.after_idle(self.updateTextWindow)
+        self.after_idle(self.updateDisplay)
+
+    #
+    # User wants to search for a string
+    #
+    def doSearch(self, event=None):
+        if self.search:
+            found = 0
+            file = self.viewzilla.jumpToCycle(self.cycle)
+            for line in file:
+                if line.find(self.search) != -1:
+                    parts=line.split(" ", 7)
+                    if parts[0] == "cell" or parts[0] == "cellt":
+                        current_cycle = long(parts[5]) + self.viewzilla.cycle_offset
+                        if (current_cycle > self.cycle):
+                            self.START_CYCLE.delete(0,END)
+                            self.START_CYCLE.insert(END, str(current_cycle))
+                            self.cycleChange(None)
+                            found = 1
+                            break
+            file.close()
+            if not found:
+                tkMessageBox.showwarning("Search", "String not found", parent=self)
+        else:
+            tkMessageBox.showwarning("Search", "No search to continue", parent=self)
+
+    #
+    # Prompt for a string, then search for it
+    #
+    def doStartSearch(self, event=None):
+        self.search = tkSimpleDialog.askstring("Search", "Enter a case sensitive string to search for:")
+        if self.search:
+            self.doSearch()
+
+    #
+    # Determine the new selection if a search hw unit and cycle has something
+    # interesting. Scrolls the view as necessary
+    #
+    def searchStep(self, search_hw, current_cycle):
+        if (current_cycle < self.cycle) or (current_cycle >= self.cycle + self.viewzilla.view_cycles):
+            self.cycle = current_cycle - self.viewzilla.view_cycles/2
+            self.viewzilla.read(self.cycle)
+        if search_hw in self.viewzilla.hardware:
+            if self.viewzilla.hardware[search_hw].label[current_cycle - self.cycle]:
+                return (search_hw, current_cycle)
+        return (None, 0)
+
+    #
+    # Get the color for a given pipe
+    # 
+    def getColor(self, search_hw, current_cycle):
+        if (current_cycle - self.cycle) < self.viewzilla.view_cycles:
+            return self.viewzilla.hardware[search_hw].color[current_cycle - self.cycle]
+        return None
+
+    #
+    # Called when the user want to step the highlight forward one
+    #
+    def doBackwardStep(self, event=None):
+        if not self.selected[0]:
+            return
+        search_hw = self.selected[0]
+        current_cycle = self.selected[1]
+        max_search = 1000
+        while current_cycle >= self.first_cycle:
+            if search_hw.endswith("ISS0"):
+                if self.getColor(search_hw, current_cycle) == "lightblue":
+                    search_hw = search_hw[0:-1] + "1"
+                else:
+                    current_cycle -= 1
+                    if self.getColor(search_hw[0:-1]+"0", current_cycle) == "lightblue":
+                        search_hw = search_hw[0:-1] + "0"
+                    else:
+                        search_hw = search_hw[0:-1] + "1"
+            elif search_hw.endswith("ISS1"):
+                if self.getColor(search_hw, current_cycle) == "lightblue":
+                    current_cycle -= 1
+                    if self.getColor(search_hw, current_cycle) == "lightblue":
+                        search_hw = search_hw[0:-1] + "0"
+                else:
+                    search_hw = search_hw[0:-1] + "0"
+            else:
+                current_cycle -= 1
+            self.selected = self.searchStep(search_hw, current_cycle)
+            if self.selected[0]:
+                break
+            max_search-=1
+            if max_search == 0:
+                break
+        self.START_CYCLE.delete(0,END)
+        self.START_CYCLE.insert(END, str(self.cycle))
+        self.after_idle(self.updateTextWindow)
+        self.after_idle(self.updateDisplay)
+
+    #
+    # Called when the user want to step the highlight backward one
+    #
+    def doForwardStep(self, event=None):
+        if not self.selected[0]:
+            return
+        search_hw = self.selected[0]
+        current_cycle = self.selected[1]
+        max_search = 1000
+        while current_cycle <= self.last_cycle:
+            # The cycles are swapped in some instances.
+            # Recognize such cases and make sure to jump to the correct location
+            if search_hw.endswith("ISS0"):
+                if self.getColor(search_hw, current_cycle) == "lightblue":
+                    current_cycle += 1
+                    if self.getColor(search_hw, current_cycle) == "lightblue":
+                        search_hw = search_hw[0:-1] + "1"
+                else:
+                    search_hw = search_hw[0:-1] + "1"
+            elif search_hw.endswith("ISS1"):
+                if self.getColor(search_hw, current_cycle) == "lightblue":
+                    search_hw = search_hw[0:-1] + "0"
+                else:
+                    current_cycle += 1
+                    if self.getColor(search_hw[0:-1]+"0", current_cycle) == "lightblue":
+                        search_hw = search_hw[0:-1] + "1"
+                    else:
+                        search_hw = search_hw[0:-1] + "0"
+            else:
+                current_cycle += 1
+            self.selected = self.searchStep(search_hw, current_cycle)
+            if self.selected[0]:
+                break
+            max_search-=1
+            if max_search == 0:
+                break
+        self.START_CYCLE.delete(0,END)
+        self.START_CYCLE.insert(END, str(self.cycle))
+        self.after_idle(self.updateTextWindow)
+        self.after_idle(self.updateDisplay)
+
+    #
+    # Called whenever the canvas drawing area needs to be updated
+    #
+    def updateDisplay(self):
+        # If the canvas is bigger than needed shrink it and enlarge the source window
+        try:
+            canvas_height = self.CANVAS.winfo_height()
+            scroll_region = [int(x) for x in self.CANVAS["scrollregion"].split()]
+            if (canvas_height > scroll_region[3] - scroll_region[1]) and self.SOURCE.winfo_height() > 200 and self.winfo_height() > canvas_height:
+                self.grid_rowconfigure(1, weight=0)
+                self.grid_rowconfigure(3, weight=1)
+                self.CANVAS["height"] = scroll_region[3] - scroll_region[1]
+            else:
+                self.grid_rowconfigure(1, weight=1)
+                self.grid_rowconfigure(3, weight=0)
+        except:
+            pass
+
+        # Get the width of the area used for the boxes. We use this
+        # to determine how many cycles to show (view_cycles)
+        canvas_width = self.CANVAS.winfo_width() - self.xstart
+        self.viewzilla.view_cycles = canvas_width / self.zoom
+        xstep = canvas_width / self.viewzilla.view_cycles
+
+        # Read the viewzilla data
+        self.viewzilla.read(self.cycle)
+
+        # Update the cycle range labels
+        self.STOP_CYCLE["text"] = self.cycle + self.viewzilla.view_cycles-1
+        self.DESCRIPTION["text"] = "\n"
+
+        # Erase the drawing area
+        self.CANVAS.delete(ALL)
+
+        if self.selected[0] and (self.selected[1] >= self.cycle) and (self.selected[1] < self.cycle + self.viewzilla.view_cycles):
+            highlight = self.viewzilla.hardware[self.selected[0]].references[self.selected[1] - self.cycle]
+        else:
+            highlight = []
+
+        y=0
+        last_section = self.hw_labels[0].split("_")[0]
+
+        # Loop through all the hardware units
+        for hw_name in self.hw_labels:
+            # Add a line between each hardware section
+            section = hw_name.split("_")[0]
+            if section != last_section:
+                self.CANVAS.create_line(0, y, canvas_width + self.xstart, y, fill="gray")
+                last_section = section
+
+            # Label the hardware unit
+            hw = self.viewzilla.hardware[hw_name]
+            self.CANVAS.create_text(0, y, text=hw.name, fill="white", anchor=NW)
+
+            # Loop through all cycles
+            x=self.xstart
+            cycle = 0;
+            while cycle < self.viewzilla.view_cycles:
+                repeat = 1
+                # Only draw boxes with a label
+                if hw.label[cycle]:
+                    # Combine sequences of boxes into one
+                    while (cycle + repeat < self.viewzilla.view_cycles) and (hw.label[cycle + repeat] == hw.label[cycle]):
+                        repeat += 1
+                    # Draw the box
+                    color = "gray"
+                    bwidth=1
+                    for ref in hw.references[cycle]:
+                        if ref in highlight:
+                            color = "white"
+                            bwidth=2
+                            break
+                    self.CANVAS.create_rectangle(x, y, x + xstep * repeat, y + self.ystep, fill=hw.color[cycle], outline=color, width=bwidth)
+                # Move to the next cycle
+                cycle += repeat
+                x += xstep * repeat
+            # Move to the next hardware unit
+            y += self.ystep
+        # Draw a line after the last hardware unit
+        self.CANVAS.create_line(0, y + self.ystep/4, canvas_width + self.xstart, y + self.ystep/4, fill="gray")
+        # Draw the selection
+        if self.selected[0]:
+            cycle = self.selected[1] - self.cycle
+            if (cycle>=0) and (cycle<=self.viewzilla.view_cycles) and (cycle < len(self.viewzilla.hardware[self.selected[0]].label)):
+                loc = self.hw_labels.index(self.selected[0])
+                self.CANVAS.create_rectangle(self.xstart + cycle * xstep, loc * self.ystep, self.xstart + cycle * xstep + xstep, loc * self.ystep + self.ystep, outline="yellow", width=2)
+                self.DESCRIPTION["text"] = ("Cycle: " + str(cycle + self.cycle) + "\n" +
+                        self.viewzilla.hardware[self.selected[0]].label[cycle])
+        self.CANVAS.config(scrollregion=(0, 0, self.viewzilla.view_cycles * xstep, y + self.ystep/4))
+
+#
+# Application starts here
+#
+if len(sys.argv) < 2 or ("--help" in sys.argv):
+    print "Usage: viewzilla [--dwarf] octeon.vz [elf] [elf] ..."
+    print "    octeon.vz    Viewzilla file to load"
+    print "    [elf]        Optional Mips ELF files to load debugging information from"
+    print "    [--dwarf]    Load detailed DWARF debugging information. This can be slow"
+    print
+    print "Version: " + getSdkVersion()
+    print
+    print "This program parses the output of the simulator \"-vz\" command and"
+    print "displays the state of the processors and busses for each cycle. Debugging"
+    print "information can be read from ELF executables to display the source code"
+    print "for each processor instruction."
+    print
+    sys.exit(-1)
+
+use_dwarf = 0
+for arg in xrange(len(sys.argv)-1, 0, -1):
+    if sys.argv[arg] == "--dwarf":
+        del sys.argv[arg]
+        use_dwarf = 1;
+
+app = Application(Tk(), sys.argv[1])
+if len(sys.argv) > 2:
+    for elf in sys.argv[2:]:
+        print "Loading debug info:", elf
+        app.dbg.read(elf)
+        if use_dwarf:
+            app.dbg.readObjectInfo(elf)
+    print "Loaded debug info for " + str(app.dbg.addressInfo.getCount()) + " addresses"
+else:
+    print "No ELF files supplied, source debugging information not available"
+app.mainloop()
+

@@ -1,0 +1,23 @@
+--- kexec/arch/mips/kexec-mips.c.orig	2017-06-16 07:00:48.000000000 -0700
++++ kexec/arch/mips/kexec-mips.c	2017-10-03 15:07:17.029312251 -0700
+@@ -60,10 +60,16 @@
+ 		} else {
+ 			continue;
+ 		}
+-		memory_range[memory_ranges].start = start;
+-		memory_range[memory_ranges].end = end;
+-		memory_range[memory_ranges].type = type;
+-		memory_ranges++;
++		if (memory_ranges > 0 &&
++		    memory_range[memory_ranges - 1].end == start &&
++		    memory_range[memory_ranges - 1].type == type) {
++			memory_range[memory_ranges - 1].end = end;
++		} else {
++			memory_range[memory_ranges].start = start;
++			memory_range[memory_ranges].end = end;
++			memory_range[memory_ranges].type = type;
++			memory_ranges++;
++		}
+ 	}
+ 	fclose(fp);
+ 	*range = memory_range;

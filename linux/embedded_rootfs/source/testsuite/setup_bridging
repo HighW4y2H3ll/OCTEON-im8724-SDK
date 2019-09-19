@@ -1,0 +1,113 @@
+#!/bin/sh
+#
+# This script is used for Octeon performance testing. It configures
+# eth0-eth3 for ethernet bridging. It also display the commands to setup
+# traffic-gen to generate the traffic.
+#
+# Optional first argument specifies the base traffic-gen port.
+# Optional second argument specifies the beginning of the device name. Defaults
+# to "eth".
+#
+
+if ! ifconfig -a | grep -q "eth0"
+then
+    if ! ifconfig -a | grep -q "spi0\|xaui\|"
+    then
+        echo "Ethernet driver not loaded"
+        exit 255
+    fi
+fi
+
+# First port of traffic-gen connected to this board
+# Our normal setup:
+#   CN30XX  Port 0-1
+#   CN31XX  Port 2-3
+#   CN38XX  Port 16-19
+if [ "$1" == "" ]
+then
+    if grep -q "CN30" /proc/cpuinfo
+    then
+        traffic_gen_start_port=0
+    else
+        if grep -q "CN31" /proc/cpuinfo
+        then
+            traffic_gen_start_port=2
+        else
+            traffic_gen_start_port=16
+        fi
+    fi
+else
+    traffic_gen_start_port=$1
+fi
+
+# Determine which devices to use. Default to "eth"
+if [ "$2" == "" ]
+then
+    dev_base=eth
+else
+    dev_base=$2
+fi
+
+if [ "$3" == "" ]
+then
+   port_limit=99
+else
+   port_limit=$3
+fi
+
+# Kill off any dhcp client processes
+killall dhclient > /dev/null 2>&1
+killall udhcpc > /dev/null 2>&1
+
+# Create a bridge
+brctl addbr br0
+
+# Loop through looking for ${dev_base}X devices
+port=${traffic_gen_start_port}
+maxport=${port}
+for i in `seq 0 23`
+do
+    dev=${dev_base}$i
+    if ifconfig -a | grep -q ${dev}
+    then
+        maxport=${port}
+        # Get rid of any IP address assigned to the interface
+        ifconfig ${dev} down
+        ifconfig ${dev} 0.0.0.0
+        # Add the interface to the bridge
+        brctl addif br0 $dev
+        # Bring the interface up
+        ifconfig ${dev} up promisc
+    fi
+    let port++
+done
+
+sleep 1
+
+# Print out some generically useful traffic-gen commands
+echo "Commands for the Octeon Traffic-gen"
+echo "hide all"
+
+# Loop through looking for ${dev_base}X devices
+port=${traffic_gen_start_port}
+for i in `seq 0 23`
+do
+    dev=${dev_base}$i
+    if ifconfig -a | grep -q ${dev} && [ $i -lt $port_limit ]
+    then
+        let port2=port+1
+        if [ ${port} -eq ${maxport} ]; then let port2=traffic_gen_start_port;fi
+        echo "src.mac  ${port} 00:0F:B7:10:00:${port}"
+        echo "dest.mac ${port} 00:0F:B7:10:00:${port2}"
+    fi
+    let port++
+done
+
+echo "default ${traffic_gen_start_port} ${maxport}"
+echo "show"
+echo
+
+# Bring the bridge up. Kernel will spew messages
+sleep 1
+ifconfig br0 up
+

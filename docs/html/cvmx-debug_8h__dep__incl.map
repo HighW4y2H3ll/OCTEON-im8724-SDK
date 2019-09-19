@@ -1,0 +1,10 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$cvmx-app-hotplug_8c.html" title="Provides APIs for applications to register for hotplug." alt="" coords="5,83,163,112"/>
+<area shape="rect" id="node5" href="$cvmx-app-init_8c.html" title="Main entry point for all simple executive based programs." alt="" coords="111,160,239,189"/>
+<area shape="rect" id="node7" href="$cvmx-coredump_8h.html" title="Coredump interface and definitions." alt="" coords="237,83,381,112"/>
+<area shape="rect" id="node14" href="$cvmx-debug-remote_8c.html" title="cvmx&#45;debug&#45;remote.c" alt="" coords="405,83,579,112"/>
+<area shape="rect" id="node16" href="$cvmx-debug-uart_8c.html" title="cvmx&#45;debug&#45;uart.c" alt="" coords="603,83,755,112"/>
+<area shape="rect" id="node18" href="$cvmx-debug_8c.html" title="cvmx&#45;debug.c" alt="" coords="779,83,896,112"/>
+<area shape="rect" id="node10" href="$cvmx-coredump_8c.html" title="Main Coredump Interface." alt="" coords="263,160,407,189"/>
+<area shape="rect" id="node12" href="$cvmx-interrupt_8c.html" title="Interface to the Mips interrupts." alt="" coords="431,160,567,189"/>
+</map>

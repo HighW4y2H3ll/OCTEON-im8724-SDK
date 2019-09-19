@@ -1,0 +1,11 @@
+#!/bin/sh
+
+source ./functions.sh
+
+ifconfig -a | grep -q "eth1"
+require_good
+
+assert ifconfig eth1 10.0.0.2
+assert arp -s 10.0.0.255 00:11:22:33:44:55
+assert arp -an 10.0.0.255 | grep -q "(10.0.0.255) at 00:11:22:33:44:55 \[ether\] PERM"
+

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+source ./functions.sh
+
+# skip the test, doesn't have enough memory to run
+have_cn50xx
+require [ $? != 0 ]
+require test -f /usr/bin/gdb
+killall -9 gdb > /dev/null 2>&1
+assert cat > $0.commands <<EOF
+break main
+run
+backtrace
+quit
+y
+EOF
+assert gdb --command=$0.commands /usr/bin/gdb </dev/null > $0.log 2>&1
+assert grep -q "Breakpoint 1 at" $0.log
+assert grep -q "Breakpoint 1," $0.log
+assert grep -q "main ()" $0.log
+

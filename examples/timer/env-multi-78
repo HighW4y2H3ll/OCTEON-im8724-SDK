@@ -1,0 +1,1 @@
+bootcmd=bootoct 0x11000000 coremask=0,7 nodemask=0x2; bootoct 0x10000000 coremask=7,0 nodemask=0x1

@@ -1,0 +1,134 @@
+#!/bin/sh
+#
+# This script is used for Octeon performance testing. It configures
+# eth0-eth3 for IPv4 forwarding. It also display the commands to setup
+# traffic-gen to generate the traffic.
+#
+# Optional first argument specifies the base traffic-gen port.
+# Optional second argument specifies the beginning of the device name. Defaults
+# to "eth".
+# Optional third argument specifies the traffic-gen port stride.
+# Optional fourth argument specifies the maximum number of ports to configure.
+#
+
+if ! ifconfig -a | grep -q "eth0"
+then
+    if ! ifconfig -a | grep -q "spi0\|xaui"
+    then
+        echo "Ethernet driver not loaded"
+        exit 255
+    fi
+fi
+
+# First port of traffic-gen connected to this board
+# Our normal setup:
+#   CN30XX  Port 0-1
+#   CN31XX  Port 2-3
+#   CN38XX  Port 16-19
+if [ "$1" == "" ]
+then
+    if grep -q "CN30" /proc/cpuinfo
+    then
+        traffic_gen_start_port=0
+    else
+        if grep -q "CN31" /proc/cpuinfo
+        then
+            traffic_gen_start_port=2
+        else
+            traffic_gen_start_port=16
+        fi
+    fi
+else
+    traffic_gen_start_port=$1
+fi
+my_dir=`dirname $0`
+
+# Determine which devices to use. Default to "eth"
+if [ "$2" == "" ]
+then
+    dev_base=eth
+else
+    dev_base=$2
+fi
+
+if [ "$3" == "" ]
+then
+   tg_port_stride=1
+else
+   tg_port_stride=$3
+fi
+
+if [ "$4" == "" ]
+then
+   port_limit=99
+else
+   port_limit=$4
+fi
+
+# Kill off any dhcp client processes
+killall dhclient > /dev/null 2>&1
+killall udhcpc > /dev/null 2>&1
+
+# Enable IPv4 forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+# Loop through looking for ${dev_base}X devices
+port=${traffic_gen_start_port}
+let ip_bit=20
+maxport=${ip_bit}
+for i in `seq 0 23`
+do
+    dev=${dev_base}$i
+    if ifconfig -a | grep -q ${dev} && [ $i -lt $port_limit ]
+    then
+        maxport=${ip_bit}
+        ifconfig ${dev} down
+        ifconfig ${dev} hw ether 00:0F:B7:10:01:${ip_bit}
+        ifconfig ${dev} 10.${ip_bit}.0.1 netmask 255.255.0.0 broadcast 10.${ip_bit}.255.255
+	echo 3600 > /proc/sys/net/ipv4/neigh/${dev}/gc_stale_time
+        arp -s 10.${ip_bit}.0.99 00:0F:B7:10:00:${ip_bit}
+    fi
+    let port++
+    let ip_bit++
+done
+
+# Wait for arp related activity to become quiescent.
+sleep 20
+
+# Print out some generically useful traffic-gen commands
+echo "Commands for the Octeon Traffic-gen"
+echo "hide all"
+
+# Loop through looking for ethX devices
+port=${traffic_gen_start_port}
+let ip_bit=20
+tg_port=${port}
+for i in `seq 0 23`
+do
+    dev=${dev_base}$i
+    if ifconfig -a | grep -q ${dev} && [ $i -lt $port_limit ]
+    then
+        let port2=ip_bit+1
+        if [ ${ip_bit} -eq ${maxport} ]; then let port2=20;fi
+        echo "src.ip   ${tg_port} 10.${ip_bit}.0.99"
+        echo "src.mac  ${tg_port} 00:0F:B7:10:00:${ip_bit}"
+        echo "dest.ip  ${tg_port} 10.${port2}.0.99"
+        echo "dest.mac ${tg_port} 00:0F:B7:10:01:${ip_bit}"
+        last_tg_port=${tg_port}
+        let tg_port=tg_port+tg_port_stride
+    fi
+    let port++
+    let ip_bit++
+done
+
+echo "default ${traffic_gen_start_port} ${last_tg_port}"
+echo "row 26 on"
+echo "tx.type IPV4+UDP"
+echo "tx.size 60"
+echo "tx.checksum off"
+echo "show"
+
+if [ -x $my_dir/set_affinity.sh ] ; then
+    $my_dir/set_affinity.sh
+fi
+

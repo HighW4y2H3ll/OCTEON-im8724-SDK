@@ -1,0 +1,12 @@
+#!/bin/sh
+source ./functions.sh
+
+assert df -h > $0.log
+assert df -m >> $0.log
+assert df -k >> $0.log
+
+for i in `grep -c 'none' $0.log | awk '{ print $1 }'`
+do
+require [ $i -eq 3 ]
+done
+

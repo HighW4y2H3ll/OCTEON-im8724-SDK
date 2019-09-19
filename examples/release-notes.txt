@@ -1,0 +1,139 @@
+Release notes for the Cavium Inc. Octeon SDK examples directory
+
+
+
+
+
+File inventory/description
+=====================================
+The following directories make up the examples:
+
+directory		description
+---------		---------------------
+crypto			crypto hardware acceleration example
+low-latency-mem		low latency memory usage example
+debugger	 	sample program for evaluating the debugger
+hello			simple 'hello world' application
+passthrough		packet passthrough example using packet IO
+passthrough_o3		packet passthrough example using cn78xx specific packet IO 
+uart			simple example usage of the uart
+zip			zip example showing how to use zip block
+application-args	demonstrates how to pass arguments to applications
+			and how to load multiple application images on 
+			Octeon
+linux-filter		shows how to pass packets between cores running
+			Linux and cores running a simple exec app.
+mailbox			demonstrates mailbox inter-core interrupts
+queue			memory queue example
+traffic-gen		traffic generation utility
+named-block		demonstrates use of named memory block allocations
+pcie-scan		CN56XX PCIe scanner
+hotplug-app             sample example which registers itself to hotplug
+power-throttle		demonstrates how to use power throttling APIs
+adma			AXI DMA APIs to transfer data to Endor PHY
+coredump		demonstrates coredump functionality
+timer			demonstrates timer functionality
+
+
+The $OCTEON_ROOT/host and $OCTEON_ROOT/target directories are used by the 
+examples and by other Cavium provided applications to reference the 
+required SDK files.  The examples expect to find the simulator and 
+toolchain in the executable path.
+
+
+Change History
+============================================================================
+Release 3.1.1
+	* Added timer example
+	* Added passthrough_o3 example
+
+Release 3.0.0
+	* Added adma example
+	* Added lmc-dump example
+	* Added otrace example
+	* Added coredump example
+
+Release 2.0.0
+	* Added hotplug-app example
+	* Added power-throttle example
+
+Release 1.8.0
+	* Added pcie-scan example
+
+Release 1.4.0
+	* Cleaned up use of delays and coremasks in passthrough
+
+Release 1.3.1
+	* Removed linux32-packet-io
+	* Fixed pointer cast problems in zip example
+
+Release 1.1.0
+	* added mailbox example
+	* added queue example
+	* added dropping of error packets to examples
+
+Release 1.0.0
+	* Removed dfa example. 
+	* Added debugger example.
+	* linux-filter and linux32-packet-io are in CN3XXX-LINUX package.
+
+Prerelease 0.8.5
+	* Removed pipeline, debugger example.
+
+Prerelease 0.8.0
+	* Updated examples that use libcmvx.a to new build system
+	* Updated hello, application-args, crypto, debugger examples
+	  to not link against libcvmx.a, as they do not require it.
+
+Prerelease 0.07
+	* The Octeon debugger now supports hardware breakpoints.
+	* The Octeon debugger knows about the number of processors used for
+	  running the program for debugging when changing the focus, the Octeon
+	  debugger will not allow changing the focus to some other core than
+	  specified with -numcores option.
+	* When the focused core reaches the end of the program, the Octeon 
+	  debugger automatically switches to the other active core that is
+	  still being debugged.
+	* added linux-filter example
+	* added application-args example
+	* added zip example
+
+Prerelease 0.05
+	* added crypto example
+	* added uart interrupt example
+
+Prerelease 0.04
+	* Example programs moved to examples directory
+	* passthrough example completely rewritten, now uses packet IO
+	* added debugger example
+	* added uart example
+	* added llm example
+	* added dfa example
+
+
+
+Known bugs
+==============================================================================
+
+Prerelease 0.07
+
+1. The hardware breakpoints in Octeon debugger are limited to four.
+
+
+Prerelease 0.05
+
+1. The octeon debugger replaces the contents of memory location where
+   breakpoint is with software break instruction on run/step/continue/next
+   commands, any core which executes this instruction will enter the exception
+   handler even though it is not set by active cores. The simulator displays
+   such cases. The octeon debugger replaces the software break instruction
+   with original contents just before it stops.
+                                                                                
+2. The Octeon debugger does not know anything about the -numcores=processors
+   specified while invoking Octeon simulator.
+
+Prerelease 0.04
+
+1. In the dfa-example, the end-of-data offset of the report is different by
+one between the dfac's output and the simulator's output, due to spec
+interpretation differences and should be ignored.

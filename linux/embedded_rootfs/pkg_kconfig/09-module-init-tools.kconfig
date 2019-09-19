@@ -1,0 +1,8 @@
+config CONFIG_module-init-tools
+	bool "module init tools"
+	default y
+	help
+		The Module-Init-Tools package contains programs for handling
+		kernel modules in Linux kernels greater than or equal to
+		version 2.5.47.
+

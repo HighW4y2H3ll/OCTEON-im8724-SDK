@@ -1,0 +1,6 @@
+#!/bin/sh
+source ./functions.sh
+assert ping -c 10 127.0.0.1 > /dev/null &
+assert sleep 1
+pidof ping | xargs kill
+require [ $? = 0 ]

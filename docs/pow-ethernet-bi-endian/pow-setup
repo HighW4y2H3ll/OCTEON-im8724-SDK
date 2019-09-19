@@ -1,0 +1,75 @@
+#!/bin/sh
+
+# Demonstration of bi-endian inter-cpu networking over
+# Octeon POW (PacketOrder/Work unit),
+# on a system with mixed big-endian/little-endian kernels.
+#
+# POW is used to pass packets & other work between CPUs and
+# other functional units in a scaleable low-cpu-overhead manner.
+# The octeon-pow-ethernet driver is a software gateway between
+# low-level POW interactions and the Linux networking stack.
+
+# who am I?  Determine which role this CPU is playing ...
+# We could look at the real CPUs involved, or boot-args in /proc/cmdline
+# but the simplest way in this example is to check the endian-ness of CPU ...
+
+case $(echo 123 | od -X) in
+*313233*) role=a; echo big-endian;;
+*333231*) role=b; echo little-endian;;
+esac
+
+# Setup routing groups to point 2 pow0 interfaces at eachother.
+# Each interface has a unique receive group, with broadcast_groups
+# ORing their bitmasks, so broadcasts reach both.
+# Additionally, assign tx/rx point-to-point groups which cross over.
+# (In a real system, these group mappings must be designed with all hardware
+# in mind: not just linux kernels, but CPUs running bare-metal executive,
+# and all the coprocessors' packet-flow rules which these CPUs set up)
+pow_a="ptp_rx_group=2 ptp_tx_group=3 receive_group=0 broadcast_groups=0x3"
+pow_b="ptp_rx_group=3 ptp_tx_group=2 receive_group=1 broadcast_groups=0x3"
+
+# pick a private subnet to use across this link
+pownet=192.168.60	# rfc1918
+addr_a=$pownet.1
+addr_b=$pownet.2
+addr_0=$pownet.0
+
+# make this script repeatable, for stepwise refinement w/o reboot
+rmmod octeon-pow-ethernet
+
+
+case $role in
+a)
+	# one kernel needs to configure physical network,
+	# to setup IPD hardware
+	modprobe octeon-ethernet
+
+	# use this kernel as interface to world
+	udhcpc -i mgmt0
+
+	# Start POW-ethernet with group-mapping A.
+	modprobe octeon-pow-ethernet $pow_a
+	ifconfig pow0 $addr_a
+
+	# allow forwarding between role==1 and world (if desired)
+	echo 1 >/proc/sys/net/ipv4/ip_forward
+	;;
+b)
+	# Start POW-ethernet with group-mapping B.
+	# Because the two kernels have opposite byte-orderings,
+	# specify reverse_endian=1 on one side only.
+	modprobe octeon-pow-ethernet reverse_endian=1 $pow_b
+	ifconfig pow0 $addr_b
+
+	ping -c1 $addr_a	# test it
+	# use for access to world
+	route add default gw $addr_a
+	;;
+esac
+
+# Typically this demo will be run on a private network (eg: 2nd NIC on a laptop).
+# To allow communication between these inter-cpu POW interfaces and world,
+# something like the following needs to be done on the host network (the laptop) ...
+## sudo route add -net $addr_0 netmask 255.255.255.0 gw 192.168.62.53 dev host_eth1
+# where 192.168.62.53 is the address mgmt0 acquired by DHCP, via host interface host_eth1
+

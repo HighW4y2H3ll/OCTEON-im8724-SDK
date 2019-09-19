@@ -1,0 +1,2 @@
+ejtag/windriver-ice2/windriver-ejtag-cn73xx.dtl filter=lfs diff=lfs merge=lfs -text
+linux/debian/debian_octeon-jessie.tgz filter=lfs diff=lfs merge=lfs -text

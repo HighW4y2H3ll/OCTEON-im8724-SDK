@@ -1,0 +1,67 @@
+The COTS server, otherwise known as Rainier has a number of unique features
+which can be controlled by environment variables.
+
+1. Setting the mode for the SFP+ ports:
+
+	Each group of four SFP+ ports can run in one of several modes.  The
+	default is for them to behave as standard 10G SFP+ ports however it
+	is also possible to put them into a 40G XLAUI mode or 1G 1000Base-X mode.
+
+	In order to put the ports into 40G mode set the environment variables
+	sfp_left or sfp_right to "40g". For 10g mode, set it to "10g", and
+	for gigabit mode, set it to "1g".
+
+	After setting the environment variable run the "saveenv" command so
+	that the new configuration will take effect after the next reset.
+
+	In order for XLAUI to work with an XLAUI port a QSFP to SFP cable or
+	a fiber optic breakout cable needs to be used.  The order in which
+	the SFP+ cables or optical cables are connected does not matter as
+	long as they are all connected to SFP+ ports 0 to 3 or 4 to 7.
+
+	For example:
+
+		Octeon rainier# setenv sfp_left 10g
+		Octeon rainier# setenv sfp_right 40g
+		Octeon rainier# saveenv
+
+	U-Boot now attempts to automatically enable autonegotiation for all
+	SFP slots when running in 1g mode unless it detects a SFP to RJ45
+	module since autonegotiation does not work with these modules.  The
+	autonegotiation can be overridden by setting the environment variable
+	octethX_autoneg to "yes" or "no". The settings will take effect after
+	saving the environment variables and resetting the device.
+
+	For example:
+
+		Octeon rainier# setenv octeth2_autoneg no
+		Octeon rainier# setenv octeth3_autoneg yes
+		Octeon rainier# saveenv
+
+2. Quieting the fans:
+
+	The fans on the server can be quieted by setting the environment
+	variable "quietfan" to 1 and saving it. At this time this feature
+	is not enabled by default because the fan controller does not
+	behave like the data sheet says it should.  More testing is required
+	to make sure that the current configuration will keep the Octeon
+	processor adequately cooled in all conditions.
+
+	For example:
+
+		Octeon rainier# setenv quietfan yes
+		Octeon rainier# saveenv
+
+3. Management ports:
+
+	Currently the two management ports are configured as standard SGMII
+	ports.  In the future this may change and they may instead be
+	connected using the MIX interface.  This will make it easier
+	to mix running Linux and Simple Executive applications.
+
+4. SFP+ module types
+	Numerous changes were made to U-Boot in order to automatically detect
+	whether a SR, LR, active copper or passive copper module has been
+	plugged in and to put the phy port in the appropriate mode.  Currently
+	this has been tested with SR, active copper and twinax copper but
+	not LR modules.

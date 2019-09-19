@@ -1,0 +1,10 @@
+config CONFIG_schedtool
+	bool "schedtool"
+	default y
+	help
+		From the schedtool man page:
+
+		schedtool can set all CPU scheduling parameters Linux
+		is capable of or display information for given
+		processes.
+

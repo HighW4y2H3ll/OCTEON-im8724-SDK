@@ -1,0 +1,4 @@
+#!/bin/sh
+source ./functions.sh
+assert mktemp $0.XXXXXX 
+assert ls -al $0.* | grep rw------- > $0.log

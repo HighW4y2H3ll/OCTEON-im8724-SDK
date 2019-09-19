@@ -1,0 +1,13 @@
+#!/bin/sh
+
+source ./functions.sh
+
+ifconfig -a | grep -q "eth1"
+require_good
+
+brctl delbr br0 > /dev/null 2>&1
+assert brctl addbr br0
+assert brctl addif br0 eth1
+assert brctl delif br0 eth1
+assert brctl delbr br0
+

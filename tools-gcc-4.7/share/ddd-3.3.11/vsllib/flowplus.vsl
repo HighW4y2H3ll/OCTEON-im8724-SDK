@@ -1,0 +1,284 @@
+// $Id: flowplus.vsl 14384 2006-04-11 21:46:04Z cchavva $ --
+// Drawing flowcharts with gotos and labels
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "std.vsl"
+#include "slopes.vsl"
+#include "arcs.vsl"
+
+
+// Extended flow charts
+
+// Version
+flowplus_version() = "$Revision: 14384 $";
+
+#include "flow.vsl"
+#include "list.vsl"
+
+
+// Data structures
+//
+// frag = (box, connect, labels, gotos)
+//
+// labels = (label, labels...)
+// 
+// gotos = (label, labels...)
+// 
+// label = (id, pos, stuff...)
+// 
+// We have:
+// 
+// box     - the created picture
+// connect - the distance of connecting lines and left side
+// labels  - the list of all labels
+// gotos   - the list of all gotos
+// id      - the id of a label
+// pos     - the distance of a label from upper-left corner
+
+
+// Helpers
+
+// frag(box) creates a fragment from a box
+
+frag((box, connect, labels, gotos)) = (box, connect, labels, gotos);
+frag(box) = fallbackFlow(box);
+
+
+// searchLabel() searches a label named ID; returns () if not found
+
+searchLabel(_, []) = ();
+searchLabel(search, [label, labels...]) = 
+  let (id, _...) = label in
+    if (search = id) then label else searchLabel(search, labels) fi;
+
+
+// expandLines() expands the lines of labels and gotos.
+
+expandLines([]) = 0;
+expandLines([label, labels...]) = 
+  let (_, pos, _...) = label in
+  (vspace(pos) | (vfix(hrule()) ^ hspace(flow_space()))) ^ expandLines(labels);
+
+
+// drawConnect() connects two positions
+
+drawConnectDown(start, end) =
+  vspace(start)
+| vfix(hrule())
+| hspace(flow_space()) & vrule() & vspace(end - start - 1)
+| vfix(hrule());
+
+drawConnectUp(start, end) =
+  vspace(end)
+| vfix(hrule())
+| hspace(flow_space()) & vrule() & vspace(start - end - 1)
+| vfix(hrule());
+
+drawConnect(start, end) =
+  if (start < end)
+  then drawConnectDown(start, end)
+  else drawConnectUp(start, end)
+  fi;
+
+
+// connectGoto() connects a goto with a label; the goto is removed
+// from the list
+
+connectGoto(frag, _, []) = frag; // Label nicht gefunden
+
+connectGoto(frag, goto, label) =
+
+  let (box, connect, labels, gotos) = frag,
+	  (_, gotopos, _...) = goto,
+	  (_, labelpos, _...) = label in
+
+	(newbox, connect, labels, select(gotos, goto))
+
+	where newbox = ((box & trailer)
+	   where trailer = drawConnect(gotopos, labelpos) 
+	  	^ expandLines(labels) ^ expandLines(gotos));
+
+
+// resolveGoto() searches a specific goto und attempts a connection
+
+resolveGoto(frag, goto) =
+  connectGoto(frag, goto, label)
+	where label = 
+	  (let (gotoid, _...) = goto, (_, _, labels, _) = frag
+		 in searchLabel(gotoid, labels));
+
+
+// _resolveGotos() calls resolveGoto() for all list elements
+
+_resolveGotos(frag, []) = frag;
+_resolveGotos(frag, [goto, gotos...]) =
+  _resolveGotos(resolveGoto(frag, goto), gotos);
+
+
+// resolveGotos() resolves all references *within a fragment*; if
+// successful, the goto is removed from the list and a path to the
+// label is drawn.
+
+resolveGotos(frag) =
+  let (_, _, _, gotos) = frag in
+	_resolveGotos(frag, gotos);
+
+// moveLabels() moves a list of references down by OFFSET
+
+moveLabels(_, []) = [];
+moveLabels(offset, [label, labels...]) =
+  let (id, pos, ...) = label in
+  [(id, vspace(pos | offset), ...), moveLabels(offset, labels)...];
+
+
+// joinFragments() joins two fragments, resolving all cross references
+// (goto/label pairs)
+
+joinTwoFragments(max, sep, f1, f2) =
+  let frag1 = frag(f1), frag2 = frag(f2) in
+  let newfrag = 
+  align(frag1, max) 
+| align(sep, max) & hfill() 
+| align(frag2, max) in
+  let 
+    (box1, _, labels1, gotos1) = frag1,
+	(_, _, labels2, gotos2) = frag2,
+	(sepbox, _) = sep,
+	voffset = vspace(box1 | sepbox),
+	newlabels = labels1 :: moveLabels(voffset, labels2),
+	newgotos  = gotos1  :: moveLabels(voffset, gotos2) in
+	(newfrag, max, newlabels, newgotos);
+
+
+joinFragments(_, frag1) = resolveGotos(frag(frag1));
+
+joinFragments(sep, frag1, frag2) =
+  resolveGotos(joinTwoFragments(max_connect(frag1, frag2), sep, frag1, frag2));
+
+joinFragments(sep, frag1, frag2, frag3, ...) =
+  joinFragments(sep, 
+	joinFragments(sep, frag1, frag2), joinFragments(sep, frag3, ...));
+
+
+
+// showRemainingGotos() displays remaining gotos and labels
+
+tagLabel(pos, tag) =
+  vspace(pos - (tag / 2)) | tag;
+
+tagLabels([]) = 0;
+tagLabels([label, labels...]) = 
+  let (id, pos, _...) = label in
+	let tag = veven(vcenter(hrule() | hspace(e_arrow())) & circle(id)) in
+	  tagLabel(pos, tag) ^ tagLabels(labels);
+
+tagGoto(pos, tag) =
+  vspace(pos - (tag / 2)) | tag;
+
+tagGotos([]) = 0;
+tagGotos([goto, gotos...]) =
+  let (id, pos, _...) = goto in
+	let tag = veven(vcenter(e_arrow()) & circle(id)) in
+	  tagGoto(pos, tag) ^ tagGotos(gotos);
+
+showRemainingGotos(frag) =
+  let (box, _, labels, gotos) = frag in
+    ((box & trailer, 0, labels, gotos)
+	  where trailer = tagLabels(labels) ^ tagGotos(gotos));
+
+
+// removeLabels() removes labels from a fragment
+// (e.g. they may not be visible outside a procedure)
+
+removeLabels((box, connect, _, gotos)) =
+  (box, connect, [], gotos);
+
+
+
+// labels and gotos
+
+labelFlow(id) = frag
+  where frag = (box, connect, labels, gotos)
+	where box = vrule() & (veven(vfix(w_arrow())) | fill()),
+	  connect = 0,
+	  labels = [(id, vspace(veven(w_arrow()) / 2))],
+	  gotos = [];
+
+gotoFlow(id) = frag
+  where frag = (box, connect, labels, gotos)
+	where box = vrule() & (hrule() | fill()),
+	  connect = 0,
+	  labels = [],
+	  gotos = [(id, 0)];
+
+
+// Sequential list (of fragments or whatsoever)
+
+// Fragment separator
+_fragsep() = (vspace(flow_space() | flow_space()), 0); 
+
+// Fragment connector
+_fragconnect() = (vrule() & vspace(flow_space()), 0);
+
+
+fragFlow() = (0, 0, [], []);
+fragFlow(frag) = frag;
+
+// Ignore goto in goto/label pair
+
+fragFlow(gotoFlow(id1), labelFlow(id2)) =
+  if (id1 = id2)
+  then fragFlow(labelFlow(id2))
+  else joinFragments(_fragconnect(), gotoFlow(id1), labelFlow(id2))
+  fi;
+
+// Leave space after goto
+
+fragFlow(gotoFlow(id), frag2) = 
+  joinFragments(_fragsep(), gotoFlow(id), frag2);
+
+
+// Otherwise: connect
+
+fragFlow(frag1, frag2) = 
+  joinFragments(_fragconnect(), frag1, frag2);
+
+fragFlow(frag1, gotoFlow(id), ...) = 
+  fragFlow(frag1, fragFlow(gotoFlow(id), ...));
+fragFlow(frag1, frag2, ...) = 
+  fragFlow(fragFlow(frag1, frag2), ...);
+
+
+
+// outputFlow() should be called before each output
+// (by defining __output() accordingly)
+
+getBox((box, _, _, _)) = box;
+
+outputFlow((box, connect, gotos, labels)) = 
+  getBox(showRemainingGotos((box, connect, gotos, labels)));
+outputFlow(box) = box;

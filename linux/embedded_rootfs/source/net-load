@@ -1,0 +1,71 @@
+#!/bin/sh
+
+while true
+do
+
+duration=1
+start=`cat /proc/net/dev | grep : | sed "s/:/ /g"`
+sleep ${duration}
+stop=`cat /proc/net/dev | grep : | sed "s/:/ /g"`
+
+let words=0
+for d in $start
+do
+    eval start_data${words}=$d
+    let words++
+done
+
+let words=0
+for d in $stop
+do
+    eval stop_data${words}=$d
+    let words++
+done
+echo
+let total_rx_bytes=0
+let total_rx_packets=0
+let total_tx_bytes=0
+let total_tx_packets=0
+let i=0
+while [ $i -ne $words ]
+do
+    eval dev=\$stop_data$i; let i++
+    let rx_bytes=stop_data$i-start_data$i; let i++
+    let rx_packets=stop_data$i-start_data$i; let i++
+    let rx_errs=stop_data$i-start_data$i; let i++
+    let rx_drop=stop_data$i-start_data$i; let i++
+    let rx_fifo=stop_data$i-start_data$i; let i++
+    let rx_frame=stop_data$i-start_data$i; let i++
+    let rx_compressed=stop_data$i-start_data$i; let i++
+    let rx_multicast=stop_data$i-start_data$i; let i++
+    let tx_bytes=stop_data$i-start_data$i; let i++
+    let tx_packets=stop_data$i-start_data$i; let i++
+    let tx_errs=stop_data$i-start_data$i; let i++
+    let tx_drop=stop_data$i-start_data$i; let i++
+    let tx_fifo=stop_data$i-start_data$i; let i++
+    let tx_colls=stop_data$i-start_data$i; let i++
+    let tx_carrier=stop_data$i-start_data$i; let i++
+    let tx_compressed=stop_data$i-start_data$i; let i++
+    let total_rx_bytes=total_rx_bytes+rx_bytes
+    let total_rx_packets=total_rx_packets+rx_packets
+    let total_tx_bytes=total_tx_bytes+tx_bytes
+    let total_tx_packets=total_tx_packets+tx_packets
+    let rx_mbits=rx_bytes*8/duration/1000000
+    let rx_packets=rx_packets/duration
+    let tx_mbits=tx_bytes*8/duration/1000000
+    let tx_packets=tx_packets/duration
+    echo -e "${dev}\tTX: ${tx_mbits} Mbps, ${tx_packets} pps\tRX: ${rx_mbits} Mbps, ${rx_packets} pps"
+done
+let total_bytes=total_rx_bytes+total_tx_bytes
+let total_packets=total_rx_packets+total_tx_packets
+let rx_mbits=total_rx_bytes*8/duration/1000000
+let rx_packets=total_rx_packets/duration
+let tx_mbits=total_tx_bytes*8/duration/1000000
+let tx_packets=total_tx_packets/duration
+let mbits=total_rx_bytes+total_tx_bytes
+let mbits=mbits*8/duration/1000000
+let packets=total_rx_packets+total_tx_packets
+let packets=packets/duration
+echo -e "Total\tTX: ${tx_mbits} Mbps, ${tx_packets} pps\tRX: ${rx_mbits} Mbps, ${rx_packets} pps (${mbits} Mbps, ${packets} pps)"
+
+done

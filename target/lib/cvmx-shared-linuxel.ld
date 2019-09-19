@@ -1,0 +1,1 @@
+../../executive/cvmx-shared-linuxel.ld

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+source ./functions.sh
+
+check_memory
+check_large_shared_mem
+
+zip_status=`oct-linux-identify | grep ZIP | awk '{print $2}'`
+if [ "$zip_status" == "Yes" ]
+then
+   require test -f /examples/zip
+   assert gzip < /examples/zip > input.gz
+   assert cp /examples/zip input
+   assert /examples/zip > $0.log
+   sleep 1
+   assert grep -q "PASSED" $0.log
+   assert cmp output input
+   assert rm output
+   assert gunzip output.gz
+   assert cmp output input
+else
+   exit 254
+fi

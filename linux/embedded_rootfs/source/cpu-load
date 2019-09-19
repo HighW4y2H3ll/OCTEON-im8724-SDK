@@ -1,0 +1,63 @@
+#!/bin/sh
+
+(grep cpu /proc/stat; echo done; sleep 1; grep cpu /proc/stat) | {
+
+    let row=0
+    while read c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 rest; do
+	if [ $c1 = done ] ; then break; fi
+	eval cpu$row=$c1
+	eval start_user$row=$c2
+	eval start_nice$row=$c3
+	eval start_system$row=$c4
+	eval start_idle$row=$c5
+	eval start_iowait$row=$c6
+	eval start_irq$row=$c7
+	eval start_softirq$row=$c8
+	eval start_steal$row=$c9
+	eval start_guest$row=$c10
+	let row++
+    done
+
+    let row=0
+    while read c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 rest; do
+	eval stop_user$row=$c2
+	eval stop_nice$row=$c3
+	eval stop_system$row=$c4
+	eval stop_idle$row=$c5
+	eval stop_iowait$row=$c6
+	eval stop_irq$row=$c7
+	eval stop_softirq$row=$c8
+	eval stop_steal$row=$c9
+	eval stop_guest$row=$c10
+	let row++
+    done
+
+    let i=0
+    while [ $i -lt $row ]
+    do
+	let user=stop_user$i-start_user$i
+	let nice=stop_nice$i-start_nice$i
+	let system=stop_system$i-start_system$i
+	let idle=stop_idle$i-start_idle$i
+	let iowait=stop_iowait$i-start_iowait$i
+	let irq=stop_irq$i-start_irq$i
+	let softirq=stop_softirq$i-start_softirq$i
+	let steal=stop_steal$i-start_steal$i
+	let guest=stop_guest$i-start_guest$i
+	let total=user+nice+system+idle+iowait+irq+softirq+steal+guest
+	if [ $total -eq 0 ] ; then let total=1; fi
+	let puser=user*1000/total
+	let pnice=nice*1000/total
+	let psystem=system*1000/total
+	let pidle=idle*1000/total
+	let piowait=iowait*1000/total
+	let pirq=irq*1000/total
+	let psoftirq=softirq*1000/total
+	let psteal=steal*1000/total
+	let pguest=guest*1000/total
+	eval cpu=\$cpu$i
+#       echo "%*10 $cpu user=$user nice=$nice system=$system idle=$idle iowait=$iowait irq=$irq softirq=$softirq steal=$steal guest=$guest"
+        echo "%*10 $cpu user=$puser nice=$pnice system=$psystem idle=$pidle iowait=$piowait irq=$pirq softirq=$psoftirq steal=$psteal guest=$pguest"
+	let i++
+    done
+}

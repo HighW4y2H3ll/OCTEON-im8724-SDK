@@ -1,0 +1,5 @@
+config CONFIG_linuxptp
+	bool "linuxptp"
+	help
+	  Precision Time Protocol on Linux
+

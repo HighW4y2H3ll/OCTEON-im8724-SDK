@@ -1,0 +1,43 @@
+#!/bin/sh
+
+test -f /usr/bin/openssl
+if [ $? -ne 0 ]; then exit 255; fi 
+
+if [ "$1" == "" ]
+then
+    tests=`find . -perm +100 -type f | grep -v runtest | sort`
+else
+    tests=$*
+fi
+
+passed_tests=
+failed_tests=
+
+for test in ${tests}
+do
+
+    if ${test} > ${test}.log 2>&1
+    then
+        if grep -q -i fail ${test}.log | grep -v should
+        then
+            echo "FAIL: ${test}"
+            failed_tests="${failed_tests} ${test}"
+        else
+            echo "Pass: ${test}"
+            passed_tests="${passed_tests} ${test}"
+        fi
+    else
+        echo "FAIL: ${test}"
+        failed_tests="${failed_tests} ${test}"
+    fi
+done
+
+echo
+if [ "${failed_tests}" != "" ]
+then
+    echo "FAILED tests: ${failed_tests}" | fold -s -w 80
+else
+    echo "All tests passed"
+fi
+
+	

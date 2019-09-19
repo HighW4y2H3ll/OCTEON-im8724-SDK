@@ -1,0 +1,225 @@
+// $Id: std.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// VSL Standard Library
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+#include "builtin.vsl"
+
+// Version
+std_version() = "$Id: std.vsl 14384 2006-04-11 21:46:04Z cchavva $";
+
+// Constants
+rulethickness() = 1;
+whitethickness() = 2;
+indentamount() = hspace("  ");
+true  = 1;
+false = 0;
+
+// Some Macros...
+
+// Maximum, minimum
+max(a) = a;
+max(a, b, ...) = if a > b then max(a, ...) else max(b, ...) fi;
+min(a) = a;
+min(a, b, ...) = if a < b then min(a, ...) else min(b, ...) fi;
+
+// Fillers
+hfill() = vfix(fill());
+vfill() = hfix(fill());
+
+// Neutral elements
+hnull() = vfill();	// neutral element for &
+vnull() = hfill();	// neutral element for |
+
+// Black and white lines
+hrule(thickness) = rule() & vspace(thickness);
+vrule(thickness) = rule() | hspace(thickness);
+hwhite(thickness) = fill() & vspace(thickness);
+vwhite(thickness) = fill() | hspace(thickness);
+
+hrule() = hrule(rulethickness());
+vrule() = vrule(rulethickness());
+hwhite() = hwhite(whitethickness());
+vwhite() = vwhite(whitethickness());
+
+// Fixers
+fix(a)  = hfix(vfix(a));
+space(a) = hspace(a) + vspace(a);
+
+// Box
+box(x) = x;
+box(x,y) = hspace(x) + vspace(y);
+
+// Alignments
+halign(...) = (&)(...);
+valign(...) = (|)(...);
+talign(...) = (~)(...);
+
+// Reverse alignments
+hralign() = hnull();
+hralign(head) = head;
+hralign(head, ...) = hralign(...) & head;
+tralign() = hnull();
+tralign(head) = head;
+tralign(head, ...) = tralign(...) ~ head;
+vralign() = vnull();
+vralign(head) = head;
+vralign(head, ...) = vralign(...) | head;
+
+// Lists
+hlist(_) = hnull();
+hlist(_, head) = head;
+hlist(sep, head, ...) = head & sep & hlist(sep, ...);
+
+tlist(_) = hnull();
+tlist(_, head) = head;
+tlist(sep, head, ...) = head ~ sep ~ tlist(sep, ...);
+
+vlist(_) = vnull();
+vlist(_, head) = head;
+vlist(sep, head, ...) = head | sep | vlist(sep, ...);
+
+hvlist(_) = vnull();
+hvlist(sep, head) = head & sep;
+hvlist(sep, head, ...) = head & sep | hvlist(sep, ...);
+
+tvlist(_) = vnull();
+tvlist(sep, head) = head ~ sep;
+tvlist(sep, head, ...) = head ~ sep | tvlist(sep, ...);
+
+vhlist(_) = vnull();
+vhlist(sep, head) = head | sep;
+vhlist(sep, head, ...) = (head | sep) & vhlist(sep, ...);
+
+vtlist(_) = vnull();
+vtlist(sep, head) = head | sep;
+vtlist(sep, head, ...) = (head | sep) ~ vtlist(sep, ...);
+
+commalist(...)     = tlist(", ", ...);
+semicolonlist(...) = tlist("; ", ...);
+
+// Make size even
+heven(box, align) = box ^ hspace(box + box % align);
+veven(box, align) = box ^ vspace(box + box % align);
+even(box, align) = heven(veven(box, align), align);
+heven(box) = heven(box, 2);
+veven(box) = veven(box, 2);
+even(box) = heven(veven(box));
+
+// Conversions
+// Convert digit
+num(a);
+digit(0) = "0";
+digit(1) = "1";
+digit(2) = "2";
+digit(3) = "3";
+digit(4) = "4";
+digit(5) = "5";
+digit(6) = "6";
+digit(7) = "7";
+digit(8) = "8";
+digit(9) = "9";
+digit(10) = "a";
+digit(11) = "b";
+digit(12) = "c";
+digit(13) = "d";
+digit(14) = "e";
+digit(15) = "f";
+digit(_) = fail("invalid digit() argument");
+
+// Convert numbers
+// Natural numbers
+pnum(a, base) =
+  if a < base then
+    digit(a) 
+  else 
+	pnum(a / base, base) & pnum(a % base, base)
+  fi;
+
+// Entire numbers
+num(a, base) =
+  if a < 0 then "-" & pnum(0 - a, base) else pnum(a, base) fi;
+num(a) = num(a, 10);
+
+// Bases
+dec(a) = num(a, 10);
+oct(a) = num(a, 8);
+bin(a) = num(a, 2);
+hex(a) = num(a, 16);
+
+// Lines with some space at the inner side
+n_rule() = hrule() | hwhite();
+w_rule() = vrule() & vwhite();
+s_rule() = hwhite() | hrule();
+e_rule() = vwhite() & vrule();
+
+// Frames
+whiteframe(box, thickness) = 
+  hwhite(thickness) 
+| vwhite(thickness) & box & vwhite(thickness) 
+| hwhite(thickness);
+whiteframe(box) = whiteframe(box, whitethickness());
+
+ruleframe(box, thickness) = 
+  hrule(thickness) 
+| vrule(thickness) & box & vrule(thickness) 
+| hrule(thickness);
+ruleframe(box) = ruleframe(box, rulethickness());
+
+frame(box)       = ruleframe(whiteframe(box));
+doubleframe(box) = frame(frame(box));
+thickframe(box)  = ruleframe(frame(box));
+
+// Centering
+hcenter(box)  = fill() & box & fill();
+vcenter(box)  = fill() | box | fill();
+center(box)   = hcenter(vcenter(box));
+
+// Flushing
+n_flush(box) = hcenter(box) | fill();
+s_flush(box) = fill() | hcenter(box);
+w_flush(box) = vcenter(box) & fill();
+e_flush(box) = fill() & vcenter(box);
+sw_flush(box) = fill() | (box & fill());
+nw_flush(box) = (box & fill()) | fill();
+se_flush(box) = fill() | (fill() & box);
+ne_flush(box) = (fill() & box) | fill();
+
+// Indentation
+indent(box) = indentamount() & box;
+
+// Underlines, Overlines, Crosslines
+underline(box) = box | hrule();
+overline(box)  = hrule() | box;
+crossline(box) = hfix(box ^ vcenter(hrule()));
+
+// Poor Man's Bold
+doublestrike(box) = box ^ (hspace(1) & box);
+
+// Abbreviations
+dquote() = "\"";
+squote() = "'";
+copyright() = "(c)";

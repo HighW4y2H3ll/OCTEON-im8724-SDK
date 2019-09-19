@@ -1,0 +1,55 @@
+This library wraps pthread locking functions to collect statistics.
+This includes for example how many cycles the application spent
+acquiring or releasing a lock or how long it held the lock.
+
+The library can be actived using the LD_PRELOAD mechanism.  Because of
+this there is no need to rebuild the application in order to gather
+statistics for it.  The statistics are printed after the program
+exits.
+
+Currently spinlocks, mutexes and condition variables are traced.
+
+There is some overhead in collecting these statistics.  For each call
+the statistic for the lock needs to be looked up in a hash table.  If
+you are only interested tracking one particular lock you can set the
+appropriate environment varible LOCKSTAT_FILTER_COND,
+LOCKSTAT_FILTER_MUTEX or LOCKSTAT_FILTER_SPINLOCK to the address of
+the lock.  The same variables can also be used to disable tracking of
+a whole category.  You can do this by setting the appropriate variable
+to empty (null address).
+
+This is an example of how to use the library.  lockstat-test is just a
+simple test app exercising one instance of each lock type.  Things
+prefixed with "lockstat: " are printed by the library upon exit.  Each
+lock identified with its address and the duration of relevant
+operations is printed in cycles, first in total then on a per-thread basis.
+
+  ~ # LD_PRELOAD=liblockstat.so lockstat-test
+  main waiting
+  thread running: 731
+  thread signaling 1 (731)
+  thread running: 732
+  thread signaling 2 (732)
+  main signaled 2
+  main waiting
+  
+  lockstat: Total cycles: 531647
+  lockstat: Spinlock statistics:
+  lockstat:        0x120101328 acquire  14573(  2.7%) hold 449709( 84.6%) release  13826(  2.6%)
+  lockstat:        per-thread:
+  lockstat:                730 acquire  14573(  2.7%) hold 449709( 84.6%) release  13826(  2.6%)
+  lockstat: 
+  lockstat: Mutex statistics:
+  lockstat:        0x120101370 acquire   1084(  0.2%) hold 289626( 54.5%) release   3091(  0.6%)
+  lockstat:        per-thread:
+  lockstat:                730 acquire    686(  0.1%) hold 226738( 42.6%) release   2373(  0.4%)
+  lockstat:                731 acquire    199(  0.0%) hold  39237(  7.4%) release    590(  0.1%)
+  lockstat:                732 acquire    199(  0.0%) hold  23651(  4.4%) release    128(  0.0%)
+  lockstat: 
+  lockstat: Condition variable statistics:
+  lockstat:        0x120101340 wait 204166( 38.4%) signal  10701(  2.0%) mutex 0x120101370
+  lockstat:        per-thread:
+  lockstat:                730 wait 204166( 38.4%) signal      0(  0.0%)
+  lockstat:                731 wait      0(  0.0%) signal  10421(  2.0%)
+  lockstat:                732 wait      0(  0.0%) signal    280(  0.1%)
+  ~ # 

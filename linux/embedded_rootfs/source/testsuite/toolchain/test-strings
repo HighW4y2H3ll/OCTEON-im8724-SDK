@@ -1,0 +1,5 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert strings `which strings` | grep -q GNU

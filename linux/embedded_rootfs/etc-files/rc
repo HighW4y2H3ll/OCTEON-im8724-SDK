@@ -1,0 +1,73 @@
+#!/bin/sh
+echo $0 starting
+
+# If we have depmod, run it to create module dependencies
+
+#
+# Module dependencies are generated at build time. If the build time
+# generation is disabled, uncomment this to generate it at runtime
+#
+#if [ -e /sbin/depmod ]
+#then
+#    echo Updating module dependencies
+#    depmod -a
+#fi
+
+mount -t devtmpfs none /dev 2> /dev/null
+mkdir -p /dev/pts
+mkdir -p /dev/shm
+
+echo Mounting file systems
+mount -a
+
+if [ ! -e /lib/modules/`uname -r`/modules.alias ] ; then
+    # if there is no modules.alias, the modules will not be loaded on
+    # demand.  Try to force load ipv6 for telnetd.
+    echo 'Loading IPv6 module'
+    modprobe ipv6
+fi
+
+#
+# The following settings are disabled since they cause TCP
+# streams to overflow L2 into DRAM with multiple flows. They
+# are still in here to allow you to tweak for your system.
+#
+#echo "Optimizing TCP window settings"
+#echo "16777216" > /proc/sys/net/core/rmem_max
+#echo "16777216" > /proc/sys/net/core/wmem_max
+#echo "4096 87380 16777216" > /proc/sys/net/ipv4/tcp_rmem
+#echo "4096 87380 16777216" > /proc/sys/net/ipv4/tcp_wmem
+
+echo Setting up loopback
+ifconfig lo 127.0.0.1
+
+echo Starting syslogd
+syslogd
+
+echo Starting telnetd
+telnetd -l /bin/ash
+
+#Start sshd if it exists
+if [ -e /usr/sbin/sshd ]; then
+
+  echo Generating sshd keys
+  if [ ! -e /usr/etc/ssh_host_key ]; then
+    /usr/bin/ssh-keygen -t rsa1 -f /usr/etc/ssh_host_key -N "" -q 
+  fi
+  if [ ! -e /usr/etc/ssh_host_dsa_key ]; then
+    /usr/bin/ssh-keygen -t dsa -f /usr/etc/ssh_host_dsa_key -N "" -q
+  fi
+  if [ ! -e /usr/etc/ssh_host_rsa_key ]; then
+    /usr/bin/ssh-keygen -t rsa -f /usr/etc/ssh_host_rsa_key -N "" -q 
+  fi
+  if [ ! -e /usr/etc/ssh_host_ecda_key ]; then
+    /usr/bin/ssh-keygen -t ecdsa -f /usr/etc/ssh_host_ecdsa_key -N "" -q
+  fi
+
+  echo Starting sshd
+  /usr/sbin/sshd -q
+fi
+
+
+echo $0 complete
+

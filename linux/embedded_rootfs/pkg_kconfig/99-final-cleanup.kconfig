@@ -1,0 +1,48 @@
+config CONFIG_final-cleanup
+	bool "final-cleanup"
+	default y
+	help
+		Performs final cleanup operations required to minimize the
+		filesystem size.
+		- Remove /usr/include
+		- Remove gconv libraries
+		- Remove "man" and "info" pages
+		- Remove static libraries
+		- Strip binaries and libraries
+		- Change file ownership
+
+config CFG_STRIP_KERNEL_MODULES
+	bool "Strip debugging information from kernel modules"
+	depends CONFIG_final-cleanup
+	default y
+	help
+		Strip debugging information from all kernel modules. Symbol
+		data will be left for dynamic linking to the kernel. This can
+		save quite a bit in the size in the modules directory. For the
+		absolute smallest size, it is best to build everything into
+		the kernel and not use modules.
+
+config CFG_STRIP_BINARIES
+	bool "Strip debugging information from binaries"
+	depends CONFIG_final-cleanup
+	default y
+	help
+		Strip debugging information from all binaries under /bin,
+		/sbin, /usr/bin, /usr/sbin, and /examples.
+
+config CFG_STRIP_LIBRARIES
+	bool "Strip debugging information from libraries"
+	depends CONFIG_final-cleanup
+	default y
+	help
+		Strip debugging information from all libraries (*.so*).
+
+config CFG_EXTRA_FILES_DIR
+	string "Directory to copy extra files from"
+	depends CONFIG_final-cleanup
+	default ""
+	help
+		This is an optional directory for extra files in the filesystem.
+		All files in this directory are copied into the filesystem with
+		"cp -R <directory>/* /"
+

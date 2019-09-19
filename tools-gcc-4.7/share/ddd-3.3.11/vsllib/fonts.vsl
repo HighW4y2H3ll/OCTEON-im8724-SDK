@@ -1,0 +1,159 @@
+// $Id: fonts.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// VSL font library
+
+// Copyright (C) 1993 Technische Universitaet Braunschweig, Germany.
+// Written by Andreas Zeller <zeller@gnu.org>.
+// 
+// This file is part of DDD.
+// 
+// DDD is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
+// 
+// DDD is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public
+// License along with DDD -- see the file COPYING.
+// If not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// 
+// DDD is the data display debugger.
+// For details, see the DDD World-Wide-Web page, 
+// `http://www.gnu.org/software/ddd/',
+// or send a mail to the DDD developers <ddd@gnu.org>.
+
+// Version
+fonts_version() = "$Id: fonts.vsl 14384 2006-04-11 21:46:04Z cchavva $";
+
+// Synonyms
+_font(box, font) = font(box, font);
+_fontfix(box) = fontfix(box);
+
+// Standard interface
+//#pragma override font
+the_font(box, font) = _fontfix(_font(box, string(font)));
+
+// Constants
+slant_unslanted()    = "r";
+slant_italic()       = "*";
+weight_medium()      = "medium";
+weight_bold()        = "bold";
+family_times()       = "times";
+family_courier()     = "courier";
+family_helvetica()   = "helvetica";
+family_new_century() = "new century schoolbook";
+family_typewriter()  = "lucidatypewriter";
+
+// Defaults
+stdfontfamily() = family_times();
+stdfontpixels() = 0;		// 0 means to use stdfontpoints()
+stdfontpoints() = 120;		// 0 means to use stdfontpixels()
+stdfontslant()  = slant_unslanted();
+stdfontweight() = weight_medium();
+stdfontsize()   = (stdfontpixels(), stdfontpoints());
+
+// Convert size spec
+fontnum(n) = if n > 0 then num(n) else "*" fi;
+
+// Font names
+// X11 system interface
+sysfontname(fndry, family, weight, slant, sWdth, adstyl, pxlsz, ptSz,
+	resx, resy, spc, avgWdth, rgstry, encdng) = string(
+	"-" & fndry &
+	"-" & family &
+	"-" & weight &
+	"-" & slant &
+	"-" & sWdth &
+	"-" & adstyl &
+	"-" & pxlsz &
+	"-" & ptSz &
+	"-" & resx &
+	"-" & resy &
+	"-" & spc &
+	"-" & avgWdth &
+	"-" & rgstry &
+	"-" & encdng);
+
+// ``Official'' interface
+fontname(weight, slant, family, (pixels, points)) = string(
+	"-" & "*" &
+	"-" & family &
+	"-" & weight &
+	"-" & slant &
+	"-" & "*" &				// sWdth
+	"-" & "*" &				// adstyl
+	"-" & fontnum(pixels) &	        	// pxlSz
+	"-" & fontnum(points) &                 // ptSz
+	"-" & "*" &				// resx
+	"-" & "*" &				// resy
+	"-" & "*" &				// spc
+	"-" & "*" &				// avgWdth
+	"-" & "*" &				// rgstry
+	"-" & "*");				// encdng
+
+// Defaults
+fontname(weight, slant, family, size) =
+	fontname(weight, slant, family, size);
+fontname(weight, slant, family) =
+	fontname(weight, slant, family, stdfontsize());
+fontname(weight, slant) =
+	fontname(weight, slant, stdfontfamily());
+fontname(weight) =
+	fontname(weight, stdfontslant());
+fontname() =
+	fontname(stdfontweight());
+
+// Font names
+// For the sake of efficiency, we avoid the ellipsis  ("...") where possible
+fontname_rm() = 
+	fontname(weight_medium(), slant_unslanted());
+fontname_bf() = 
+	fontname(weight_bold(), slant_unslanted());
+fontname_it() = 
+	fontname(weight_medium(), slant_italic());
+fontname_bi() = 
+	fontname(weight_bold(), slant_italic());
+
+fontname_rm(family) = 
+	fontname(weight_medium(), slant_unslanted(), family);
+fontname_bf(family) = 
+	fontname(weight_bold(), slant_unslanted(), family);
+fontname_it(family) = 
+	fontname(weight_medium(), slant_italic(), family);
+fontname_bi(family) = 
+	fontname(weight_bold(), slant_italic(), family);
+
+fontname_rm(family, size) = 
+	fontname(weight_medium(), slant_unslanted(), family, size);
+fontname_bf(family, size) = 
+	fontname(weight_bold(), slant_unslanted(), family, size);
+fontname_it(family, size) = 
+	fontname(weight_medium(), slant_italic(), family, size);
+fontname_bi(family, size) = 
+	fontname(weight_bold(), slant_italic(), family, size);
+
+
+// Macros for font settings
+rm(box) = the_font(box, fontname_rm());
+bf(box) = the_font(box, fontname_bf());
+it(box) = the_font(box, fontname_it());
+bi(box) = the_font(box, fontname_bi());
+
+rm(box, family) = the_font(box, fontname_rm(family));
+bf(box, family) = the_font(box, fontname_bf(family));
+it(box, family) = the_font(box, fontname_it(family));
+bi(box, family) = the_font(box, fontname_bi(family));
+
+rm(box, family, size) = font(box, fontname_rm(family, size));
+bf(box, family, size) = font(box, fontname_bf(family, size));
+it(box, family, size) = font(box, fontname_it(family, size));
+bi(box, family, size) = font(box, fontname_bi(family, size));
+
+
+// Synonyms
+sl(...) = it(...);
+bs(...) = bi(...);

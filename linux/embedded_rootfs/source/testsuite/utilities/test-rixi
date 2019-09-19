@@ -1,0 +1,13 @@
+#!/bin/sh
+
+source ./functions.sh
+
+have_cn5xxx || have_cn6xxx
+require [ $? == 0 ]
+
+require test -f ./rixi
+
+assert ./rixi > $0.log
+assert grep -q "XI-1 succeeded" $0.log
+assert grep -q "XI-2 succeeded" $0.log
+assert grep -q "RI succeeded" $0.log

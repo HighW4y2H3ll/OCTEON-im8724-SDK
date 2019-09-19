@@ -1,0 +1,14 @@
+#!/bin/sh
+
+source ./functions.sh
+
+check_memory
+check_large_shared_mem
+have_cn30xx
+require [ $? != 0 ]
+have_cn50xx
+require [ $? != 0 ]
+require test -f /examples/named-block
+assert schedtool -a 0 -e /examples/named-block > $0.log
+assert grep -q "PASS: All tests passed" $0.log
+

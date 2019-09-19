@@ -1,0 +1,1 @@
+bootcmd=bootoctlinux 0x10000000 endbootargs rw root=1f00 octeon_error_tree.disable=1 slram=root,0x40000000,+1073741824

@@ -1,0 +1,26 @@
+#!/bin/sh
+source ./functions.sh
+
+test -f /var/spool/cron/crontabs
+if [ $? -eq 1 ]; then
+assert mkdir -p /var/spool/cron/crontabs
+fi
+
+test -f /etc/group
+if [ $? -eq 1 ]; then
+assert touch /etc/group
+fi
+
+assert echo "20 * * * * rm /tmp/*" > /var/spool/cron/crontabs/root
+crontab -l > $0.log
+
+grep -q '20 * * * *' $0.log
+require [ $? -eq 0 ]
+
+grep -q '20 * * * *' /var/spool/cron/crontabs/root
+require [ $? -eq 0 ]
+
+crontab -d > $0.log
+grep -q '20 * * * *' $0.log
+require [ $? -eq 1 ]
+

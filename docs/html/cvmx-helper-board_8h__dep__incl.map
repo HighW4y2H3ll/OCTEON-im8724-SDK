@@ -1,0 +1,13 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$cvmx-agl_8c.html" title="Functions for RGMII (MGMT) initialization, configuration, and monitoring." alt="" coords="5,83,101,112"/>
+<area shape="rect" id="node5" href="$cvmx-helper-bgx_8c.html" title="Functions to configure the BGX MAC." alt="" coords="125,83,272,112"/>
+<area shape="rect" id="node7" href="$cvmx-helper-board_8c.html" title="Helper functions to abstract board specific data about network ports from the rest..." alt="" coords="296,83,456,112"/>
+<area shape="rect" id="node9" href="$cvmx-helper-cfg_8c.html" title="Helper Functions for the Configuration Framework." alt="" coords="480,83,624,112"/>
+<area shape="rect" id="node11" href="$cvmx-helper-rgmii_8c.html" title="Functions for RGMII/GMII/MII initialization, configuration, and monitoring." alt="" coords="648,83,803,112"/>
+<area shape="rect" id="node13" href="$cvmx-helper-sgmii_8c.html" title="Functions for SGMII initialization, configuration, and monitoring." alt="" coords="827,83,984,112"/>
+<area shape="rect" id="node15" href="$cvmx-helper_8c.html" title="Helper functions for common, but complicated tasks." alt="" coords="1008,83,1125,112"/>
+<area shape="rect" id="node17" href="$cvmx-mgmt-port_8h.html" title="Support functions for managing the MII management port." alt="" coords="1149,83,1301,112"/>
+<area shape="rect" id="node21" href="$cvmx-usb_8c.html" title="&quot;cvmx&#45;usb.c&quot; defines a set of low level USB functions to help developers..." alt="" coords="1325,83,1424,112"/>
+<area shape="rect" id="node23" href="$cvmx-usbd_8c.html" title="&quot;cvmx&#45;usbd.c&quot; defines a set of low level USB functions to help developers..." alt="" coords="1448,83,1555,112"/>
+<area shape="rect" id="node19" href="$cvmx-mgmt-port_8c.html" title="Support functions for managing the MII management port." alt="" coords="1149,160,1301,189"/>
+</map>

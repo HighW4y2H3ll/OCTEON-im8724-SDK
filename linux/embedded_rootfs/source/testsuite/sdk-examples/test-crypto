@@ -1,0 +1,33 @@
+#!/bin/sh
+
+source ./functions.sh
+
+check_memory
+check_large_shared_mem
+require test -f /examples/crypto
+assert schedtool -a 0 -e /examples/crypto > $0.log
+assert grep -q '^CVMX_SHARED:' $0.log
+if have_cn78xx || have_cn73xx
+then
+   assert grep -q '^Active coremask =  node 0: 0x1$' $0.log
+else
+   assert grep -q '^Active coremask = 0x1$' $0.log
+fi
+assert grep -q '^Plaintext: "Original plaintext message"$' $0.log
+assert grep -q '^MD5:      1517fa5c261777f967f2c7c034a13fd4$' $0.log
+assert grep -q '^SHA1:     4964868fb28c4fdb08afa18c462e4c2c53b9c0ca$' $0.log
+assert grep -q '^3des:     3fa40e8a984d48153fa40e8a984d4815$' $0.log
+assert grep -q '^3des cbc: e5c7cdde872bf27cbc3e81b5aaa5190c$' $0.log
+assert grep -q '^aes:      f8a4ba8e3feab9b1d63e0d1f67b00808f8a4ba8e3feab9b1d63e0d1f67b00808$' $0.log
+assert grep -q '^aes cbc:  e5a82dea368354dcb2982f24ed13bc170b4256f2222e06362e54096ace81568f$' $0.log
+if have_cn5xxx || have_cn6xxx || have_cn7xxx 
+then
+    assert grep -q '^kasumi:   df1f9b251c0bf45f$' $0.log
+    assert grep -q '^kasumi cbc: 86e5030dee2524f96d88a257350ad6493fb6337a9d7c329b5b1bb9785cd1808f$' $0.log
+fi
+if have_cn6xxx || have_cn7xxx
+then
+    assert grep -q '^sms4:     681edf34d206965e86b3e94f536e4246681edf34d206965e86b3e94f536e4246' $0.log
+    assert grep -q '^sms4 cbc: 0b15a6c212d85b67e7cdef840362e352896227805c2a1fad643b88bf7b2ba4af' $0.log
+    assert grep -q '^snow3g:   5d5bfe75eb04f68ce0a12377ea00b37d47c6a0ba06309155086a859c4341b37c' $0.log
+fi

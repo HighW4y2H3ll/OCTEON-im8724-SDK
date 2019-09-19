@@ -1,0 +1,150 @@
+#!/usr/bin/python
+#
+# This script provides a simple interface to the Octeon simulator uarts.
+# For usage information run "oct-uart-io -h"
+#
+# This script requires Python 2.3 or later
+#
+import sys
+import socket
+import time
+import getopt
+
+#
+# The following constants are used as line types for the
+# outputLine function
+#
+BOOTLOADER_EARLY="BOOT INITIAL"
+BOOTLOADER_MAIN="BOOT"
+APPLICATION="APPL"
+
+#
+# These global variables receive their value based on
+# the parameters passed by the user
+#
+display_output = 1
+timeout = 10
+app_log = 0
+boot_log = 0
+input_data = ""
+hostname = "localhost"
+port = 2020
+
+#
+# Create a TCP connection to the simulator
+#
+def connectSimulator(host, port):
+    global timeout
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    for retry in range(0,timeout):
+        try:
+            sock.connect((host, port))
+            return sock
+        except:
+            time.sleep(1)
+    print "oct-uart-io: Failed to connect to simulator. Exiting."
+    sys.exit(-1)
+
+#
+# Output a line from the simulator to the appropriate files
+#
+def outputLine(line, line_type):
+    global app_log
+    global boot_log
+    if display_output:
+        print line.replace("\n","")
+    if line_type == APPLICATION:
+        if app_log:
+            app_log.write(line)
+            app_log.flush()
+    else:
+        if boot_log:
+            boot_log.write(line)
+            boot_log.flush()
+
+#
+# Read all output fro mthe simulator and parse it
+#
+def readSimulator(host, port):
+    global input_data
+    line_type = BOOTLOADER_EARLY
+    sock = connectSimulator(host, port)
+    file = sock.makefile("r+")
+    try:
+        line = file.readline()
+        while line:
+            if line.startswith("Bootloader:"):
+                line_type = BOOTLOADER_MAIN
+            elif line_type == BOOTLOADER_MAIN:
+                line_type = APPLICATION
+                if input_data:
+	            file.write(input_data)
+		    file.flush()
+		    input_data = ""
+            outputLine(line, line_type)
+            line = file.readline()
+    except:
+        print "oct-uart-io: Disconnected from simulator"
+    file.close()
+    sock.close()
+
+#
+# Setup the python argument parser 
+#
+shortopt="qn:p:l:b:i:t:"
+longopt=["quiet", "host=", "port=", "log=", "bootlog=", "input=", "timeout="]
+
+try:
+    (options, args) = getopt.getopt(sys.argv[1:], shortopt, longopt)
+    if len(options) == 0:
+        raise Exception("show usage")
+    for option,value in options:
+        if option in ("-h", "--help"):
+            raise Exception("show usage")
+        elif option in ("-q", "--quiet"):
+            display_output = 0
+        elif option in ("-n", "--host"):
+            hostname = value
+        elif option in ("-p", "--port"):
+            port = int(value)
+        elif option in ("-l", "--log"):
+            app_log = open(value, "w")
+        elif option in ("-b", "--bootlog"):
+            boot_log = open(value, "w")
+        elif option in ("-i", "--input"):
+            f = open(value, "r")
+            input_data = f.read()
+            f.close()
+        elif option in ("-t", "--timeout"):
+            timeout = int(value)
+except:
+    print "Usage: " + sys.argv[0] + " [options]"
+    print "    Cavium Octeon uart communication utility.  Use this program"
+    print "    to read output from the Octeon uarts through a TCP socket."
+    print "     -q --quiet      Disable the display of uart output."
+    print "     -n --host       Hostname to connect to. Default: " + hostname
+    print "     -p --port       TCP Port to connect to the simulator on. This"
+    print "                     must match the argument \"-uartX=port\" given"
+    print "                     to the simulator. Default: " + str(port)
+    print "     -l --log        File name to write application output to."
+    print "     -b --bootlog    File name to write bootloader output to."
+    print "     -i --input      File name to read input from and pipe into the simulator."
+    print "     -t --timeout    Amount of time (in seconds) to wait for the"
+    print "                     simulator connect for. Default: " + str(timeout) + " seconds."
+    sys.exit(-1)
+
+#
+# Do the work
+#
+readSimulator(hostname, port)
+
+#
+# Close down any leftover files
+#
+if app_log:
+    app_log.close()
+
+if boot_log:
+    boot_log.close()
+
+

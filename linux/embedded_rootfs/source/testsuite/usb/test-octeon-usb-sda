@@ -1,0 +1,39 @@
+#!/bin/sh
+
+source ./functions.sh
+
+# Check if a usb storage device is plugged in. If not
+# skip this test.
+require test -d /sys/bus/usb/drivers/usb-storage/1-1\:1.0
+require test -d /sys/devices/platform/OcteonUSB.0
+
+device=`find /sys/devices/platform/OcteonUSB.0 -print | sed -n -e '/block:sd.$/ {s,^.\+:\(sd.\)$,/dev/\1, p}'`
+device1=$device"1"
+
+echo " device is $device, $device1"
+# Make sure fdisk returns at least the first primary partition
+assert fdisk -l $device > $0.log
+assert grep -q "Disk $device:" $0.log
+assert grep -q "heads," $0.log
+assert grep -q "sectors/track," $0.log
+assert grep -q "cylinders" $0.log
+assert grep -q "Device Boot    Start       End    Blocks   Id  System" $0.log
+assert grep -q "$device1" $0.log
+
+# Make sure we can read at least 60MB
+assert dd if=$device of=/dev/null bs=1M count=60 >> $0.log
+
+# Skip if we don't have iozone
+require which iozone >> $0.log
+
+# Mount the first partition
+umount /mnt > /dev/null 2>&1
+assert mount $device1 /mnt
+
+# Run a quick iozone test
+assert iozone -A -s 8192 -f /mnt/iozone.tmp >> $0.log
+
+# Cleanup by unmounting the filesystem
+assert umount /mnt
+
+

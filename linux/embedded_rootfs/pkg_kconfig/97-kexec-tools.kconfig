@@ -1,0 +1,6 @@
+config CONFIG_kexec-tools
+	bool "kexec-tools for Octeon"
+	default n
+	help
+		User space utilities to work with Kexec and Kdump
+

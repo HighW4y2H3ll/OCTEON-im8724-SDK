@@ -1,0 +1,35 @@
+#!/bin/sh
+source ./functions.sh
+
+#verify /etc/group exist, if not create file
+test -f /etc/group
+if [ $? != 0 ];
+then
+  echo "# first line is reserved for root" > /etc/group
+fi
+
+# add new users
+assert adduser -D sdk-test-user0 
+assert adduser -D sdk-test-user1 
+
+# verify existance of created user entries
+require_good assert grep -q 'sdk-test-user0' /etc/passwd
+require_good assert grep -q 'sdk-test-user1' /etc/passwd
+require_good assert grep -q 'sdk-test-user0' /etc/group
+require_good assert grep -q 'sdk-test-user1' /etc/group
+
+# delete the newly created users
+assert deluser sdk-test-user0
+assert deluser sdk-test-user1
+assert rm -rf /home/sdk-test-user0
+assert rm -rf /home/sdk-test-user1
+
+# make sure users are deleted
+grep -q 'sdk-test-user0' /etc/passwd                   
+if [ $? != 1 ]; then exit 1; fi
+grep -q 'sdk-test-user0' /etc/group                   
+if [ $? != 1 ]; then exit 1; fi
+grep -q 'sdk-test-user1' /etc/passwd                   
+if [ $? != 1 ]; then exit 1; fi
+grep -q 'sdk-test-user1' /etc/group                   
+if [ $? != 1 ]; then exit 1; fi

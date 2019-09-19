@@ -1,0 +1,166 @@
+This bootloader is designed for the OCTEON CN70XX processor, it is not
+compatible with any earlier processors.
+
+Two bootloaders are actually created.  The first bootloader is a SPI bootloader.
+All it does is search the SPI NOR flash starting from the end of the SPI
+bootloader for another bootloader header.  It loads the next bootloader into
+L2 cache and transfers execution to it. The SPI bootloader must be entirely
+contained within 8K.
+
+A tool combines the bootloaders into a single image that can be loaded into a
+SPI NOR that is at least 32KB in size.  A 64KB SPI NOR may be preferable for
+future expansion purposes.
+
+The second bootloader is a NAND bootloader.  It is designed to scan a NAND
+flash for a stage 2 bootloader and transfer control to it.
+
+The stage 2 bootloader must remain under 448KB in size since the stage 1 and
+1.5 bootloaders consume around 64KB of the L2 cache.
+
+When using the spi eeprom and nand write commands in U-Boot do not use address
+0. These commands do not remap address 0 to the file load address. Always use
+$(fileaddr) or 0x20000000 (assuming that is the file address) instead.
+
+NAND:
+
+There are some restrictions imposed by the NAND bootloader.
+
+1.  All NAND devices must be ONFI compatible and contain the extended parameter
+    page data (EPPS).  All of the ECC information is detected at runtime from
+    the ONFI data.
+
+2.  Only multi-bit ECC is supported using the CN70XX BCH engine.  The BCH engine
+    can correct NAND devices with 4, 8, 16, 24, 32, 40, 48, 56, 60 or 64-bits of
+    ECC per block and the block size can be up to 2K.  The hardware BCH engine
+    is optimized for a block size of 2K so the ECC data will be slightly larger
+    for smaller block sizes compared to a software BCH engine.  For some ECC
+    sizes such as 12 the hardware will round this up to the next size, in this
+    case 16 bits of ECC.  There must be enough OOB space to hold
+    (15 * ECC_LEVEL + 7) / 8 as well as a bit of extra space for marking blocks
+    as bad.
+
+3.  For NAND devices with unsupported ECC sizes the BCH engine will use the next
+    largest size.  For example, if the NAND device requires 12 bits of ECC per
+    block then 16 bits will be used instead.  Make sure that the OOB space is
+    large enough to contain the ECC data.  Single bit NAND ECC correction is not
+    supported unless there is enough OOB space to contain the ECC for 4 bit ECC
+    as well as a bit of extra space for marking bad blocks.
+
+4.  While support has been implemented to detect and skip bad blocks it has not
+    yet been tested.
+
+5.  Currently only Micron devices have been tested.
+
+6.  All previous octnand commands in U-Boot are not supported.  The stage 1.5
+    NAND driver is designed to be compatible with U-Boot's NAND and OOB layout.
+
+7.  The stage 2 bootloader must be 447KB or smaller.
+
+8.  To update the stage 1 and stage 1.5 bootloaders in U-Boot use the following
+    commands:
+
+        # tftp 0 spi-combined.bin
+        # spieeprom write $(fileaddr) 0 $(filesize)
+
+9.  To write the generic stage 2 bootloader use the following commands:
+
+        # tftp 0 u-boot-octeon_generic_nand2_stage2.bin
+        # nand erase 0 $(filesize)
+        # nand write $(fileaddr) 0 $(filesize)
+
+    The stage 2 bootloader is not expected to be updated frequently and the
+    first NAND block is guaranteed to be good by the manufacturer so it should
+    always be written to offset 0.
+
+10. To write the stage 3 bootloader use the following commands:
+        # tftp 0 u-boot-octeon_evb7000.bin
+        # bootloaderupdate nand
+
+    Alternatively the following commands can be used:
+        # tftp 0 u-boot-octeon_evb7000.bin
+        # nand erase 0x100000 $(filesize)
+        # nand write $(fileaddr) 0x100000 $(filesize)
+
+    It is normal for the stage 3 bootloader to be written at NAND offsets
+    0x100000 or 0x300000.  It will write to the next free space in the
+    bootloader area before erasing the old one to reduce the amount of wear.
+
+11. While the stage 1.5 and stage 2 bootloaders are designed to skip over bad
+    blocks in the NAND this code has not been thoroughly tested.  The bad block
+    skipping code is not expected to be used in the stage 1.5 NAND bootloader
+    since most NAND manufacturers guarantee at least one write operation to
+    the first block.
+
+12. The stage 2 bootloader requires that the TLV EEPROM contains the board type
+    information.  This is needed for initializing DRAM.
+
+13. To boot the stage 3 bootloader from the stage 2 bootloader use the
+    "bootstage3" command on the U-Boot prompt.  This can be set to be the
+    default command to execute to automate booting to stage 3.  This can be
+    configured by adding the following to
+    include/configs/octeon_generic_nand2_stage2.h:
+
+    #define CONFIG_BOOTCOMMAND	"bootstage3"
+
+14. The stage 2 bootloader is quite limited and contains no networking support.
+    If it fails to load the stage 3 bootloader it is possible to do so using
+    either X Modem, Y Modem or kermit via the loadx, loady or loadb commands.
+
+    As an example, use the following commands to boot the stage 3:
+
+    loady 0x81000000
+    go 0x81000000
+
+    The nand commands are also available to manually erase and write the stage 3
+    bootloader to the NAND flash after loading it over the serial connection.
+    Use the following commands to write the stage 3 bootloader to the NAND
+    flash:
+
+    # nand erase 0x100000 $(filesize)
+    # nand write $(fileaddr) 0x100000 $(filesize)
+
+    If these commands are successful then the bootstage3 command should work.
+
+*** Compiling and Building ***
+
+To build the stage 1 and 1.5 combined bootloader execute the following command
+in this directory:
+
+% make
+
+While the stage 1 and 1.5 bootloaders have been designed to be very generic
+there are various options that can be adjusted in nand-config.h and
+spi-config.h.  These include things like the UART baud rate.  It is recommended
+that most of the fields not be changed, especially various memory addresses.
+
+To build the stage 2  U-Boot bootloader go to the u-boot directory and execute
+the following commands:
+
+% make clean
+% make octeon_generic_nand2_stage2_config
+% make -jX [where X is the number of CPU cores/threads on the current system]
+
+*** SFF7000 Board Notes ***
+The NAND bootloader is designed to be loaded from a 16-bit SPI EEPROM.  While
+it is capable of running from a 24-bit SPI NOR this is not the default
+configuration.  In order to use the NAND bootloader with the SFF7000 board
+the following lines in spi-config.h must be changed:
+
+/* Only enable one of the following SPI device types below */
+
+#define CONFIG_SPI_NOR              /** Use a SPI NOR */
+
+/** Enable M95XXX SPI EEPROM support, disable for SFF7000 board */
+#undef CONFIG_SPI_EEPROM_M95XXX
+
+This will allow the SPI bootloader to support the 24-bit SPI NOR that is
+present on this board.  The default configuration is to use a SPI EEPROM
+since that is the device most products are expected to use.
+
+Also, instead of the spieeprom the following commands should be used instead:
+
+# tftp 0 spi-combined.bin
+# sf probe
+# sf update $(fileaddr) 0 $(filesize)
+
+The sf probe and sf update commands replace the spieeprom command.

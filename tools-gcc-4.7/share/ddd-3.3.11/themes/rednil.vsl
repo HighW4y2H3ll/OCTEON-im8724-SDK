@@ -1,0 +1,38 @@
+// $Id: rednil.vsl 14384 2006-04-11 21:46:04Z cchavva $
+// Red nil pointers.  If enabled, show nil pointers in red.
+
+#pragma override old_pointer_value
+#pragma override old_dereferenced_pointer_value
+old_pointer_value(...) -> pointer_value(...);
+old_dereferenced_pointer_value(...) -> dereferenced_pointer_value(...);
+
+#pragma override pointer_value
+#pragma override dereferenced_pointer_value
+
+// True if S1 ends in S2
+ends_in(s1, s2) = 
+    let s1c = chars(s1), s2c = chars(s2) in suffix(s2c, s1c);
+
+// True if null value
+is_null(value) = (ends_in(value, "0x0") or ends_in(value, "nil"));
+
+// Rendering of null values
+null_pointer(value) = color(value, "red");
+
+// Ordinary pointers
+pointer_value (value) -> 
+    old_pointer_value(v)
+    where v = (if (is_null(value)) then 
+	           null_pointer(value)
+	       else 
+	           value
+               fi);
+
+// Dereferenced pointers
+dereferenced_pointer_value (value) -> 
+    old_dereferenced_pointer_value(v)
+    where v = (if (is_null(value)) then 
+	           null_pointer(value) 
+	       else 
+	           value
+               fi);

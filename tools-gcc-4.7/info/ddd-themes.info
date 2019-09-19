@@ -1,0 +1,3245 @@
+This is ../../../src/ddd/ddd/ddd-themes.info, produced by makeinfo
+version 4.13 from ../../../src/ddd/ddd/ddd-themes.texi.
+
+INFO-DIR-SECTION Programming & development tools.
+START-INFO-DIR-ENTRY
+* DDD-Themes: (ddd-themes).       Writing DDD Themes.
+END-INFO-DIR-ENTRY
+
+DDD is a graphical front-end for GDB and other command-line debuggers.
+
+This is the First Edition, 2001-02-01, of `Writing DDD themes' for DDD
+Version 3.3.11.
+
+
+   Copyright (C) 2001 Universität Passau
+Lehrstuhl für Software-Systeme
+Innstraße 33
+D-94032 Passau
+GERMANY
+
+Distributed by
+Free Software Foundation, Inc.
+59 Temple Place - Suite 330
+Boston, MA 02111-1307
+USA
+
+DDD and this manual are available via the DDD WWW page
+(http://www.gnu.org/software/ddd/).
+
+   Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.1 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts and no Back-Cover Texts.  A
+copy of the license is included in the section entitled "GNU Free
+Documentation License".
+
+   Send questions, comments, suggestions, etc. to <ddd@gnu.org>.
+Send bug reports to <bug-ddd@gnu.org>.
+
+File: ddd-themes.info,  Node: Top,  Next: Welcome,  Up: (dir)
+
+Writing DDD Themes
+******************
+
+DDD is a graphical front-end for GDB and other command-line debuggers.
+This manual describes how to write _themes,_ that is, modifiers that
+change the visual appearance of data.
+
+   This is the First Edition of `Writing DDD Themes', 2001-02-01, for
+DDD Version 3.3.11.
+
+   The first part of this master menu lists the major nodes in this Info
+document, including the label and command indices.  The rest of the menu
+lists all the lower level nodes in the document.
+
+* Menu:
+
+* Welcome::                     What this manual is about.
+* Creating Displays::           How DDD visualizes data.
+* Writing Themes::              How you can customize the visualization.
+
+* DDD VSL Functions::           All the VSL functions used by DDD.
+* VSL Library::                 The standard VSL functions.
+* VSL Reference::               Syntax and semantics of VSL.
+
+* Documentation License::       The license of this document.
+* Index::                       All VSL functions.
+
+
+File: ddd-themes.info,  Node: Welcome,  Next: Creating Displays,  Prev: Top,  Up: Top
+
+Welcome
+*******
+
+Welcome to _Writing DDD Themes_!  In this manual, we will sketch how
+data visualization in DDD works.  (DDD, the Data Display Debugger, is a
+debugger front-end with data visualization.  For details, *note Summary
+of DDD: (ddd)Summary.)
+
+
+File: ddd-themes.info,  Node: Creating Displays,  Next: Writing Themes,  Prev: Welcome,  Up: Top
+
+1 Creating Displays
+*******************
+
+We begin with a short discussion of how DDD actually creates displays
+from data.
+
+* Menu:
+
+* Handling Boxes::              How boxes group into displays.
+* Building Boxes from Data::    How DDD computes boxes.
+
+
+File: ddd-themes.info,  Node: Handling Boxes,  Next: Building Boxes from Data,  Up: Creating Displays
+
+1.1 Handling Boxes
+==================
+
+All data displayed in the DDD data window is maintained by the inferior
+debugger.  GDB, for instance, provides a _display list_, holding
+symbolic expressions to be evaluated and printed on standard output at
+each program stop.  The GDB command `display tree' adds `tree' to the
+display list and makes GDB print the value of `tree' as, say, `tree =
+(Tree *)0x20e98', at each program stop.  This GDB output is processed
+by DDD and displayed in the data window.
+
+   Each element of the display list, as transmitted by the inferior
+debugger, is read by DDD and translated into a _box_.  Boxes are
+rectangular entities with a specific content that can be displayed in
+the data window.  We distinguish _atomic_ boxes and _composite_ boxes.
+An atomic box holds white or black space, a line, or a string.
+Composite boxes are horizontal or vertical alignments of other boxes.
+Each box has a size and an extent that determines how it fits into a
+larger surrounding space.
+
+   Through construction of larger and larger boxes, DDD constructs a
+graph node from the GDB data structure in a similar way a typesetting
+system like TeX builds words from letters and pages from paragraphs.
+
+   Such constructions are easily expressed by means of functions mapping
+boxes onto boxes.  These _display functions_ can be specified by the
+user and interpreted by DDD, using an applicative language called VSL
+for _visual structure language_.  VSL functions can be specified by the
+DDD user, leaving much room for extensions and customization.  A VSL
+display function putting a frame around its argument looks like this:
+
+     // Put a frame around TEXT
+     frame(text) = hrule()
+       | vrule() & text & vrule()
+       | hrule();
+
+   Here, `hrule()' and `vrule()' are primitive functions returning
+horizontal and vertical lines, respectively.  The `&' and `|' operators
+construct horizontal and vertical alignments from their arguments.
+
+   VSL provides basic facilities like pattern matching and variable
+numbers of function arguments.  The `halign()' function, for instance,
+builds a horizontal alignment from an arbitrary number of arguments,
+matched by three dots (`...'):
+
+     // Horizontal alignment
+     halign(x) = x;
+     halign(x, ...) = x & halign(...);
+
+   Frequently needed functions like `halign()' are grouped into a
+standard VSL library.
+
+
+File: ddd-themes.info,  Node: Building Boxes from Data,  Prev: Handling Boxes,  Up: Creating Displays
+
+1.2 Building Boxes from Data
+============================
+
+To visualize data structures, each atomic type and each type constructor
+from the programming language is assigned a VSL display function.
+Atomic values like numbers, characters, enumerations, or character
+strings are displayed using string boxes holding their value; the VSL
+function to display them leaves them unchanged:
+
+     // Atomic Values
+     simple_value(value) = value;
+
+   Composite values require more attention.  An array, for instance, may
+be displayed using a horizontal alignment:
+
+     // Array
+     array(...) = frame(halign(...));
+
+   When GDB sends DDD the value of an array, the VSL function `array()'
+is invoked with array elements as values.  A GDB array expression `{1,
+2, 3}' is thus evaluated in VSL as
+
+     array(simple_value("1"), simple_value("2"), simple_value("3"))
+
+which equals
+
+     "1" & "2" & "3"
+
+a composite box holding a horizontal alignment of three string boxes.
+The actual VSL function used in DDD also puts delimiters between the
+elements and comes in a vertical variant as well.
+
+   Nested structures like multi-dimensional arrays are displayed by
+applying the `array()' function in a bottom-up fashion.  First,
+`array()' is applied to the innermost structures; the resulting boxes
+are then passed as arguments to another `array()' invocation.  The GDB
+output
+
+     {{"A", "B", "C"}, {"D", "E", "F"}}
+
+representing a 2 * 3 array of character strings, is evaluated in VSL as
+
+     array(array("A", "B", "C"), array("A", "B", "C"))
+
+resulting in a horizontal alignment of two more alignments representing
+the inner arrays.
+
+   Record structures are built in a similar manner, using a display
+function `struct\_member' rendering the record members.  Names and
+values are separated by an equality sign:
+
+     // Member of a record structure
+     struct_member (name, value) =
+       name & " = " & value;
+
+   The display function `struct' renders the record itself, using the
+`valign()' function.(1)
+
+     // Record structure
+     struct(...) = frame(valign(...));
+
+   This is a simple example; the actual VSL function used in DDD takes
+additional effort to align the equality signs; also, it ensures that
+language-specific delimiters are used, that collapsed structs are
+rendered properly, and so on.
+
+   ---------- Footnotes ----------
+
+   (1) `valign()' is similar to `halign()', but builds a vertical
+alignment.
+
+
+File: ddd-themes.info,  Node: Writing Themes,  Next: DDD VSL Functions,  Prev: Creating Displays,  Up: Top
+
+2 Writing Themes
+****************
+
+The basic idea of a _theme_ is to customize one or more aspects of the
+visual appearance of data.  This is done by _modifying_ specific VSL
+definitions.
+
+* Menu:
+
+* Display Title Color::         A simple theme example.
+* General Scheme::              How to write themes in general.
+* Overriding vs. Replacing::    Referring to existing definitions.
+* A Complex Example::           Displaying null values in red.
+* Future Work::                 The road goes on...
+
+
+File: ddd-themes.info,  Node: Display Title Color,  Next: General Scheme,  Up: Writing Themes
+
+2.1 Example: Changing the Display Title Color
+=============================================
+
+As a simple example, consider the following task: You want to display
+display titles in blue instead of black.  The VSL function which
+handles the colors of display titles is called `title_color' (*note
+Displaying Colors::).  It is defined as
+
+     title_color(box) = color(box, "black");
+
+   All you'd have to do to change the color is to provide a new
+definition:
+
+     title_color(box) = color(box, "blue");
+
+   How do you do this?  You create a _data theme_ which modifies the
+definition.
+
+   Using your favourite text editor, you create a file named, say,
+`blue-title.vsl' in the directory `~/.ddd/themes/'.
+
+   The file `blue-title.vsl' has the following content:
+
+     #pragma replace title_color
+     title_color(box) = color(box, "blue");
+
+   In DDD, select `Data => Themes'.  You will find `blue-title.vsl' in
+a line on its own.  Set the checkbox next to `blue-title.vsl' in order
+to activate it.  Whoa!  All display titles will now appear in blue.
+
+
+File: ddd-themes.info,  Node: General Scheme,  Next: Overriding vs. Replacing,  Prev: Display Title Color,  Up: Writing Themes
+
+2.2 The General Scheme
+======================
+
+The general scheme for writing a theme is:
+
+   * _Find the appropriate VSL function._
+
+     Find out which VSL function FUNCTION is responsible for a specific
+     task.  *Note DDD VSL Functions::, for details on the VSL functions
+     used by DDD.
+
+   * _Replace it by your own definition._
+
+     Write a theme (a text file) with the following content:
+
+          #pragma replace FUNCTION
+          FUNCTION(ARGS) = DEFINITION;
+
+     This will replace the existing definition of FUNCTION by your new
+     definition DEFINITION.  It is composed of two parts:
+
+        - The `#pragma replace' declaration removes the original
+          definition of FUNCTION.  *Note VSL Redefining Functions::,
+          for details.
+
+        - The following line provides a new DEFINITION for FUNCTION.
+
+     Please note: If the function FUNCTION is marked as `Global VSL
+     Function', it must be (re-)defined using `->' instead of `=';
+     *Note VSL Function Definitions::, for details.  You may also want
+     to consider `#pragma override' instead; *Note Overriding vs.
+     Replacing::, for details.
+
+   * _Install the theme in a place where DDD can find it._
+
+     For your personal use, this is normally the directory
+     `~/.ddd/themes/'.
+
+     Besides your personal directory, DDD also searches for themes in
+     its theme directory, typically
+     `/usr/local/share/ddd-3.3.11/themes/'.
+
+     The DDD `vslPath' resource controls the actual path where DDD
+     looks for themes.  *Note VSL Resources: (ddd)VSL Resources, for
+     details.
+
+   * _In DDD, invoke `Data => Themes' to apply the theme._
+
+     You're done!
+
+
+File: ddd-themes.info,  Node: Overriding vs. Replacing,  Next: A Complex Example,  Prev: General Scheme,  Up: Writing Themes
+
+2.3 Overriding vs. Replacing
+============================
+
+In certain cases, you may not want to replace the original definition by
+your own, but rather _extend_ the original definition.
+
+   As an example, consider the `value_box' function (*note Displaying
+Data Displays::).  It is applied to every single value displayed.  By
+default, it does nothing.  So we could write a theme that leaves a
+little white space around values:
+
+     #pragma replace value_box
+     value_box(box) -> whiteframe(box);
+
+   or another theme that changes the color to black on yellow:
+
+     #pragma replace value_box
+     value_box(box) -> color(box, "black", "yellow");
+
+   However, we cannot apply both themes at once (say, to create a
+green-on-yellow scheme).  This is because each of the two themes
+replaces the previous definition--the theme that comes last wins.
+
+   The solution to this problem is to set up the theme in such a way
+that it _extends_ the original definition rather than to replace it.  To
+do so, VSL provides an alternative to `#pragma replace', namely
+`#pragma override' (*note VSL Overriding Functions::).
+
+   Like `#pragma replace', the `#pragma override' declaration allows
+for a new definition of a function.  In contrast to `#pragma replace',
+though, uses of the function prior to `#pragma override' are not
+affected--they still refer to the old definition.
+
+   Here's a better theme that changes the color to black on yellow.
+First, it makes the old definition of `value_box' accessible as
+`old_value_box'.  Then, it provides a new definition for `value_box'
+which refers to the old definition, saved in `old_value_box'.
+
+     #pragma override old_value_box
+     old_value_box(...) = value_box(...);
+
+     #pragma override value_box
+     value_box(value) -> color(old_value_box(value),
+                               "black", "yellow");
+
+   Why do we need a `#pragma override' for `old_value_box', too?
+Simple: to avoid name clashes between multiple themes.  VSL has no
+scopes or name spaces for definitions, so we must resort to this crude,
+but effective scheme.
+
+
+File: ddd-themes.info,  Node: A Complex Example,  Next: Future Work,  Prev: Overriding vs. Replacing,  Up: Writing Themes
+
+2.4 A Complex Example
+=====================
+
+As a more complex example, we define a theme that highlights all null
+pointers.  First, we need a predicate `is_null' that tells us whether a
+pointer value is null:
+
+     // True if S1 ends in S2
+     ends_in(s1, s2) =
+         let s1c = chars(s1),
+             s2c = chars(s2) in suffix(s2c, s1c);
+
+     // True if null value
+     is_null(value) =
+         (ends_in(value, "0x0") or ends_in(value, "nil"));
+
+   The `null_pointer' function tells us how we actually want to render
+null values:
+
+     // Rendering of null values
+     null_pointer(value) -> color(value, "red");
+
+   Now we go and redefine the `pointer_value' function such that
+`null_pointer' is applied only to null values:
+
+     #pragma override old_pointer_value
+     old_pointer_value(...) -> pointer_value(...);
+
+     #pragma override pointer_value
+
+     // Ordinary pointers
+     pointer_value (value) ->
+         old_pointer_value(v)
+         where v = (if (is_null(value)) then
+                        null_pointer(value)
+                    else
+                        value
+                    fi);
+
+   All we need now is the same definition for dereferenced pointers
+(that is, overriding the `dereferenced_pointer_value' function), and
+here we go!
+
+
+File: ddd-themes.info,  Node: Future Work,  Prev: A Complex Example,  Up: Writing Themes
+
+2.5 Future Work
+===============
+
+With the information in this manual, you should be able to set up your
+own themes.  If you miss anything, please let us know: simply write to
+<ddd@gnu.org>.
+
+   If there is sufficient interest, DDD's data themes will be further
+extended.  Among the most wanted features is the ability to access and
+parse debuggee data from within VSL functions; this would allow
+user-defined processing of debuggee data.  Let us know if you're
+interested--and keep in touch!
+
+
+File: ddd-themes.info,  Node: DDD VSL Functions,  Next: VSL Library,  Prev: Writing Themes,  Up: Top
+
+Appendix A DDD VSL Functions
+****************************
+
+This appendix describes how DDD invokes VSL functions to create data
+displays.
+
+   The functions in this section are predefined in the library
+`ddd.vsl'.  They can be used and replaced by DDD themes.
+
+   Please note: Functions marked as `Global VSL Function' must be
+(re-)defined using `->' instead of `='.  *Note VSL Function
+Definitions::, for details.
+
+* Menu:
+
+* Displaying Fonts::
+* Displaying Colors::
+* Displaying Shadows::
+* Displaying Data Displays::
+* Displaying Simple Values::
+* Displaying Pointers::
+* Displaying References::
+* Displaying Arrays::
+* Displaying Structs::
+* Displaying Lists::
+* Displaying Sequences::
+* Displaying Multi-Line Texts::
+* Displaying Extra Properties::
+
+
+File: ddd-themes.info,  Node: Displaying Fonts,  Next: Displaying Colors,  Up: DDD VSL Functions
+
+A.1 Displaying Fonts
+====================
+
+These are the function DDD uses for rendering boxes in different fonts:
+
+ -- VSL Function: small_rm (box)
+ -- VSL Function: small_bf (box)
+ -- VSL Function: small_it (box)
+ -- VSL Function: small_bi (box)
+     Returns BOX in small roman / bold face / italic / bold italic font.
+
+ -- VSL Function: small_size ()
+     Default size for small fonts.(1)
+
+ -- VSL Function: tiny_rm (box)
+ -- VSL Function: tiny_bf (box)
+ -- VSL Function: tiny_it (box)
+ -- VSL Function: tiny_bi (box)
+     Returns BOX in tiny roman / bold face / italic / bold italic font.
+
+ -- VSL Function: tiny_size ()
+     Default size for tiny fonts.(2)
+
+ -- VSL Function: title_rm (box)
+ -- VSL Function: title_bf (box)
+ -- VSL Function: title_it (box)
+ -- VSL Function: title_bi (box)
+     Returns BOX (a display title) in roman / bold face / italic / bold
+     italic font.
+
+ -- VSL Function: value_rm (box)
+ -- VSL Function: value_bf (box)
+ -- VSL Function: value_it (box)
+ -- VSL Function: value_bi (box)
+     Returns BOX (a display value) in roman / bold face / italic / bold
+     italic font.
+
+   ---------- Footnotes ----------
+
+   (1) DDD replaces this as set in the DDD font preferences.  Use `ddd
+--fonts' to see the actual definitions.
+
+   (2) DDD replaces this as set in the DDD font preferences.  Use `ddd
+--fonts' to see the actual definitions.
+
+
+File: ddd-themes.info,  Node: Displaying Colors,  Next: Displaying Shadows,  Prev: Displaying Fonts,  Up: DDD VSL Functions
+
+A.2 Displaying Colors
+=====================
+
+ -- VSL Function: display_color (box)
+     Returns BOX in the color used for displays.  Default definition is
+          display_color(box) = color(box, "black", "white");
+
+ -- VSL Function: title_color (box)
+     Returns BOX in the color used for display titles.  Default
+     definition is
+          title_color(box) = color(box, "black");
+
+ -- VSL Function: disabled_color (box)
+     Returns BOX in the color used for disabled displays.  Default
+     definition is
+          disabled_color(box) = color(box, "white", "grey50");
+
+ -- VSL Function: simple_color (box)
+     Returns BOX in the color used for simple values.  Default
+     definition is
+          simple_color(box) = color(box, "black");
+
+ -- VSL Function: text_color (box)
+     Returns BOX in the color used for multi-line texts.  Default
+     definition is
+          text_color(box) = color(box, "black");
+
+ -- VSL Function: pointer_color (box)
+     Returns BOX in the color used for pointers.  Default definition is
+          pointer_color(box) = color(box, "blue4");
+
+ -- VSL Function: struct_color (box)
+     Returns BOX in the color used for structs.  Default definition is
+          struct_color(box) = color(box, "black");
+
+ -- VSL Function: list_color (box)
+     Returns BOX in the color used for lists.  Default definition is
+          list_color(box) = color(box, "black");
+
+ -- VSL Function: array_color (box)
+     Returns BOX in the color used for arrays.  Default definition is
+          array_color(box) = color(box, "blue4");
+
+ -- VSL Function: reference_color (box)
+     Returns BOX in the color used for references.  Default definition
+     is
+          reference_color(box) = color(box, "blue4");
+
+ -- VSL Function: changed_color (box)
+     Returns BOX in the color used for changed values.  Default
+     definition is
+          changed_color(box) = color(box, "black", "#ffffcc");
+
+ -- VSL Function: shadow_color (box)
+     Returns BOX in the color used for display shadows.  Default
+     definition is
+          shadow_color(box) = color(box, "grey");
+
+
+File: ddd-themes.info,  Node: Displaying Shadows,  Next: Displaying Data Displays,  Prev: Displaying Colors,  Up: DDD VSL Functions
+
+A.3 Displaying Shadows
+======================
+
+ -- VSL Function: shadow (box)
+     Return BOX with a shadow around it.
+
+
+File: ddd-themes.info,  Node: Displaying Data Displays,  Next: Displaying Simple Values,  Prev: Displaying Shadows,  Up: DDD VSL Functions
+
+A.4 Displaying Data Displays
+============================
+
+DDD uses these functions to create data displays.
+
+ -- Global VSL Function: title (display_number, name)
+ -- Global VSL Function: title (name)
+     Returns a box for the display title.  If DISPLAY_NUMBER (a string)
+     is given, this is prepended to the title.
+
+ -- Global VSL Function: annotation (name)
+     Returns a box for an edge annotation.  This typically uses a tiny
+     font.
+
+ -- Global VSL Function: disabled ()
+     Returns a box to be used as value for disabled displays.
+
+ -- Global VSL Function: none ()
+     Returns a box for "no value" (i.e. undefined values).  Default: an
+     empty string.
+
+ -- Global VSL Function: value_box (value)
+     Returns VALUE in a display box.  Default: leave unchanged.
+
+ -- Global VSL Function: display_box (title, value)
+ -- Global VSL Function: display_box (value)
+     Returns the entire display box.  TITLE comes from `title()', VALUE
+     from `value_box()'.
+
+
+File: ddd-themes.info,  Node: Displaying Simple Values,  Next: Displaying Pointers,  Prev: Displaying Data Displays,  Up: DDD VSL Functions
+
+A.5 Displaying Simple Values
+============================
+
+DDD uses these functions to display simple values.
+
+ -- Global VSL Function: simple_value (value)
+     Returns a box for a simple non-numeric value (characters, strings,
+     constants, ...).  This is typically aligned to the left.
+
+ -- Global VSL Function: numeric_value (value)
+     Returns a box for a simple numeric value.  This is typically
+     aligned to the right.
+
+ -- Global VSL Function: collapsed_simple_value ()
+     Returns a box for a collapsed simple value.
+
+
+File: ddd-themes.info,  Node: Displaying Pointers,  Next: Displaying References,  Prev: Displaying Simple Values,  Up: DDD VSL Functions
+
+A.6 Displaying Pointers
+=======================
+
+DDD uses these functions to display pointers.
+
+ -- Global VSL Function: pointer_value (value)
+     Returns a box for a pointer value.
+
+ -- Global VSL Function: dereferenced_pointer_value (value)
+     Returns a box for a dereferenced pointer value.
+
+ -- Global VSL Function: collapsed_pointer_value ()
+     Returns a box for a collapsed pointer.
+
+
+File: ddd-themes.info,  Node: Displaying References,  Next: Displaying Arrays,  Prev: Displaying Pointers,  Up: DDD VSL Functions
+
+A.7 Displaying References
+=========================
+
+DDD uses these functions to display references.
+
+ -- Global VSL Function: reference_value (value)
+     Returns a box for a reference value.
+
+ -- Global VSL Function: collapsed_reference_value ()
+     Returns a box for a collapsed reference.
+
+
+File: ddd-themes.info,  Node: Displaying Arrays,  Next: Displaying Structs,  Prev: Displaying References,  Up: DDD VSL Functions
+
+A.8 Displaying Arrays
+=====================
+
+DDD uses these functions to display arrays.
+
+ -- Global VSL Function: horizontal_array (values...)
+     Returns a box for a horizontal array containing VALUES.
+
+ -- Global VSL Function: vertical_array (values...)
+     Returns a box for a vertical array containing VALUES.
+
+ -- Global VSL Function: empty_array ()
+     Returns a box for an empty array.
+
+ -- Global VSL Function: collapsed_array ()
+     Returns a box for a collapsed array.
+
+ -- Global VSL Function: twodim_array (rows...)
+     Returns a box for a two-dimensional array.  Argument is a list of
+     rows, suitable for use with `tab()' or `dtab()'.
+
+ -- Global VSL Function: twodim_array_elem (value)
+     Returns a box for an element in a two-dimensional array.
+
+
+File: ddd-themes.info,  Node: Displaying Structs,  Next: Displaying Lists,  Prev: Displaying Arrays,  Up: DDD VSL Functions
+
+A.9 Displaying Structs
+======================
+
+A struct is a set of (NAME, VALUE) pairs, and is also called "record"
+or "object".  DDD uses these functions to display structs.
+
+ -- Global VSL Function: struct_value (members...)
+     Returns a box for a struct containing MEMBERS.
+
+ -- Global VSL Function: collapsed_struct_value ()
+     Returns a box for a collapsed struct.
+
+ -- Global VSL Function: empty_struct_value ()
+     Returns a box for an empty struct.
+
+ -- Global VSL Function: struct_member_name (name)
+     Returns a box for a member name.
+
+ -- Global VSL Function: struct_member (name, sep, value, name_width)
+     Returns a box for a struct member.  NAME is the member name,
+     typeset with `struct_member_name()', SEP is the separator (as
+     determined by the current programming language), VALUE is the
+     typeset member value, and NAME_WIDTH is the maximum width of all
+     member names.
+
+ -- Global VSL Function: horizontal_unnamed_struct ()
+ -- Global VSL Function: vertical_unnamed_struct ()
+     Returns a box for a horizontal / vertical unnamed struct, where
+     member names are suppressed.
+
+ -- Global VSL Function: struct_member (value)
+     Returns a box for a struct member in a struct where member names
+     are suppressed.
+
+
+File: ddd-themes.info,  Node: Displaying Lists,  Next: Displaying Sequences,  Prev: Displaying Structs,  Up: DDD VSL Functions
+
+A.10 Displaying Lists
+=====================
+
+A list is a set of (NAME, VALUE) pairs not defined by the specific
+programming language.  DDD uses this format to display variable lists.
+
+ -- Global VSL Function: list_value (members...)
+     Returns a box for a list containing MEMBERS.
+
+ -- Global VSL Function: collapsed_list_value ()
+     Returns a box for a collapsed list.
+
+ -- Global VSL Function: empty_list_value ()
+     Returns a box for an empty list.
+
+ -- Global VSL Function: list_member_name (name)
+     Returns a box for a member name.
+
+ -- Global VSL Function: list_member (name, sep, value, name_width)
+     Returns a box for a list member.  NAME is the member name, typeset
+     with `list_member_name()', SEP is the separator (as determined by
+     the current programming language), VALUE is the typeset member
+     value, and NAME_WIDTH is the maximum width of all member names.
+
+ -- Global VSL Function: horizontal_unnamed_list ()
+ -- Global VSL Function: vertical_unnamed_list ()
+     Returns a box for a horizontal / vertical unnamed list, where
+     member names are suppressed.
+
+ -- Global VSL Function: list_member (value)
+     Returns a box for a list member in a list where member names are
+     suppressed.
+
+
+File: ddd-themes.info,  Node: Displaying Sequences,  Next: Displaying Multi-Line Texts,  Prev: Displaying Lists,  Up: DDD VSL Functions
+
+A.11 Displaying Sequences
+=========================
+
+Sequences are lists of arbitrary, unstructured values.
+
+ -- Global VSL Function: sequence_value (values...)
+     Returns a box for a list of values.
+
+ -- Global VSL Function: collapsed_sequence_value ()
+     Returns a box for a collapsed sequence.
+
+
+File: ddd-themes.info,  Node: Displaying Multi-Line Texts,  Next: Displaying Extra Properties,  Prev: Displaying Sequences,  Up: DDD VSL Functions
+
+A.12 Displaying Multi-Line Texts
+================================
+
+DDD uses these functions to display multi-line texts, such as status
+displays.
+
+ -- Global VSL Function: text_value (lines...)
+     Returns a box for a list of lines (typically in a vertical
+     alignment).
+
+ -- Global VSL Function: collapsed_text_value ()
+     Returns a box for a collapsed text.
+
+
+File: ddd-themes.info,  Node: Displaying Extra Properties,  Prev: Displaying Multi-Line Texts,  Up: DDD VSL Functions
+
+A.13 Displaying Extra Properties
+================================
+
+DDD uses these functions to display additional properties.
+
+ -- Global VSL Function: repeated_value (value, n)
+     Returns a box for a VALUE that is repeated N times.  Note: N is a
+     number, not a string.
+
+ -- Global VSL Function: changed_value (value)
+     Returns a box for a VALUE that has changed since the last display.
+     Typically, this invokes `changed_color(VALUE)'.
+
+
+File: ddd-themes.info,  Node: VSL Library,  Next: VSL Reference,  Prev: DDD VSL Functions,  Up: Top
+
+Appendix B VSL Library
+**********************
+
+This appendix describes the VSL functions available in the standard VSL
+library.
+
+   Unless otherwise stated, all following functions are defined in
+`std.vsl'.
+
+   For DDD themes, `std.vsl' need not be included explicitly.
+
+* Menu:
+
+* Library Conventions::
+* Space Functions::
+* Composition Functions::
+* Arithmetic Functions::
+* Comparison Functions::
+* Negation Functions::
+* Frame Functions::
+* Alignment Functions::
+* Emphasis Functions::
+* Indentation Functions::
+* String Functions::
+* List Functions::
+* Table Functions::
+* Font Functions::
+* Color Functions::
+* Arc Functions::
+* Slope Functions::
+
+
+File: ddd-themes.info,  Node: Library Conventions,  Next: Space Functions,  Up: VSL Library
+
+B.1 Conventions
+===============
+
+Throughout this document, we write A = (A1, A2) to refer to individual
+box sizes.  A1 stands for the horizontal size of A, and A2 stands for
+the vertical size of A.
+
+
+File: ddd-themes.info,  Node: Space Functions,  Next: Composition Functions,  Prev: Library Conventions,  Up: VSL Library
+
+B.2 Space Functions
+===================
+
+* Menu:
+
+* Empty Space::
+* Black Lines::
+* White Space::
+* Controlling Stretch::
+* Box Dimensions::
+
+
+File: ddd-themes.info,  Node: Empty Space,  Next: Black Lines,  Up: Space Functions
+
+B.2.1 Empty Space
+-----------------
+
+ -- VSL Function: fill ()
+     Returns an empty box of width 0 and height 0 which stretches in
+     both horizontal and vertical directions.
+
+ -- VSL Function: hfill ()
+     Returns a box of height 0 which stretches horizontally.
+
+ -- VSL Function: vfill ()
+     Returns a box of width 0 which stretches vertically.
+
+
+File: ddd-themes.info,  Node: Black Lines,  Next: White Space,  Prev: Empty Space,  Up: Space Functions
+
+B.2.2 Black Lines
+-----------------
+
+ -- VSL Function: rule ()
+     Returns a black box of width 0 and height 0 which stretches in both
+     horizontal and vertical directions.
+
+ -- VSL Function: hrule ([thickness])
+     Returns a black box of width 0 and height THICKNESS which
+     stretches horizontally.  THICKNESS defaults to `rulethickness()'
+     (typically 1 pixel).
+
+ -- VSL Function: vrule ([thickness])
+     Returns a black box of width THICKNESS and height 0 which
+     stretches vertically.  THICKNESS defaults to `rulethickness()'
+     (typically 1 pixel).
+
+ -- VSL Function: rulethickness ()
+     Returns the default thickness for black rules (default: 1).
+
+
+File: ddd-themes.info,  Node: White Space,  Next: Controlling Stretch,  Prev: Black Lines,  Up: Space Functions
+
+B.2.3 White Space
+-----------------
+
+ -- VSL Function: hwhite ([thickness])
+     Returns a black box of width 0 and height THICKNESS which
+     stretches horizontally.  THICKNESS defaults to `whitethickness()'
+     (typically 2 pixels).
+
+ -- VSL Function: vwhite ([thickness])
+     Returns a black box of width THICKNESS and height 0 which
+     stretches vertically.  THICKNESS defaults to `whitethickness()'
+     (typically 2 pixels).
+
+ -- VSL Function: whitethickness ()
+     Returns the default thickness for white rules (default: 2).
+
+
+File: ddd-themes.info,  Node: Controlling Stretch,  Next: Box Dimensions,  Prev: White Space,  Up: Space Functions
+
+B.2.4 Controlling Stretch
+-------------------------
+
+ -- VSL Function: hfix (A)
+     Returns a box containing A, but not stretchable horizontally.
+
+ -- VSL Function: vfix (A)
+     Returns a box containing A, but not stretchable vertically.
+
+ -- VSL Function: fix (A)
+     Returns a box containing A, but not stretchable in either
+     direction.
+
+
+File: ddd-themes.info,  Node: Box Dimensions,  Prev: Controlling Stretch,  Up: Space Functions
+
+B.2.5 Box Dimensions
+--------------------
+
+ -- VSL Function: hspace (A)
+     If A = (A1, A2), create a square empty box with a size of (A1, A1).
+
+ -- VSL Function: vspace (A)
+     If A = (A1, A2), create a square empty box with a size of (A2, A2).
+
+ -- VSL Function: square (A)
+     If A = (A1, A2), create a square empty box with a size of max(A1,
+     A2).
+
+ -- VSL Function: box (N, M)
+     Returns a box of size (N, M).
+
+
+File: ddd-themes.info,  Node: Composition Functions,  Next: Arithmetic Functions,  Prev: Space Functions,  Up: VSL Library
+
+B.3 Composition Functions
+=========================
+
+* Menu:
+
+* Horizontal Composition::
+* Vertical Composition::
+* Textual Composition::
+* Overlays::
+
+
+File: ddd-themes.info,  Node: Horizontal Composition,  Next: Vertical Composition,  Up: Composition Functions
+
+B.3.1 Horizontal Composition
+----------------------------
+
+ -- VSL Function: (&) (a, b)
+ -- VSL Function: (&) (boxes...)
+ -- VSL Function: halign (boxes...)
+     Returns a horizontal alignment of A and B; A is placed left of B.
+     Typically written in inline form `A & B'.
+
+     The alternative forms (available in function-call form only)
+     return a horizontal left-to-right alignment of their arguments.
+
+ -- VSL Function: hralign (boxes...)
+     Returns a right-to-left alignment of its arguments.
+
+
+File: ddd-themes.info,  Node: Vertical Composition,  Next: Textual Composition,  Prev: Horizontal Composition,  Up: Composition Functions
+
+B.3.2 Vertical Composition
+--------------------------
+
+ -- VSL Function: (|) (a, b)
+ -- VSL Function: (|) (boxes...)
+ -- VSL Function: valign (boxes...)
+     Returns a vertical alignment of A and B; A is placed above B.
+     Typically written in inline form `A | B'.
+
+     The alternative forms (available in function-call form only)
+     return a vertical top-to-bottom alignment of their arguments.
+
+ -- VSL Function: vralign (boxes...)
+     Returns a bottom-to-top alignment of its arguments.
+
+ -- VSL Function: vlist (sep, boxes...)
+     Returns a top-to-bottom alignment of BOXES, where any two boxes
+     are separated by SEP.
+
+
+File: ddd-themes.info,  Node: Textual Composition,  Next: Overlays,  Prev: Vertical Composition,  Up: Composition Functions
+
+B.3.3 Textual Composition
+-------------------------
+
+ -- VSL Function: (~) (a, b)
+ -- VSL Function: (~) (boxes...)
+ -- VSL Function: talign (boxes...)
+     Returns a textual concatenation of A and B.  B is placed in the
+     lower right unused corner of A.  Typically written in inline form
+     `A ~ B'.
+
+     The alternative forms (available in function-call form only)
+     return a textual concatenation of their arguments.
+
+ -- VSL Function: tralign (boxes...)
+     Returns a textual right-to-left concatenation of its arguments.
+
+ -- VSL Function: tlist (sep, boxes...)
+     Returns a textual left-to-right alignment of BOXES, where any two
+     boxes are separated by SEP.
+
+ -- VSL Function: commalist (boxes...)
+     Shorthand for `tlist(", ", BOXES...)'.
+
+ -- VSL Function: semicolonlist (boxes...)
+     Shorthand for `tlist("; ", BOXES...)'.
+
+
+File: ddd-themes.info,  Node: Overlays,  Prev: Textual Composition,  Up: Composition Functions
+
+B.3.4 Overlays
+--------------
+
+ -- VSL Function: (^) (a, b)
+ -- VSL Function: (^) (boxes...)
+     Returns an overlay of A and B.  A and B are placed in the same
+     rectangular area, which is the maximum size of A and B; first, A
+     is drawn, then B.  Typically written in inline form `A ^ B'.
+
+     The second form (available in function-call form only) returns an
+     overlay of its arguments.
+
+
+File: ddd-themes.info,  Node: Arithmetic Functions,  Next: Comparison Functions,  Prev: Composition Functions,  Up: VSL Library
+
+B.4 Arithmetic Functions
+========================
+
+ -- VSL Function: (+) (a, b)
+ -- VSL Function: (+) (boxes...)
+     Returns the sum of A and B.  If A = (A1, A2) and B = (B1, B2),
+     then A + B = (A1 + A2, B1 + B2).  Typically written in inline form
+     `A + B'.
+
+     The second form (available in function-call form only) returns the
+     sum of its arguments.
+
+     The special form `+A' is equivalent to `A'.
+
+ -- VSL Function: (-) (a, b)
+     Returns the difference of A and B.  If A = (A1, A2) and B = (B1,
+     B2), then A - B = (A1 - A2, B1 - B2).  Typically written in inline
+     form `A - B'.
+
+     The special form `-A' is equivalent to `0-A'.
+
+ -- VSL Function: (*) (a, b)
+ -- VSL Function: (*) (boxes...)
+     Returns the product of A and B.  If A = (A1, A2) and B = (B1, B2),
+     then A * B = (A1 * A2, B1 * B2).  Typically written in inline form
+     `A * B'.
+
+     The second form (available in function-call form only) returns the
+     product of its arguments.
+
+ -- VSL Function: (/) (a, b)
+     Returns the quotient of A and B.  If A = (A1, A2) and B = (B1,
+     B2), then A / B = (A1 / A2, B1 / B2).  Typically written in inline
+     form `A / B'.
+
+ -- VSL Function: (%) (a, b)
+     Returns the remainder of A and B.  If A = (A1, A2) and B = (B1,
+     B2), then A % B = (A1 % A2, B1 % B2).  Typically written in inline
+     form `A % B'.
+
+
+File: ddd-themes.info,  Node: Comparison Functions,  Next: Negation Functions,  Prev: Arithmetic Functions,  Up: VSL Library
+
+B.5 Comparison Functions
+========================
+
+ -- VSL Function: (=) (a, b)
+     Returns true (`1') if A = B, and false (`0'), otherwise.  A = B
+     holds if A and B have the same size, the same structure, and the
+     same content.  Typically written in inline form `A / B'.
+
+ -- VSL Function: (<>) (a, b)
+     Returns false (`0') if A = B, and true (`1'), otherwise.  A = B
+     holds if A and B have the same size, the same structure, and the
+     same content.  Typically written in inline form `A / B'.
+
+ -- VSL Function: (<) (a, b)
+     If A = (A1, A2) and B = (B1, B2), then this function returns true
+     (`1') if A1 < B1 or A2 < B2 holds; false (`0'), otherwise.
+     Typically written in inline form `A < B'.
+
+ -- VSL Function: (<=) (a, b)
+     If A = (A1, A2) and B = (B1, B2), then this function returns true
+     (`1') if A1 <= B1 or A2 <= B2 holds; false (`0'), otherwise.
+     Typically written in inline form `A <= B'.
+
+ -- VSL Function: (>) (a, b)
+     If A = (A1, A2) and B = (B1, B2), then this function returns true
+     (`1') if A1 > B1 or A2 > B2 holds; false (`0'), otherwise.
+     Typically written in inline form `A > B'.
+
+ -- VSL Function: (>=) (a, b)
+     If A = (A1, A2) and B = (B1, B2), then this function returns true
+     (`1') if A1 >= B1 or A2 >= B2 holds; false (`0'), otherwise.
+     Typically written in inline form `A >= B'.
+
+* Menu:
+
+* Maximum and Minimum Functions::
+
+
+File: ddd-themes.info,  Node: Maximum and Minimum Functions,  Up: Comparison Functions
+
+B.5.1 Maximum and Minimum Functions
+-----------------------------------
+
+ -- VSL Function: max (b1, b2, ...)
+     Returns the maximum of its arguments; that is, the one box B in
+     its arguments for which B > B1, B > B2, ...  holds.
+
+ -- VSL Function: min (b1, b2, ...)
+     Returns the maximum of its arguments; that is, the one box B in
+     its arguments for which B < B1, B < B2, ...  holds.
+
+
+File: ddd-themes.info,  Node: Negation Functions,  Next: Frame Functions,  Prev: Comparison Functions,  Up: VSL Library
+
+B.6 Negation Functions
+======================
+
+ -- VSL Function: (not) (a)
+     Returns true (`1') if A is false, and false (`0'), otherwise.
+     Typically written in inline form `not A'.
+
+   *Note VSL Boolean Operators::, for `and' and `or'.
+
+
+File: ddd-themes.info,  Node: Frame Functions,  Next: Alignment Functions,  Prev: Negation Functions,  Up: VSL Library
+
+B.7 Frame Functions
+===================
+
+ -- VSL Function: ruleframe (a[, thickness])
+     Returns A within a black rectangular frame of thickness THICKNESS.
+     THICKNESS defaults to `rulethickness()' (typically 1 pixel).
+
+ -- VSL Function: whiteframe (a[, thickness])
+     Returns A within a white rectangular frame of thickness THICKNESS.
+     THICKNESS defaults to `whitethickness()' (typically 2 pixels).
+
+ -- VSL Function: frame (a)
+     Returns A within a rectangular frame.  Equivalent to
+     `ruleframe(whiteframe(A)'.
+
+ -- VSL Function: doubleframe (a)
+     Shortcut for `frame(frame(A))'.
+
+ -- VSL Function: thickframe (a)
+     Shortcut for `ruleframe(frame(A))'.
+
+
+File: ddd-themes.info,  Node: Alignment Functions,  Next: Emphasis Functions,  Prev: Frame Functions,  Up: VSL Library
+
+B.8 Alignment Functions
+=======================
+
+* Menu:
+
+* Centering Functions::
+* Flushing Functions::
+
+
+File: ddd-themes.info,  Node: Centering Functions,  Next: Flushing Functions,  Up: Alignment Functions
+
+B.8.1 Centering Functions
+-------------------------
+
+ -- VSL Function: hcenter (a)
+     Returns box A centered horizontally within a (vertical) alignment.
+
+     Example: In `A | hcenter(B) | C', B is centered relatively to A
+     and C.
+
+ -- VSL Function: vcenter (a)
+     Returns box A centered vertically within a (horizontal) alignment.
+
+     Example: In `A & vcenter(B) & C', B is centered relatively to A
+     and C.
+
+ -- VSL Function: center (a)
+     Returns box A centered vertically and horizontally within an
+     alignment.
+
+     Example: In `100 ^ center(B)', B is centered within a square of
+     size 100.
+
+
+File: ddd-themes.info,  Node: Flushing Functions,  Prev: Centering Functions,  Up: Alignment Functions
+
+B.8.2 Flushing Functions
+------------------------
+
+ -- VSL Function: n_flush (box)
+ -- VSL Function: s_flush (box)
+ -- VSL Function: w_flush (box)
+ -- VSL Function: e_flush (box)
+     Within an alignment, Flushes box to the center of a side.
+
+     Example: In `100 ^ s_flush(B)', B is centered on the bottom side
+     of a square of size 100.
+
+ -- VSL Function: nw_flush (box)
+ -- VSL Function: sw_flush (box)
+ -- VSL Function: ne_flush (box)
+ -- VSL Function: se_flush (box)
+     Within an alignment, Flushes box to a corner.
+
+     Example: In `100 ^ se_flush(B)', B is placed in the lower right
+     corner of a square of size 100.
+
+
+File: ddd-themes.info,  Node: Emphasis Functions,  Next: Indentation Functions,  Prev: Alignment Functions,  Up: VSL Library
+
+B.9 Emphasis Functions
+======================
+
+ -- VSL Function: underline (a)
+     Returns A with a line underneath.
+
+ -- VSL Function: overline (a)
+     Returns A with a line above it.
+
+ -- VSL Function: crossline (a)
+     Returns A with a horizontal line across it.
+
+ -- VSL Function: doublestrike (a)
+     Returns A in "poor man's bold": it is drawn two times, displaced
+     horizontally by one pixel.
+
+
+File: ddd-themes.info,  Node: Indentation Functions,  Next: String Functions,  Prev: Emphasis Functions,  Up: VSL Library
+
+B.10 Indentation Functions
+==========================
+
+ -- VSL Function: indent (box)
+     Return a box where white space of width `indentamount()' is placed
+     left of BOX.
+
+ -- VSL Function: indentamount ()
+     Indent amount to be used in `indent()'; defaults to `" "' (two
+     spaces).
+
+
+File: ddd-themes.info,  Node: String Functions,  Next: List Functions,  Prev: Indentation Functions,  Up: VSL Library
+
+B.11 String Functions
+=====================
+
+To retrieve the string from a composite box, use `string()':
+
+ -- VSL Function: string (BOX)
+     Return the string (in left-to-right, top-to-bottom order) within
+     BOX.
+
+   To convert numbers to strings, use `num()':
+
+ -- VSL Function: num (a [, \varbase])
+     For a square box A = (A1, A1), returns a string containing a
+     textual representation of A1.  BASE must be between 2 and 16; it
+     defaults to `10'.  Example: `num(25) => "25")'
+
+ -- VSL Function: dec (a)
+ -- VSL Function: oct (a)
+ -- VSL Function: bin (a)
+ -- VSL Function: hex (a)
+     Shortcut for `num(A, 10)', `num(A, 8)', `num(A, 2)', `num(A, 16)',
+     respectively.
+
+
+File: ddd-themes.info,  Node: List Functions,  Next: Table Functions,  Prev: String Functions,  Up: VSL Library
+
+B.12 List Functions
+===================
+
+The functions in this section require inclusion of the library
+`list.vsl'.
+
+   For themes, `list.vsl' need not be included explicitly.
+
+* Menu:
+
+* Creating Lists::
+* List Properties::
+* Accessing List Elements::
+* Manipulating Lists::
+* Lists and Strings::
+
+
+File: ddd-themes.info,  Node: Creating Lists,  Next: List Properties,  Up: List Functions
+
+B.12.1 Creating Lists
+---------------------
+
+ -- VSL Function: (::) (list1, list2, ...)
+     Return the concatenation of the given lists.  Typically written in
+     inline form: `[1] :: [2] :: [3] => [1, 2, 3]'.
+
+ -- VSL Function: append (list, elem)
+     Returns LIST with ELEM appended at the end: `append([1, 2, 3], 4)
+     => [1, 2, 3, 4]'
+
+
+File: ddd-themes.info,  Node: List Properties,  Next: Accessing List Elements,  Prev: Creating Lists,  Up: List Functions
+
+B.12.2 List Properties
+----------------------
+
+ -- VSL Function: isatom (x)
+     Returns True (1) if X is an atom; False (0) if X is a list.
+
+ -- VSL Function: islist (x)
+     Returns True (1) if X is a list; False (0) if X is an atom.
+
+ -- VSL Function: member (x, list)
+     Returns True (1) if X is an element of LIST; False (0) if not:
+     `member(1, [1, 2, 3]) => true'
+
+ -- VSL Function: prefix (sublist, list)
+ -- VSL Function: suffix (sublist, list)
+ -- VSL Function: sublist (sublist, list)
+     Returns True (1) if SUBLIST is a prefix / suffix / sublist of
+     LIST; False (0) if not: `prefix([1], [1, 2]) => true',
+     `suffix([3], [1, 2]) => false', `sublist([2, 2], [1, 2, 2, 3]) =>
+     true',
+
+ -- VSL Functions: length (list)
+     Returns the number of elements in LIST: `length([1, 2, 3]) => 3'
+
+
+File: ddd-themes.info,  Node: Accessing List Elements,  Next: Manipulating Lists,  Prev: List Properties,  Up: List Functions
+
+B.12.3 Accessing List Elements
+------------------------------
+
+ -- VSL Function: car (list)
+ -- VSL Function: head (list)
+     Returns the first element of LIST:  `car([1, 2, 3]) => 1'
+
+ -- VSL Function: cdr (list)
+ -- VSL Function: tail (list)
+     Returns LIST without its first element:  `cdr([1, 2, 3]) => [2, 3]'
+
+ -- VSL Function: elem (list, n)
+     Returns the N-th element (starting with 0) of LIST: `elem([4, 5,
+     6], 0) => 4'
+
+ -- VSL Function: pos (elem, list)
+     Returns the position of ELEM in LIST (starting with 0): `pos(4,
+     [1, 2, 4]) => 2'
+
+ -- VSL Function: last (list)
+     Returns the last element of LIST: `last([4, 5, 6]) => 6'
+
+
+File: ddd-themes.info,  Node: Manipulating Lists,  Next: Lists and Strings,  Prev: Accessing List Elements,  Up: List Functions
+
+B.12.4 Manipulating Lists
+-------------------------
+
+ -- VSL Function: reverse (list)
+     Returns a reversed LIST: `reverse([3, 4, 5]) => [5, 4, 3]'
+
+ -- VSL Function: delete (list, elem)
+     Returns LIST, with all elements ELEM removed: `delete([4, 5, 5,
+     6], 5) => [4, 6]'
+
+ -- VSL Function: select (list, elem)
+     Returns LIST, with the first element ELEM removed: `select([4, 5,
+     5, 6], 5) => [4, 5, 6]'
+
+ -- VSL Function: flat (list)
+     Returns flattened LIST: `flat([[3, 4], [[5], [6]]]) => [3, 4, 5,
+     6]'
+
+ -- VSL Function: sort (list)
+     Returns sortened LIST (according to box size): `sort([7, 4, 9]) =>
+     [4, 7, 9]'
+
+
+File: ddd-themes.info,  Node: Lists and Strings,  Prev: Manipulating Lists,  Up: List Functions
+
+B.12.5 Lists and Strings
+------------------------
+
+ -- VSL Function: chars (s)
+     Returns a list of all characters in the box S: `chars("abc") =>
+     ["a", "b", "c"]'
+
+ -- VSL Function: list (list)
+     Returns a string, pretty-printing the LIST: `list([4, 5, 6]) =>
+     "[4, 5, 6]"'
+
+
+File: ddd-themes.info,  Node: Table Functions,  Next: Font Functions,  Prev: List Functions,  Up: VSL Library
+
+B.13 Table Functions
+====================
+
+The functions in this section require inclusion of the library
+`tab.vsl'.
+
+   For themes, `tab.vsl' need not be included explicitly.
+
+ -- VSL Function: tab (table)
+     Return TABLE (a list of lists) aligned in a table: `tab([[1, 2,
+     3], [4, 5, 6], [7, 8]]) =>'
+          1 2 3
+          4 5 6
+          7 8
+
+ -- VSL Function: dtab (table)
+     Like `tab', but place delimiters (horizontal and vertical rules)
+     around table elements.
+
+ -- VSL Function: tab_elem (X)
+     Returns padded table element X.  Its default definition is:
+          tab_elem([]) = tab_elem(0);     // empty table
+          tab_elem(x)  = whiteframe(x);   // padding
+
+
+File: ddd-themes.info,  Node: Font Functions,  Next: Color Functions,  Prev: Table Functions,  Up: VSL Library
+
+B.14 Font Functions
+===================
+
+The functions in this section require inclusion of the library
+`fonts.vsl'.
+
+   For themes, `fonts.vsl' need not be included explicitly.
+
+* Menu:
+
+* Font Basics::
+* Font Name Selection::
+* Font Defaults::
+* Font Selection::
+
+
+File: ddd-themes.info,  Node: Font Basics,  Next: Font Name Selection,  Up: Font Functions
+
+B.14.1 Font Basics
+------------------
+
+ -- VSL Function: font (BOX, FONT)
+     Returns BOX, with all strings set in FONT (a valid X11 font
+     description)
+
+
+File: ddd-themes.info,  Node: Font Name Selection,  Next: Font Defaults,  Prev: Font Basics,  Up: Font Functions
+
+B.14.2 Font Name Selection
+--------------------------
+
+ -- VSL Function: weight_bold ()
+ -- VSL Function: weight_medium ()
+     Font weight specifier in `fontname()' (see below).
+
+ -- VSL Function: slant_unslanted ()
+ -- VSL Function: slant_italic ()
+     Font slant Specifier in `fontname()' (see below).
+
+ -- VSL Function: family_times ()
+ -- VSL Function: family_courier ()
+ -- VSL Function: family_helvetica ()
+ -- VSL Function: family_new_century ()
+ -- VSL Function: family_typewriter ()
+     Font family specifier in `fontname()' (see below).
+
+ -- VSL Function: fontname ([weight, [slant, [family, [size]]]])
+     Returns a fontname, suitable for use with `font()'.
+        * WEIGHT defaults to `stdfontweight()' (see below).
+
+        * SLANT defaults to `stdfontslant()' (see below).
+
+        * FAMILY defaults to `stdfontfamily()' (see below).
+
+        * SIZE is a pair (PIXELS, POINTS) where PIXELS being zero means
+          to use POINTS instead and vice versa.  defaults to
+          `stdfontsize()' (see below).
+
+
+File: ddd-themes.info,  Node: Font Defaults,  Next: Font Selection,  Prev: Font Name Selection,  Up: Font Functions
+
+B.14.3 Font Defaults
+--------------------
+
+ -- VSL Function: stdfontweight ()
+     Default font weight: `weight_medium()'.
+
+ -- VSL Function: stdfontslant ()
+     Default font slant: `slant_unslanted()'.
+
+ -- VSL Function: stdfontfamily ()
+     Default font family: `family_times()'.
+
+     DDD replaces this as set in the DDD font preferences.  Use `ddd
+     --fonts' to see the actual definitions.
+
+ -- VSL Function: stdfontsize ()
+     Default font size: `(stdfontpixels(), stdfontpoints())'.
+
+     DDD replaces this as set in the DDD font preferences.  Use `ddd
+     --fonts' to see the actual definitions.
+
+ -- VSL Function: stdfontpixels ()
+     Default font size (in pixels): 0, meaning to use `stdfontpoints()'
+     instead.
+
+ -- VSL Function: stdfontpoints ()
+     Default font size (in 1/10 points): 120.
+
+
+File: ddd-themes.info,  Node: Font Selection,  Prev: Font Defaults,  Up: Font Functions
+
+B.14.4 Font Selection
+---------------------
+
+ -- VSL Function: rm (box [, family [, size]])
+ -- VSL Function: bf (box [, family [, size]])
+ -- VSL Function: it (box [, family [, size]])
+ -- VSL Function: bi (box [, family [, size]])
+     Returns BOX in roman / bold face / italic / bold italic.  FAMILY
+     specifies one of the font families; it defaults to
+     `stdfontfamily()' (see above).  SIZE specifies a font size; it
+     defaults to `stdfontsize()' (see above).
+
+
+File: ddd-themes.info,  Node: Color Functions,  Next: Arc Functions,  Prev: Font Functions,  Up: VSL Library
+
+B.15 Color Functions
+====================
+
+The functions in this section require inclusion of the library
+`colors.vsl'.
+
+   For themes, `colors.vsl' need not be included explicitly.
+
+ -- VSL Function: color (box, foreground [, background]])
+     Returns BOX, where the foreground color will be drawn using the
+     FOREGROUND color.  If BACKGROUND is specified as well, it will be
+     used for drawing the background.  Both FOREGROUND and BACKGROUND
+     are strings specifying a valid X11 color.
+
+
+File: ddd-themes.info,  Node: Arc Functions,  Next: Slope Functions,  Prev: Color Functions,  Up: VSL Library
+
+B.16 Arc Functions
+==================
+
+The functions in this section require inclusion of the library
+`arcs.vsl'.
+
+   For themes, `arcs.vsl' _must_ be included explicitly, using a line
+     #include <arcs.vsl>
+   at the beginning of the theme.
+
+* Menu:
+
+* Arc Basics::
+* Custom Arc Functions::
+
+
+File: ddd-themes.info,  Node: Arc Basics,  Next: Custom Arc Functions,  Up: Arc Functions
+
+B.16.1 Arc Basics
+-----------------
+
+ -- VSL Function: arc (start, length [, thickness])
+     Returns a stretchable box with an arc of LENGTH, starting at angle
+     START.  START and LENGTH must be multiples of 90 (degrees).  The
+     angle of START is specified clockwise relative to the 9 o'clock
+     position.  THICKNESS defaults to `arcthickness()' (see below).
+
+ -- VSL Function: arcthickness ()
+     Default width of arcs.  Defaults to `rulethickness()'.
+
+
+File: ddd-themes.info,  Node: Custom Arc Functions,  Prev: Arc Basics,  Up: Arc Functions
+
+B.16.2 Custom Arc Functions
+---------------------------
+
+ -- VSL Function: oval (box)
+     Returns an oval containing BOX.  Example: `oval("33")'.
+
+ -- VSL Function: ellipse (box)
+ -- VSL Function: ellipse ()
+     Returns an ellipse containing BOX.  Example: `ellipse("START")'.
+     If BOX is omitted, the ellipse is stretchable and expands to the
+     available space.
+
+ -- VSL Function: circle (box)
+     Returns a circle containing BOX.  Example: `circle(10)'.
+
+
+File: ddd-themes.info,  Node: Slope Functions,  Prev: Arc Functions,  Up: VSL Library
+
+B.17 Slope Functions
+====================
+
+The functions in this section require inclusion of the library
+`slopes.vsl'.
+
+   For themes, `slopes.vsl' _must_ be included explicitly, using a line
+     #include <slopes.vsl>
+   at the beginning of the theme.
+
+* Menu:
+
+* Slope Basics::
+* Arrow Functions::
+* Custom Slope Functions::
+
+
+File: ddd-themes.info,  Node: Slope Basics,  Next: Arrow Functions,  Up: Slope Functions
+
+B.17.1 Slope Basics
+-------------------
+
+ -- VSL Function: rise ([thickness])
+     Create a stretchable box with a line from the lower left to the
+     upper right corner.  THICKNESS defaults to `slopethickness()' (see
+     below).
+
+ -- VSL Function: fall ([thickness])
+     Create a stretchable box with a line from the upper left to the
+     lower right corner.  THICKNESS defaults to `slopethickness()' (see
+     below).
+
+ -- VSL Function: slopethickness ()
+     Default thickness of slopes.  Defaults to `rulethickness()'.
+
+
+File: ddd-themes.info,  Node: Arrow Functions,  Next: Custom Slope Functions,  Prev: Slope Basics,  Up: Slope Functions
+
+B.17.2 Arrow Functions
+----------------------
+
+ -- VSL Function: n_arrow ()
+ -- VSL Function: w_arrow ()
+ -- VSL Function: s_arrow ()
+ -- VSL Function: e_arrow ()
+     Returns a box with an arrow pointing to the upper, left, lower, or
+     right side, respectively.
+
+ -- VSL Function: nw_arrow ()
+ -- VSL Function: ne_arrow ()
+ -- VSL Function: sw_arrow ()
+ -- VSL Function: se_arrow ()
+     Returns a box with an arrow pointing to the upper left, upper
+     right, lower left, or lower right side, respectively.
+
+
+File: ddd-themes.info,  Node: Custom Slope Functions,  Prev: Arrow Functions,  Up: Slope Functions
+
+B.17.3 Custom Slope Functions
+-----------------------------
+
+ -- VSL Function: punchcard (box)
+     Returns a punchcard containing BOX.
+
+ -- VSL Function: rhomb (box)
+     Returns a rhomb containing BOX.
+
+ -- VSL Function: octogon (box)
+     Returns an octogon containing BOX.
+
+
+File: ddd-themes.info,  Node: VSL Reference,  Next: Documentation License,  Prev: VSL Library,  Up: Top
+
+Appendix C VSL Reference
+************************
+
+This appendix describes the VSL language.
+
+* Menu:
+
+* VSL Boxes::
+* VSL Lists::
+* VSL Expressions::
+* VSL Function Calls::
+* VSL Constant Definitions::
+* VSL Function Definitions::
+* VSL Includes::
+* VSL Operators::
+* VSL Syntax Summary::
+
+
+File: ddd-themes.info,  Node: VSL Boxes,  Next: VSL Lists,  Up: VSL Reference
+
+C.1 Boxes
+=========
+
+VSL knows two data types.  The most common data type is the _box_.  A
+box is a rectangular area with a _content_, a _size_, and a
+_stretchability_.
+
+   Boxes are either _atomic_ or _composite_.  A composite box is built
+from two or more other boxes.  These boxes can be aligned horizontally,
+vertically, or otherwise.
+
+   Boxes have a specific minimum _size_, depending on their content.
+We say `minimum' size here, because some boxes are _stretchable_--that
+is, they can fill up the available space.
+
+   If you have a vertical alignment of three boxes A, B, and C, like
+this:
+     AAAAAA
+     AAAAAA
+       B
+       B
+     CCCCCC
+     CCCCCC
+   and B is stretchable horizontally, then B will fill up the available
+horizontal space:
+     AAAAAA
+     AAAAAA
+     BBBBBB
+     BBBBBB
+     CCCCCC
+     CCCCCC
+
+   If two or more boxes compete for the same space, the space will be
+distributed in proportion to their stretchability.
+
+   An atomic stretchable box has a stretchability of 1.  An alignment of
+multiple boxes stretchable in the direction of the alignment boxes will
+have a stretchability which is the sum of all stretchabilities.
+
+   If you have a vertical alignment of three boxes A, B, C, D, and E,
+like this:
+     AAAAAA
+     AAAAAA
+     BC   D
+     BC   D
+     EEEEEE
+     EEEEEE
+   and B, C, and D are stretchable horizontally (with a stretchability
+of 1), then the horizontal alignment of B and C will have a
+stretchability of 2.  Thus, the alignment of B and C gets two thirds of
+the available space; D gets the remaining third.
+     AAAAAA
+     AAAAAA
+     BBCCDD
+     BBCCDD
+     EEEEEE
+     EEEEEE
+
+
+File: ddd-themes.info,  Node: VSL Lists,  Next: VSL Expressions,  Prev: VSL Boxes,  Up: VSL Reference
+
+C.2 Lists
+=========
+
+Besides boxes, VSL knows _lists_.  A list is not a box--it has no size
+or stretchability.  A list is a simple means to structure data.
+
+   VSL lists are very much like lists in functional languages like Lisp
+or Scheme.  They consist of a head (typically a list element) and a tail
+(which is either a list remainder or the empty list).
+
+
+File: ddd-themes.info,  Node: VSL Expressions,  Next: VSL Function Calls,  Prev: VSL Lists,  Up: VSL Reference
+
+C.3 Expressions
+===============
+
+* Menu:
+
+* VSL String Literals::
+* VSL Number Literals::
+* VSL List Literals::
+* VSL Conditionals::
+* VSL Boolean Operators::
+* VSL Local Variables::
+* VSL Let Patterns::
+
+
+File: ddd-themes.info,  Node: VSL String Literals,  Next: VSL Number Literals,  Up: VSL Expressions
+
+C.3.1 String Literals
+---------------------
+
+The expression `"TEXT"' returns a box containing TEXT.  TEXT is parsed
+according to C syntax rules.
+
+   Multiple string expressions may follow each other to form a larger
+constant, as in C++.  `"TEXT1" "TEXT2"' is equivalent to `"TEXT1TEXT2"'
+
+   Strings are not stretchable.
+
+
+File: ddd-themes.info,  Node: VSL Number Literals,  Next: VSL List Literals,  Prev: VSL String Literals,  Up: VSL Expressions
+
+C.3.2 Number Literals
+---------------------
+
+Any constant integer N evaluates to a _number_--that is, a
+non-stretchable empty square box with size (N, N).
+
+
+File: ddd-themes.info,  Node: VSL List Literals,  Next: VSL Conditionals,  Prev: VSL Number Literals,  Up: VSL Expressions
+
+C.3.3 List Literals
+-------------------
+
+The expression `[A, B, ...]' evaluates to a _list_ containing the
+element A, B, ....  `[]' is the empty list.
+
+   The expression `[HEAD : TAIL]' evaluates to a list whose first
+element is HEAD and whose remainder (typically a list) is TAIL.
+
+   In most contexts, round parentheses can be used as alternatives to
+square brackets.  Thus, `(A, B)' is a list with two elements, and `()'
+is the empty list.
+
+   Within an expression, though, square parentheses must be used to
+create a list with one element.  In an expression, the form `(A)' is
+not a list, but an alternative notation for A.
+
+
+File: ddd-themes.info,  Node: VSL Conditionals,  Next: VSL Boolean Operators,  Prev: VSL List Literals,  Up: VSL Expressions
+
+C.3.4 Conditionals
+------------------
+
+A box A = (A1, A2) is called _true_ if A1 or A2 is non-zero.  It is
+called _false_ if both A1 or A2 are zero.
+
+   The special form
+     if A then B else C fi
+   returns B if A is true, and C otherwise.  Only one of B or C is
+evaluated.
+
+   The special form
+     elsif A2 then B2 else C fi
+   is equivalent to
+     else if A2 then B2 else C fi fi
+
+
+File: ddd-themes.info,  Node: VSL Boolean Operators,  Next: VSL Local Variables,  Prev: VSL Conditionals,  Up: VSL Expressions
+
+C.3.5 Boolean Operators
+-----------------------
+
+The special form
+     A and B
+   is equivalent to
+     if A then B else 0 fi
+
+   The special form
+     A or B
+   is equivalent to
+     if A then 1 else B fi
+
+   The special form
+     not A
+   is equivalent to
+     if A then 0 else 1 fi
+
+   Actually, `not' is realized as a function; *Note Negation
+Functions::, for details.
+
+
+File: ddd-themes.info,  Node: VSL Local Variables,  Next: VSL Let Patterns,  Prev: VSL Boolean Operators,  Up: VSL Expressions
+
+C.3.6 Local Variables
+---------------------
+
+You can introduce local variables using `let' and `where':
+
+     let V1 = E1 in E
+   makes V1 available as replacement for E1 in the expression E.
+
+   Example:
+     let pi = 3.1415 in 2 * pi => 6.2830
+
+   The special form
+     let V1 = E1, V2 = E2, ... in E
+   is equivalent to
+     let V1 = E1 in let V2 = E2 in let ... in E
+
+   As an alternative, you can also use the `where' form:
+
+     E where V1 = E1
+   is equivalent to
+     let V1 = E1 in E
+
+   Example:
+     ("here lies" | name) where
+         name = ("one whose name" | "was writ in water")
+
+   The special form
+     E where V1 = E1, V2 = E2, ...
+   is equivalent to
+     let V1 = E1, V2 = E2, ... in E
+
+
+File: ddd-themes.info,  Node: VSL Let Patterns,  Prev: VSL Local Variables,  Up: VSL Expressions
+
+C.3.7 Let Patterns
+------------------
+
+You can access the individual elements of a list or some composite box
+by giving an appropriate _pattern_:
+
+     let (left, right) = pair in EXPR
+
+   If `pair' has the value, say, `(3, 4)', then `left' will be
+available as a replacement for `3', and `right' will be available as a
+replacement for `4' in EXPR.
+
+   A special pattern is available for accessing the head and the tail
+of a list:
+
+     let [head : tail] = list in EXPR
+
+   If `expr' has the value, say, `[3, 4, 5]', then `head' will be `3',
+and `tail' will be `[4, 5]' in EXPR.
+
+
+File: ddd-themes.info,  Node: VSL Function Calls,  Next: VSL Constant Definitions,  Prev: VSL Expressions,  Up: VSL Reference
+
+C.4 Function Calls
+==================
+
+A function call takes the form
+
+     NAME LIST
+
+   which invokes the (previously declared or defined) function with an
+argument of LIST.  Normally, LIST is a list literal (*note VSL List
+Literals::) written with round brackets.
+
+
+File: ddd-themes.info,  Node: VSL Constant Definitions,  Next: VSL Function Definitions,  Prev: VSL Function Calls,  Up: VSL Reference
+
+C.5 Constant Definitions
+========================
+
+A VSL file consists of a list of _definitions_.
+
+   A constant definition takes the form
+
+     NAME = EXPRESSION;
+
+   Any later definitions can use NAME as a replacement for EXPRESSION.
+
+   Example:
+     true = 1;
+     false = 0;
+
+
+File: ddd-themes.info,  Node: VSL Function Definitions,  Next: VSL Includes,  Prev: VSL Constant Definitions,  Up: VSL Reference
+
+C.6 Function Definitions
+========================
+
+In VSL, all functions either map a _list_ to a _box_ or a _list_ to a
+_list_.  A function definition takes the form
+
+     NAME LIST = EXPRESSION;
+
+   where LIST is a list literal (*note VSL List Literals::).
+
+   The list literal is typically written in round parentheses, making
+the above form look like this:
+
+     NAME(PARAM1, PARAM2, ...) = EXPRESSION;
+
+   The `=' is replaced by `->' if NAME is a _global_ definition--that
+is, NAME can be called from a library client such as DDD.  A _local_
+definition (with `=') can be called only from other VSL functions.(1)
+
+* Menu:
+
+* VSL Function Parameters::
+* VSL Function Patterns::
+* VSL Declaring Functions::
+* VSL Redefining Functions::
+* VSL Replacing Functions::
+* VSL Overriding Functions::
+
+   ---------- Footnotes ----------
+
+   (1) The distinction into global and local definitions is useful when
+optimizing the library: local definitions that are unused within the
+library can be removed, while global definitions cannot.
+
+
+File: ddd-themes.info,  Node: VSL Function Parameters,  Next: VSL Function Patterns,  Up: VSL Function Definitions
+
+C.6.1 Function Parameters
+-------------------------
+
+The parameter list LIST may contain names of formal parameters.  Upon a
+function call, these are bound to the actual arguments.
+
+   If the function
+     sum(a, b) = a + b;
+   is called as
+     sum(2. 3)
+   then `a' will be bound to `2' and `b' will be bound to `3',
+evaluating to `5'.
+
+* Menu:
+
+* VSL Unused Parameters::
+
+
+File: ddd-themes.info,  Node: VSL Unused Parameters,  Up: VSL Function Parameters
+
+C.6.1.1 VSL Unused Parameters
+.............................
+
+Unused parameters cause a warning, as in this example:
+
+     first_arg(a, dummy) = a;        // Warning
+
+   If a parameter has the name `_', it will not be bound to the actual
+argument (and can thus not be used).  Use `_' as parameter name for
+unused arguments:
+
+     first_arg(a, _) = a;            // No warning
+
+   `_' can be used multiple times in a parameter list.
+
+
+File: ddd-themes.info,  Node: VSL Function Patterns,  Next: VSL Declaring Functions,  Prev: VSL Function Parameters,  Up: VSL Function Definitions
+
+C.6.2 Function Patterns
+-----------------------
+
+A VSL function may have multiple definitions, each with a specific
+_pattern_.  The first definition whose pattern _matches_ the actual
+argument is used.
+
+   What does `matching' mean?  Within a pattern,
+   * An ordinary formal parameter matches any single value
+
+   * A formal parameter whose name is `...' or ends in `...' matches a
+     single value or a list or a list remainder
+
+   * A constant matches exactly the same value
+
+   * A composite box or list matches a composite box or list if
+        - the composites have the same type
+
+        - the composites have the same number of elements
+
+        - the elements match each other.
+
+   Here are some examples.  The `num()' function (*note String
+Functions::) can take either one or two arguments.  The one-argument
+definition simply invokes the two-argument definition:
+
+     num(a, base) = ...;
+     num(a) = num(a, 10);
+
+   Here's another example: The `digit' function returns a string
+representation for a single number.  It has multiple definitions, all
+dependent on the actual argument:
+
+     digit(0) = "0";
+     digit(1) = "1";
+     digit(2) = "2";
+     digit(3) = "3";
+     digit(4) = "4";
+     digit(5) = "5";
+     digit(6) = "6";
+     digit(7) = "7";
+     digit(8) = "8";
+     digit(9) = "9";
+     digit(10) = "a";
+     digit(11) = "b";
+     digit(12) = "c";
+     digit(13) = "d";
+     digit(14) = "e";
+     digit(15) = "f";
+     digit(_) = fail("invalid digit() argument");
+
+   Formal parameters ending in `...' are useful for defining _aliases_
+of functions.  The definition
+     roman(...) = rm(...);
+   makes `roman' an alias of `rm'--any parameters (regardless how many)
+passed to `roman' will be passed to `rm'.
+
+   Here's an example of how formal parameters ending in `...' can be
+used to realize _variadic functions_, taking any number of arguments
+(*note Maximum and Minimum Functions::):
+
+     max(a) = a;
+     max(a, b, ...) = if a > b then max(a, ...) else max(b, ...) fi;
+     min(a) = a;
+     min(a, b, ...) = if a < b then min(a, ...) else min(b, ...) fi;
+
+
+File: ddd-themes.info,  Node: VSL Declaring Functions,  Next: VSL Redefining Functions,  Prev: VSL Function Patterns,  Up: VSL Function Definitions
+
+C.6.3 Declaring Functions
+-------------------------
+
+If you want to use a function before it has been defined, just write
+down its signature without specifying a body.  Here's an example:
+
+     num(a, base);                   // declaration
+     num(a) = num(a, 10);
+
+   Remember to give a definition later on, though.
+
+
+File: ddd-themes.info,  Node: VSL Redefining Functions,  Next: VSL Replacing Functions,  Prev: VSL Declaring Functions,  Up: VSL Function Definitions
+
+C.6.4 Redefining Functions
+--------------------------
+
+You can redefine a VSL function even _after_ its original definition.
+You can
+   * _replace_ the original definition, thus making all previous
+     definitions refer to your new definition;
+
+   * _override_ the original definition, thus making only later
+     definitions refer to your new definition.
+
+
+File: ddd-themes.info,  Node: VSL Replacing Functions,  Next: VSL Overriding Functions,  Prev: VSL Redefining Functions,  Up: VSL Function Definitions
+
+C.6.5 Replacing Functions
+-------------------------
+
+To remove an original definition, use
+
+     #pragma replace NAME
+
+   This removes all previous definitions of NAME.  Be sure to provide
+your own definitions, though.
+
+   `#pragma replace' is typically used to change defaults:
+
+     #include "fonts.vsl"            // defines stdfontsize()
+
+     #pragma replace stdfontsize()   // replace def
+     stdfontsize() = 20;
+
+   All existing function calls will now refer to the new definition.
+
+
+File: ddd-themes.info,  Node: VSL Overriding Functions,  Prev: VSL Replacing Functions,  Up: VSL Function Definitions
+
+C.6.6 Overriding Functions
+--------------------------
+
+To override an original definition, use
+
+     #pragma override NAME
+
+   This makes all later definitions use your new definition of NAME.
+Earlier definitions, however, still refer to the old definition.
+
+   `#pragma override' is typically used if you want to redefine a
+function while still refering to the old definition:
+
+     #include "fonts.vsl"            // defines stdfontsize()
+
+     // Save old definition
+     old_stdfontsize() = stdfontsize();
+
+     #pragma override stdfontsize()
+
+     // Refer to old definition
+     stdfontsize() = old_stdfontsize() * 2;
+
+   Since we used `#pragma override', we can use `old_stdfontsize()' to
+refer to the original definition of `stdfontsize()'.
+
+
+File: ddd-themes.info,  Node: VSL Includes,  Next: VSL Operators,  Prev: VSL Function Definitions,  Up: VSL Reference
+
+C.7 Includes
+============
+
+In a VSL file, you can include at any part the contents of another VSL
+file, using one of the special forms
+
+     #include "FILE"
+     #include <FILE>
+
+   The form `<FILE>' looks for VSL files in a number of standard
+directories; the form `"FILE"' first looks in the directory where the
+current file resides.
+
+   Any included file is included only once.
+
+   In DDD, you can set these places using the `vslPath' resource.
+*Note Customizing Display Appearance: (ddd)Customizing Display
+Appearance, for details.
+
+
+File: ddd-themes.info,  Node: VSL Operators,  Next: VSL Syntax Summary,  Prev: VSL Includes,  Up: VSL Reference
+
+C.8 Operators
+=============
+
+VSL comes with a number of _inline operators,_ which can be used to
+compose boxes.  With raising precedence, these are:
+
+     or
+     and
+     = <>
+     <= < >= >
+     ::
+     |
+     ^
+     ~
+     &
+     + -
+     * / %
+     not
+
+   Except for `or' and `and', these operators are mapped to function
+calls.  Each invocation of an operator `@' in the form `A @ B' gets
+translated to a call of the VSL function with the special name `(@)'.
+This VSL function can be defined just like any other VSL function.
+
+   For instance, the expression `A + B' gets translated to a function
+call `(+)(a, b)'; `A & B' invokes `(&)(a, b)'.
+
+   In the file `builtin.vsl', you can actually find definitions of these
+functions:
+
+     (&)(...) = __op_halign(...);
+     (+)(...) = __op_plus(...);
+
+   The functions `__op_halign' and `__op_plus' are the names by which
+the `(&)' and `(+)' functions are implemented.  In this document,
+though, we will not look further at these internals.
+
+   Here are the places where the operator functions are described:
+   * For `=' and `<>', *Note Comparison Functions::.
+
+   * For `<=', `<', `>=', and `>', *Note Comparison Functions::.
+
+   * For `::', *Note List Functions::.
+
+   * For `|', `^', `~', and `&', *Note Composition Functions::.
+
+   * For `+', `-', `*', `/', and `%', *Note Arithmetic Functions::.
+
+   * For `not', *Note Negation Functions::.
+
+
+File: ddd-themes.info,  Node: VSL Syntax Summary,  Prev: VSL Operators,  Up: VSL Reference
+
+C.9 Syntax Summary
+==================
+
+The following file summarizes the syntax of VSL files.
+
+     /*** VSL file ***/
+
+     file                    :       item_list
+
+     item_list               :       /* empty */
+                             |       item_list item
+
+     item                    :       function_declaration ';'
+                             |       function_definition ';'
+                             |       override_declaration
+                             |       replace_declaration
+                             |       include_declaration
+                             |       line_declaration
+                             |       ';'
+                             |       error ';'
+
+     /*** functions ***/
+
+     function_declaration    :       function_header
+
+     function_header         :       function_identifier function_argument
+                             |       function_identifier
+
+     function_identifier     :       identifier
+                             |       '(' '==' ')'
+                             |       '(' '<>' ')'
+                             |       '(' '>' ')'
+                             |       '(' '>=' ')'
+                             |       '(' '<' ')'
+                             |       '(' '<=' ')'
+                             |       '(' '&' ')'
+                             |       '(' '|' ')'
+                             |       '(' '^' ')'
+                             |       '(' '~' ')'
+                             |       '(' '+' ')'
+                             |       '(' '-' ')'
+                             |       '(' '*' ')'
+                             |       '(' '/' ')'
+                             |       '(' '%' ')'
+                             |       '(' '::' ')'
+                             |       '(' 'not' ')'
+
+     identifier              :       IDENTIFIER
+
+     function_definition     :       local_definition
+                             |       global_definition
+
+     local_definition        :       local_header function_body
+
+     local_header            :       function_header '='
+
+     global_definition       :       global_header function_body
+
+     global_header           :       function_header '->'
+
+     function_body           :       box_expression_with_defs
+
+
+
+     /*** expressions ***/
+
+     /*** let, where ***/
+
+     box_expression_with_defs:       box_expression_with_wheres
+                             |       'let' var_definition in_box_expression
+
+     in_box_expression       :       'in' box_expression_with_defs
+                             |       ',' var_definition in_box_expression
+
+     box_expression_with_wheres:     box_expression
+                             |       box_expression_with_where
+
+     box_expression_with_where:      box_expression_with_wheres
+                                     'where' var_definition
+                             |       box_expression_with_where
+                                     ',' var_definition
+
+     var_definition          :       box_expression '=' box_expression
+
+
+     /*** basic expressions ***/
+
+     box_expression          :       '(' box_expression_with_defs ')'
+                             |       list_expression
+                             |       const_expression
+                             |       binary_expression
+                             |       unary_expression
+                             |       cond_expression
+                             |       function_call
+                             |       argument_or_function
+
+     list_expression         :       '[' ']'
+                             |       '[' box_expression_list ']'
+                             |       '(' ')'
+                             |       '(' multiple_box_expression_list ')'
+
+     box_expression_list     :       box_expression_with_defs
+                             |       multiple_box_expression_list
+
+     multiple_box_expression_list:   box_expression ':' box_expression
+                             |       box_expression ',' box_expression_list
+                             |       box_expression '...'
+                             |       '...'
+
+     const_expression        :       string_constant
+                             |       numeric_constant
+
+     string_constant         :       STRING
+                             |       string_constant STRING
+
+     numeric_constant        :       INTEGER
+
+     function_call           :       function_identifier function_argument
+
+     unary_expression        :       'not' box_expression
+                             |       '+' box_expression
+                             |       '-' box_expression
+
+
+     /*** operators ***/
+
+     binary_expression       :       box_expression '=' box_expression
+                             |       box_expression '<>' box_expression
+                             |       box_expression '>' box_expression
+                             |       box_expression '>=' box_expression
+                             |       box_expression '<' box_expression
+                             |       box_expression '<=' box_expression
+                             |       box_expression '&' box_expression
+                             |       box_expression '|' box_expression
+                             |       box_expression '^' box_expression
+                             |       box_expression '~' box_expression
+                             |       box_expression '+' box_expression
+                             |       box_expression '-' box_expression
+                             |       box_expression '*' box_expression
+                             |       box_expression '/' box_expression
+                             |       box_expression '%' box_expression
+                             |       box_expression '::' box_expression
+                             |       box_expression 'or' box_expression
+                             |       box_expression 'and' box_expression
+
+     cond_expression         :       'if' box_expression
+                                     'then' box_expression_with_defs
+                                     else_expression
+                                     'fi'
+
+     else_expression         :       'elsif' box_expression
+                                     'then' box_expression_with_defs
+                                     else_expression
+                             |       'else' box_expression_with_defs
+
+     function_argument       :       list_expression
+                             |       '(' box_expression_with_defs ')'
+
+     argument_or_function    :       identifier
+
+
+     /*** directives ***/
+
+     override_declaration    :       '#pragma' 'override' override_list
+
+     override_list           :       override_identifier
+                             |       override_list ',' override_identifier
+
+     override_identifier     :       function_identifier
+
+     replace_declaration     :       '#pragma' 'replace' replace_list
+
+     replace_list            :       replace_identifier
+                             |       replace_list ',' replace_identifier
+
+     replace_identifier      :       function_identifier
+
+     include_declaration     :       '#include' '"' SIMPLE_STRING '"'
+                             |       '#include' '<' SIMPLE_STRING '>'
+
+     line_declaration        :       '#line' INTEGER
+                             |       '#line' INTEGER STRING
+
+
+File: ddd-themes.info,  Node: Documentation License,  Next: Index,  Prev: VSL Reference,  Up: Top
+
+Appendix D GNU Free Documentation License
+*****************************************
+
+                        Version 1.1, March 2000
+
+     Copyright (C) 2000  Free Software Foundation, Inc.
+     59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+     Everyone is permitted to copy and distribute verbatim copies
+     of this license document, but changing it is not allowed.
+
+
+  0. PREAMBLE
+
+     The purpose of this License is to make a manual, textbook, or other
+     written document "free" in the sense of freedom: to assure everyone
+     the effective freedom to copy and redistribute it, with or without
+     modifying it, either commercially or noncommercially.  Secondarily,
+     this License preserves for the author and publisher a way to get
+     credit for their work, while not being considered responsible for
+     modifications made by others.
+
+     This License is a kind of "copyleft", which means that derivative
+     works of the document must themselves be free in the same sense.
+     It complements the GNU General Public License, which is a copyleft
+     license designed for free software.
+
+     We have designed this License in order to use it for manuals for
+     free software, because free software needs free documentation: a
+     free program should come with manuals providing the same freedoms
+     that the software does.  But this License is not limited to
+     software manuals; it can be used for any textual work, regardless
+     of subject matter or whether it is published as a printed book.
+     We recommend this License principally for works whose purpose is
+     instruction or reference.
+
+
+  1. APPLICABILITY AND DEFINITIONS
+
+     This License applies to any manual or other work that contains a
+     notice placed by the copyright holder saying it can be distributed
+     under the terms of this License.  The "Document", below, refers to
+     any such manual or work.  Any member of the public is a licensee,
+     and is addressed as "you".
+
+     A "Modified Version" of the Document means any work containing the
+     Document or a portion of it, either copied verbatim, or with
+     modifications and/or translated into another language.
+
+     A "Secondary Section" is a named appendix or a front-matter
+     section of the Document that deals exclusively with the
+     relationship of the publishers or authors of the Document to the
+     Document's overall subject (or to related matters) and contains
+     nothing that could fall directly within that overall subject.
+     (For example, if the Document is in part a textbook of
+     mathematics, a Secondary Section may not explain any mathematics.)
+     The relationship could be a matter of historical connection with
+     the subject or with related matters, or of legal, commercial,
+     philosophical, ethical or political position regarding them.
+
+     The "Invariant Sections" are certain Secondary Sections whose
+     titles are designated, as being those of Invariant Sections, in
+     the notice that says that the Document is released under this
+     License.
+
+     The "Cover Texts" are certain short passages of text that are
+     listed, as Front-Cover Texts or Back-Cover Texts, in the notice
+     that says that the Document is released under this License.
+
+     A "Transparent" copy of the Document means a machine-readable copy,
+     represented in a format whose specification is available to the
+     general public, whose contents can be viewed and edited directly
+     and straightforwardly with generic text editors or (for images
+     composed of pixels) generic paint programs or (for drawings) some
+     widely available drawing editor, and that is suitable for input to
+     text formatters or for automatic translation to a variety of
+     formats suitable for input to text formatters.  A copy made in an
+     otherwise Transparent file format whose markup has been designed
+     to thwart or discourage subsequent modification by readers is not
+     Transparent.  A copy that is not "Transparent" is called "Opaque".
+
+     Examples of suitable formats for Transparent copies include plain
+     ASCII without markup, Texinfo input format, LaTeX input format,
+     SGML or XML using a publicly available DTD, and
+     standard-conforming simple HTML designed for human modification.
+     Opaque formats include PostScript, PDF, proprietary formats that
+     can be read and edited only by proprietary word processors, SGML
+     or XML for which the DTD and/or processing tools are not generally
+     available, and the machine-generated HTML produced by some word
+     processors for output purposes only.
+
+     The "Title Page" means, for a printed book, the title page itself,
+     plus such following pages as are needed to hold, legibly, the
+     material this License requires to appear in the title page.  For
+     works in formats which do not have any title page as such, "Title
+     Page" means the text near the most prominent appearance of the
+     work's title, preceding the beginning of the body of the text.
+
+  2. VERBATIM COPYING
+
+     You may copy and distribute the Document in any medium, either
+     commercially or noncommercially, provided that this License, the
+     copyright notices, and the license notice saying this License
+     applies to the Document are reproduced in all copies, and that you
+     add no other conditions whatsoever to those of this License.  You
+     may not use technical measures to obstruct or control the reading
+     or further copying of the copies you make or distribute.  However,
+     you may accept compensation in exchange for copies.  If you
+     distribute a large enough number of copies you must also follow
+     the conditions in section 3.
+
+     You may also lend copies, under the same conditions stated above,
+     and you may publicly display copies.
+
+  3. COPYING IN QUANTITY
+
+     If you publish printed copies of the Document numbering more than
+     100, and the Document's license notice requires Cover Texts, you
+     must enclose the copies in covers that carry, clearly and legibly,
+     all these Cover Texts: Front-Cover Texts on the front cover, and
+     Back-Cover Texts on the back cover.  Both covers must also clearly
+     and legibly identify you as the publisher of these copies.  The
+     front cover must present the full title with all words of the
+     title equally prominent and visible.  You may add other material
+     on the covers in addition.  Copying with changes limited to the
+     covers, as long as they preserve the title of the Document and
+     satisfy these conditions, can be treated as verbatim copying in
+     other respects.
+
+     If the required texts for either cover are too voluminous to fit
+     legibly, you should put the first ones listed (as many as fit
+     reasonably) on the actual cover, and continue the rest onto
+     adjacent pages.
+
+     If you publish or distribute Opaque copies of the Document
+     numbering more than 100, you must either include a
+     machine-readable Transparent copy along with each Opaque copy, or
+     state in or with each Opaque copy a publicly-accessible
+     computer-network location containing a complete Transparent copy
+     of the Document, free of added material, which the general
+     network-using public has access to download anonymously at no
+     charge using public-standard network protocols.  If you use the
+     latter option, you must take reasonably prudent steps, when you
+     begin distribution of Opaque copies in quantity, to ensure that
+     this Transparent copy will remain thus accessible at the stated
+     location until at least one year after the last time you
+     distribute an Opaque copy (directly or through your agents or
+     retailers) of that edition to the public.
+
+     It is requested, but not required, that you contact the authors of
+     the Document well before redistributing any large number of
+     copies, to give them a chance to provide you with an updated
+     version of the Document.
+
+  4. MODIFICATIONS
+
+     You may copy and distribute a Modified Version of the Document
+     under the conditions of sections 2 and 3 above, provided that you
+     release the Modified Version under precisely this License, with
+     the Modified Version filling the role of the Document, thus
+     licensing distribution and modification of the Modified Version to
+     whoever possesses a copy of it.  In addition, you must do these
+     things in the Modified Version:
+
+     A. Use in the Title Page (and on the covers, if any) a title
+     distinct    from that of the Document, and from those of previous
+     versions    (which should, if there were any, be listed in the
+     History section    of the Document).  You may use the same title
+     as a previous version    if the original publisher of that version
+     gives permission.
+     B. List on the Title Page, as authors, one or more persons or
+     entities    responsible for authorship of the modifications in the
+     Modified    Version, together with at least five of the principal
+     authors of the    Document (all of its principal authors, if it
+     has less than five).
+     C. State on the Title page the name of the publisher of the
+     Modified Version, as the publisher.
+     D. Preserve all the copyright notices of the Document.
+     E. Add an appropriate copyright notice for your modifications
+     adjacent to the other copyright notices.
+     F. Include, immediately after the copyright notices, a license
+     notice    giving the public permission to use the Modified Version
+     under the    terms of this License, in the form shown in the
+     Addendum below.
+     G. Preserve in that license notice the full lists of Invariant
+     Sections    and required Cover Texts given in the Document's
+     license notice.
+     H. Include an unaltered copy of this License.
+     I. Preserve the section entitled "History", and its title, and add
+     to    it an item stating at least the title, year, new authors, and
+       publisher of the Modified Version as given on the Title Page.  If
+       there is no section entitled "History" in the Document, create
+     one    stating the title, year, authors, and publisher of the
+     Document as    given on its Title Page, then add an item
+     describing the Modified    Version as stated in the previous
+     sentence.
+     J. Preserve the network location, if any, given in the Document for
+       public access to a Transparent copy of the Document, and likewise
+       the network locations given in the Document for previous versions
+       it was based on.  These may be placed in the "History" section.
+       You may omit a network location for a work that was published at
+       least four years before the Document itself, or if the original
+      publisher of the version it refers to gives permission.
+     K. In any section entitled "Acknowledgements" or "Dedications",
+     preserve the section's title, and preserve in the section all the
+      substance and tone of each of the contributor acknowledgements
+     and/or dedications given therein.
+     L. Preserve all the Invariant Sections of the Document,
+     unaltered in their text and in their titles.  Section numbers
+     or the equivalent are not considered part of the section titles.
+     M. Delete any section entitled "Endorsements".  Such a section
+     may not be included in the Modified Version.
+     N. Do not retitle any existing section as "Endorsements"    or to
+     conflict in title with any Invariant Section.
+
+     If the Modified Version includes new front-matter sections or
+     appendices that qualify as Secondary Sections and contain no
+     material copied from the Document, you may at your option
+     designate some or all of these sections as invariant.  To do this,
+     add their titles to the list of Invariant Sections in the Modified
+     Version's license notice.  These titles must be distinct from any
+     other section titles.
+
+     You may add a section entitled "Endorsements", provided it contains
+     nothing but endorsements of your Modified Version by various
+     parties-for example, statements of peer review or that the text has
+     been approved by an organization as the authoritative definition
+     of a standard.
+
+     You may add a passage of up to five words as a Front-Cover Text,
+     and a passage of up to 25 words as a Back-Cover Text, to the end
+     of the list of Cover Texts in the Modified Version.  Only one
+     passage of Front-Cover Text and one of Back-Cover Text may be
+     added by (or through arrangements made by) any one entity.  If the
+     Document already includes a cover text for the same cover,
+     previously added by you or by arrangement made by the same entity
+     you are acting on behalf of, you may not add another; but you may
+     replace the old one, on explicit permission from the previous
+     publisher that added the old one.
+
+     The author(s) and publisher(s) of the Document do not by this
+     License give permission to use their names for publicity for or to
+     assert or imply endorsement of any Modified Version.
+
+  5. COMBINING DOCUMENTS
+
+     You may combine the Document with other documents released under
+     this License, under the terms defined in section 4 above for
+     modified versions, provided that you include in the combination
+     all of the Invariant Sections of all of the original documents,
+     unmodified, and list them all as Invariant Sections of your
+     combined work in its license notice.
+
+     The combined work need only contain one copy of this License, and
+     multiple identical Invariant Sections may be replaced with a single
+     copy.  If there are multiple Invariant Sections with the same name
+     but different contents, make the title of each such section unique
+     by adding at the end of it, in parentheses, the name of the
+     original author or publisher of that section if known, or else a
+     unique number.  Make the same adjustment to the section titles in
+     the list of Invariant Sections in the license notice of the
+     combined work.
+
+     In the combination, you must combine any sections entitled
+     "History" in the various original documents, forming one section
+     entitled "History"; likewise combine any sections entitled
+     "Acknowledgements", and any sections entitled "Dedications".  You
+     must delete all sections entitled "Endorsements."
+
+  6. COLLECTIONS OF DOCUMENTS
+
+     You may make a collection consisting of the Document and other
+     documents released under this License, and replace the individual
+     copies of this License in the various documents with a single copy
+     that is included in the collection, provided that you follow the
+     rules of this License for verbatim copying of each of the
+     documents in all other respects.
+
+     You may extract a single document from such a collection, and
+     distribute it individually under this License, provided you insert
+     a copy of this License into the extracted document, and follow
+     this License in all other respects regarding verbatim copying of
+     that document.
+
+  7. AGGREGATION WITH INDEPENDENT WORKS
+
+     A compilation of the Document or its derivatives with other
+     separate and independent documents or works, in or on a volume of
+     a storage or distribution medium, does not as a whole count as a
+     Modified Version of the Document, provided no compilation
+     copyright is claimed for the compilation.  Such a compilation is
+     called an "aggregate", and this License does not apply to the
+     other self-contained works thus compiled with the Document, on
+     account of their being thus compiled, if they are not themselves
+     derivative works of the Document.
+
+     If the Cover Text requirement of section 3 is applicable to these
+     copies of the Document, then if the Document is less than one
+     quarter of the entire aggregate, the Document's Cover Texts may be
+     placed on covers that surround only the Document within the
+     aggregate.  Otherwise they must appear on covers around the whole
+     aggregate.
+
+  8. TRANSLATION
+
+     Translation is considered a kind of modification, so you may
+     distribute translations of the Document under the terms of section
+     4.  Replacing Invariant Sections with translations requires special
+     permission from their copyright holders, but you may include
+     translations of some or all Invariant Sections in addition to the
+     original versions of these Invariant Sections.  You may include a
+     translation of this License provided that you also include the
+     original English version of this License.  In case of a
+     disagreement between the translation and the original English
+     version of this License, the original English version will prevail.
+
+  9. TERMINATION
+
+     You may not copy, modify, sublicense, or distribute the Document
+     except as expressly provided for under this License.  Any other
+     attempt to copy, modify, sublicense or distribute the Document is
+     void, and will automatically terminate your rights under this
+     License.  However, parties who have received copies, or rights,
+     from you under this License will not have their licenses
+     terminated so long as such parties remain in full compliance.
+
+ 10. FUTURE REVISIONS OF THIS LICENSE
+
+     The Free Software Foundation may publish new, revised versions of
+     the GNU Free Documentation License from time to time.  Such new
+     versions will be similar in spirit to the present version, but may
+     differ in detail to address new problems or concerns.  See
+     http://www.gnu.org/copyleft/.
+
+     Each version of the License is given a distinguishing version
+     number.  If the Document specifies that a particular numbered
+     version of this License "or any later version" applies to it, you
+     have the option of following the terms and conditions either of
+     that specified version or of any later version that has been
+     published (not as a draft) by the Free Software Foundation.  If
+     the Document does not specify a version number of this License,
+     you may choose any version ever published (not as a draft) by the
+     Free Software Foundation.
+
+
+ADDENDUM: How to use this License for your documents
+====================================================
+
+To use this License in a document you have written, include a copy of
+the License in the document and put the following copyright and license
+notices just after the title page:
+
+
+       Copyright (C)  YEAR  YOUR NAME.
+       Permission is granted to copy, distribute and/or modify this document
+       under the terms of the GNU Free Documentation License, Version 1.1
+       or any later version published by the Free Software Foundation;
+       with the Invariant Sections being LIST THEIR TITLES, with the
+       Front-Cover Texts being LIST, and with the Back-Cover Texts being LIST.
+       A copy of the license is included in the section entitled ``GNU
+       Free Documentation License''.
+If you have no Invariant Sections, write "with no Invariant Sections"
+instead of saying which ones are invariant.  If you have no Front-Cover
+Texts, write "no Front-Cover Texts" instead of "Front-Cover Texts being
+LIST"; likewise for Back-Cover Texts.
+
+   If your document contains nontrivial examples of program code, we
+recommend releasing these examples in parallel under your choice of
+free software license, such as the GNU General Public License, to
+permit their use in free software.
+
+
+File: ddd-themes.info,  Node: Index,  Prev: Documentation License,  Up: Top
+
+Index
+*****
+
+ [index ]
+* Menu:
+
+* ( <1>:                                 Creating Lists.       (line  7)
+* ( <2>:                                 Negation Functions.   (line  7)
+* ( <3>:                                 Comparison Functions. (line  7)
+* ( <4>:                                 Arithmetic Functions. (line  7)
+* ( <5>:                                 Overlays.             (line  7)
+* ( <6>:                                 Textual Composition.  (line  7)
+* ( <7>:                                 Vertical Composition. (line  7)
+* (:                                     Horizontal Composition.
+                                                               (line  7)
+* and:                                   VSL Boolean Operators.
+                                                               (line  6)
+* annotation:                            Displaying Data Displays.
+                                                               (line 14)
+* append:                                Creating Lists.       (line 11)
+* arc:                                   Arc Basics.           (line  7)
+* arcs.vsl:                              Arc Functions.        (line  6)
+* arcthickness:                          Arc Basics.           (line 13)
+* array_color:                           Displaying Colors.    (line 43)
+* bf:                                    Font Selection.       (line  8)
+* bi:                                    Font Selection.       (line 10)
+* bin:                                   String Functions.     (line 22)
+* box:                                   Box Dimensions.       (line 17)
+* builtin.vsl:                           VSL Operators.        (line 30)
+* car:                                   Accessing List Elements.
+                                                               (line  7)
+* cdr:                                   Accessing List Elements.
+                                                               (line 11)
+* center:                                Centering Functions.  (line 19)
+* changed_color:                         Displaying Colors.    (line 52)
+* changed_value:                         Displaying Extra Properties.
+                                                               (line 13)
+* chars:                                 Lists and Strings.    (line  7)
+* circle:                                Custom Arc Functions. (line 16)
+* collapsed_array:                       Displaying Arrays.    (line 18)
+* collapsed_list_value:                  Displaying Lists.     (line 13)
+* collapsed_pointer_value:               Displaying Pointers.  (line 15)
+* collapsed_reference_value:             Displaying References.
+                                                               (line 12)
+* collapsed_sequence_value:              Displaying Sequences. (line 12)
+* collapsed_simple_value:                Displaying Simple Values.
+                                                               (line 17)
+* collapsed_struct_value:                Displaying Structs.   (line 13)
+* collapsed_text_value:                  Displaying Multi-Line Texts.
+                                                               (line 14)
+* color:                                 Color Functions.      (line 12)
+* colors.vsl:                            Color Functions.      (line  6)
+* commalist:                             Textual Composition.  (line 24)
+* crossline:                             Emphasis Functions.   (line 13)
+* ddd.vsl:                               DDD VSL Functions.    (line  9)
+* dec:                                   String Functions.     (line 20)
+* delete:                                Manipulating Lists.   (line 10)
+* dereferenced_pointer_value:            Displaying Pointers.  (line 12)
+* disabled:                              Displaying Data Displays.
+                                                               (line 18)
+* disabled_color:                        Displaying Colors.    (line 16)
+* display_box:                           Displaying Data Displays.
+                                                               (line 28)
+* display_color:                         Displaying Colors.    (line  7)
+* doubleframe:                           Frame Functions.      (line 19)
+* doublestrike:                          Emphasis Functions.   (line 16)
+* dtab:                                  Table Functions.      (line 19)
+* e_arrow:                               Arrow Functions.      (line 10)
+* e_flush:                               Flushing Functions.   (line 10)
+* elem:                                  Accessing List Elements.
+                                                               (line 15)
+* ellipse:                               Custom Arc Functions. (line 10)
+* else:                                  VSL Conditionals.     (line  9)
+* elsif:                                 VSL Conditionals.     (line 14)
+* empty_array:                           Displaying Arrays.    (line 15)
+* empty_list_value:                      Displaying Lists.     (line 16)
+* empty_struct_value:                    Displaying Structs.   (line 16)
+* fall:                                  Slope Basics.         (line 12)
+* family_courier:                        Font Name Selection.  (line 16)
+* family_helvetica:                      Font Name Selection.  (line 17)
+* family_new_century:                    Font Name Selection.  (line 18)
+* family_times:                          Font Name Selection.  (line 15)
+* family_typewriter:                     Font Name Selection.  (line 19)
+* fi:                                    VSL Conditionals.     (line  9)
+* fill:                                  Empty Space.          (line  7)
+* fix:                                   Controlling Stretch.  (line 13)
+* flat:                                  Manipulating Lists.   (line 18)
+* font:                                  Font Basics.          (line  7)
+* fontname:                              Font Name Selection.  (line 22)
+* fonts.vsl:                             Font Functions.       (line  6)
+* frame:                                 Frame Functions.      (line 15)
+* Functions, in VSL <1>:                 VSL Library.          (line  6)
+* Functions, in VSL:                     DDD VSL Functions.    (line  6)
+* halign:                                Horizontal Composition.
+                                                               (line  9)
+* hcenter:                               Centering Functions.  (line  7)
+* head:                                  Accessing List Elements.
+                                                               (line  8)
+* hex:                                   String Functions.     (line 23)
+* hfill:                                 Empty Space.          (line 11)
+* hfix:                                  Controlling Stretch.  (line  7)
+* horizontal_array:                      Displaying Arrays.    (line  9)
+* horizontal_unnamed_list:               Displaying Lists.     (line 28)
+* horizontal_unnamed_struct:             Displaying Structs.   (line 29)
+* hralign:                               Horizontal Composition.
+                                                               (line 16)
+* hrule:                                 Black Lines.          (line 11)
+* hspace:                                Box Dimensions.       (line  7)
+* hwhite:                                White Space.          (line  7)
+* if:                                    VSL Conditionals.     (line  9)
+* indent:                                Indentation Functions.
+                                                               (line  7)
+* indentamount:                          Indentation Functions.
+                                                               (line 11)
+* isatom:                                List Properties.      (line  7)
+* islist:                                List Properties.      (line 10)
+* it:                                    Font Selection.       (line  9)
+* last:                                  Accessing List Elements.
+                                                               (line 23)
+* length:                                List Properties.      (line 25)
+* let:                                   VSL Local Variables.  (line  8)
+* Library, VSL:                          VSL Library.          (line  6)
+* License, Documentation:                Documentation License.
+                                                               (line  6)
+* list:                                  Lists and Strings.    (line 11)
+* list.vsl:                              List Functions.       (line  6)
+* list_color:                            Displaying Colors.    (line 39)
+* list_member:                           Displaying Lists.     (line 22)
+* list_member_name:                      Displaying Lists.     (line 19)
+* list_value:                            Displaying Lists.     (line 10)
+* max:                                   Maximum and Minimum Functions.
+                                                               (line  7)
+* member:                                List Properties.      (line 13)
+* min:                                   Maximum and Minimum Functions.
+                                                               (line 11)
+* n_arrow:                               Arrow Functions.      (line  7)
+* n_flush:                               Flushing Functions.   (line  7)
+* ne_arrow:                              Arrow Functions.      (line 15)
+* ne_flush:                              Flushing Functions.   (line 18)
+* none:                                  Displaying Data Displays.
+                                                               (line 21)
+* not:                                   VSL Boolean Operators.
+                                                               (line 16)
+* num:                                   String Functions.     (line 15)
+* numeric_value:                         Displaying Simple Values.
+                                                               (line 13)
+* nw_arrow:                              Arrow Functions.      (line 14)
+* nw_flush:                              Flushing Functions.   (line 16)
+* oct:                                   String Functions.     (line 21)
+* octogon:                               Custom Slope Functions.
+                                                               (line 13)
+* or:                                    VSL Boolean Operators.
+                                                               (line 11)
+* oval:                                  Custom Arc Functions. (line  7)
+* overline:                              Emphasis Functions.   (line 10)
+* pointer_color:                         Displaying Colors.    (line 31)
+* pointer_value:                         Displaying Pointers.  (line  9)
+* pos:                                   Accessing List Elements.
+                                                               (line 19)
+* prefix:                                List Properties.      (line 17)
+* punchcard:                             Custom Slope Functions.
+                                                               (line  7)
+* reference_color:                       Displaying Colors.    (line 47)
+* reference_value:                       Displaying References.
+                                                               (line  9)
+* repeated_value:                        Displaying Extra Properties.
+                                                               (line  9)
+* reverse:                               Manipulating Lists.   (line  7)
+* rhomb:                                 Custom Slope Functions.
+                                                               (line 10)
+* rise:                                  Slope Basics.         (line  7)
+* rm:                                    Font Selection.       (line  7)
+* rule:                                  Black Lines.          (line  7)
+* ruleframe:                             Frame Functions.      (line  7)
+* rulethickness:                         Black Lines.          (line 21)
+* s_arrow:                               Arrow Functions.      (line  9)
+* s_flush:                               Flushing Functions.   (line  8)
+* se_arrow:                              Arrow Functions.      (line 17)
+* se_flush:                              Flushing Functions.   (line 19)
+* select:                                Manipulating Lists.   (line 14)
+* semicolonlist:                         Textual Composition.  (line 27)
+* sequence_value:                        Displaying Sequences. (line  9)
+* shadow:                                Displaying Shadows.   (line  7)
+* shadow_color:                          Displaying Colors.    (line 57)
+* simple_color:                          Displaying Colors.    (line 21)
+* simple_value:                          Displaying Simple Values.
+                                                               (line  9)
+* slant_italic:                          Font Name Selection.  (line 12)
+* slant_unslanted:                       Font Name Selection.  (line 11)
+* slopes.vsl:                            Slope Functions.      (line  6)
+* slopethickness:                        Slope Basics.         (line 17)
+* small_bf:                              Displaying Fonts.     (line 10)
+* small_bi:                              Displaying Fonts.     (line 12)
+* small_it:                              Displaying Fonts.     (line 11)
+* small_rm:                              Displaying Fonts.     (line  9)
+* small_size:                            Displaying Fonts.     (line 15)
+* sort:                                  Manipulating Lists.   (line 22)
+* square:                                Box Dimensions.       (line 13)
+* std.vsl:                               VSL Library.          (line  9)
+* stdfontfamily:                         Font Defaults.        (line 13)
+* stdfontpixels:                         Font Defaults.        (line 25)
+* stdfontpoints:                         Font Defaults.        (line 29)
+* stdfontsize:                           Font Defaults.        (line 19)
+* stdfontslant:                          Font Defaults.        (line 10)
+* stdfontweight:                         Font Defaults.        (line  7)
+* string:                                String Functions.     (line  9)
+* struct_color:                          Displaying Colors.    (line 35)
+* struct_member:                         Displaying Structs.   (line 22)
+* struct_member_name:                    Displaying Structs.   (line 19)
+* struct_value:                          Displaying Structs.   (line 10)
+* sublist:                               List Properties.      (line 19)
+* suffix:                                List Properties.      (line 18)
+* sw_arrow:                              Arrow Functions.      (line 16)
+* sw_flush:                              Flushing Functions.   (line 17)
+* tab:                                   Table Functions.      (line 12)
+* tab.vsl:                               Table Functions.      (line  6)
+* tab_elem:                              Table Functions.      (line 23)
+* tail:                                  Accessing List Elements.
+                                                               (line 12)
+* talign:                                Textual Composition.  (line  9)
+* text_color:                            Displaying Colors.    (line 26)
+* text_value:                            Displaying Multi-Line Texts.
+                                                               (line 10)
+* then:                                  VSL Conditionals.     (line  9)
+* thickframe:                            Frame Functions.      (line 22)
+* tiny_bf:                               Displaying Fonts.     (line 19)
+* tiny_bi:                               Displaying Fonts.     (line 21)
+* tiny_it:                               Displaying Fonts.     (line 20)
+* tiny_rm:                               Displaying Fonts.     (line 18)
+* tiny_size:                             Displaying Fonts.     (line 24)
+* title:                                 Displaying Data Displays.
+                                                               (line  9)
+* title_bf:                              Displaying Fonts.     (line 28)
+* title_bi:                              Displaying Fonts.     (line 30)
+* title_color:                           Displaying Colors.    (line 11)
+* title_it:                              Displaying Fonts.     (line 29)
+* title_rm:                              Displaying Fonts.     (line 27)
+* tlist:                                 Textual Composition.  (line 20)
+* tralign:                               Textual Composition.  (line 17)
+* twodim_array:                          Displaying Arrays.    (line 21)
+* twodim_array_elem:                     Displaying Arrays.    (line 25)
+* underline:                             Emphasis Functions.   (line  7)
+* valign:                                Vertical Composition. (line  9)
+* value_bf:                              Displaying Fonts.     (line 35)
+* value_bi:                              Displaying Fonts.     (line 37)
+* value_box:                             Displaying Data Displays.
+                                                               (line 25)
+* value_it:                              Displaying Fonts.     (line 36)
+* value_rm:                              Displaying Fonts.     (line 34)
+* vcenter:                               Centering Functions.  (line 13)
+* vertical_array:                        Displaying Arrays.    (line 12)
+* vertical_unnamed_list:                 Displaying Lists.     (line 29)
+* vertical_unnamed_struct:               Displaying Structs.   (line 30)
+* vfill:                                 Empty Space.          (line 14)
+* vfix:                                  Controlling Stretch.  (line 10)
+* vlist:                                 Vertical Composition. (line 19)
+* vralign:                               Vertical Composition. (line 16)
+* vrule:                                 Black Lines.          (line 16)
+* VSL:                                   VSL Reference.        (line  6)
+* VSL Functions <1>:                     VSL Library.          (line  6)
+* VSL Functions:                         DDD VSL Functions.    (line  6)
+* VSL Library:                           VSL Library.          (line  6)
+* vspace:                                Box Dimensions.       (line 10)
+* vwhite:                                White Space.          (line 12)
+* w_arrow:                               Arrow Functions.      (line  8)
+* w_flush:                               Flushing Functions.   (line  9)
+* weight_bold:                           Font Name Selection.  (line  7)
+* weight_medium:                         Font Name Selection.  (line  8)
+* where:                                 VSL Local Variables.  (line 21)
+* whiteframe:                            Frame Functions.      (line 11)
+* whitethickness:                        White Space.          (line 17)
+
+
+
+Tag Table:
+Node: Top1208
+Node: Welcome2280
+Node: Creating Displays2623
+Node: Handling Boxes2975
+Node: Building Boxes from Data5452
+Ref: Building Boxes from Data-Footnote-17897
+Node: Writing Themes7975
+Node: Display Title Color8586
+Node: General Scheme9736
+Node: Overriding vs. Replacing11529
+Node: A Complex Example13732
+Node: Future Work15127
+Node: DDD VSL Functions15712
+Node: Displaying Fonts16570
+Ref: Displaying Fonts-Footnote-117815
+Ref: Displaying Fonts-Footnote-217927
+Node: Displaying Colors18039
+Node: Displaying Shadows20248
+Node: Displaying Data Displays20503
+Node: Displaying Simple Values21621
+Node: Displaying Pointers22298
+Node: Displaying References22833
+Node: Displaying Arrays23261
+Node: Displaying Structs24166
+Node: Displaying Lists25556
+Node: Displaying Sequences26919
+Node: Displaying Multi-Line Texts27360
+Node: Displaying Extra Properties27877
+Node: VSL Library28448
+Node: Library Conventions29205
+Node: Space Functions29499
+Node: Empty Space29766
+Node: Black Lines30207
+Node: White Space30987
+Node: Controlling Stretch31641
+Node: Box Dimensions32106
+Node: Composition Functions32629
+Node: Horizontal Composition32907
+Node: Vertical Composition33527
+Node: Textual Composition34302
+Node: Overlays35282
+Node: Arithmetic Functions35781
+Node: Comparison Functions37277
+Node: Maximum and Minimum Functions38819
+Node: Negation Functions39308
+Node: Frame Functions39676
+Node: Alignment Functions40476
+Node: Centering Functions40704
+Node: Flushing Functions41430
+Node: Emphasis Functions42171
+Node: Indentation Functions42707
+Node: String Functions43126
+Node: List Functions43938
+Node: Creating Lists44352
+Node: List Properties44790
+Node: Accessing List Elements45731
+Node: Manipulating Lists46521
+Node: Lists and Strings47302
+Node: Table Functions47690
+Node: Font Functions48496
+Node: Font Basics48876
+Node: Font Name Selection49128
+Node: Font Defaults50271
+Node: Font Selection51205
+Node: Color Functions51770
+Node: Arc Functions52381
+Node: Arc Basics52789
+Node: Custom Arc Functions53346
+Node: Slope Functions53905
+Node: Slope Basics54323
+Node: Arrow Functions54943
+Node: Custom Slope Functions55580
+Node: VSL Reference55960
+Node: VSL Boxes56358
+Node: VSL Lists58076
+Node: VSL Expressions58538
+Node: VSL String Literals58857
+Node: VSL Number Literals59282
+Node: VSL List Literals59567
+Node: VSL Conditionals60322
+Node: VSL Boolean Operators60836
+Node: VSL Local Variables61340
+Node: VSL Let Patterns62178
+Node: VSL Function Calls62858
+Node: VSL Constant Definitions63255
+Node: VSL Function Definitions63675
+Ref: VSL Function Definitions-Footnote-164639
+Node: VSL Function Parameters64838
+Node: VSL Unused Parameters65331
+Node: VSL Function Patterns65848
+Node: VSL Declaring Functions68087
+Node: VSL Redefining Functions68558
+Node: VSL Replacing Functions69069
+Node: VSL Overriding Functions69714
+Node: VSL Includes70585
+Node: VSL Operators71243
+Node: VSL Syntax Summary72757
+Node: Documentation License80267
+Node: Index99983
+
+End Tag Table
+
+
+Local Variables:
+coding: iso-8859-1
+End:

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+source ./functions.sh
+ps | grep -q telnetd
+require [ $? -eq 0 ]
+netstat -tan | grep -q 23
+require [ $? -eq  0 ]
+
+netstat -l | grep -q 23
+require [ $? -eq 0 ]

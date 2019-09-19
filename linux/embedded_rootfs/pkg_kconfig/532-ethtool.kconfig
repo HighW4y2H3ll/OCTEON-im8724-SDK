@@ -1,0 +1,9 @@
+config CONFIG_ethtool
+	bool "ethtool"
+	default y
+	help
+		ethtool is used for querying settings of an ethernet device
+		and changing them.
+		
+		http://sourceforge.net/projects/gkernel/
+

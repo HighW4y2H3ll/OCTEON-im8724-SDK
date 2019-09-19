@@ -1,0 +1,11 @@
+config CONFIG_pciutils
+	bool "pciutils"
+	select CONFIG_zlib
+	default y
+	help
+		From the PCI Utilities homepage:
+		The PCI Utilities are a collection of programs for inspecting
+		and manipulating configuration of PCI devices, all based on a
+		common portable library libpci which offers access to the PCI
+		configuration space on a variety of operating systems.
+

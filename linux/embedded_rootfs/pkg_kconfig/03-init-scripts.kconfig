@@ -1,0 +1,9 @@
+config CONFIG_init-scripts
+	bool "init-scripts"
+	default y
+	help
+		Install the minimal init scripts used for booting. These are
+		not the full sysv init files. Unless you've added other files,
+		these are required for boot.
+		
+

@@ -1,0 +1,9 @@
+--- ptpd-1.0.0/src/arith.c.orig	2009-08-17 17:01:25.000000000 -0700
++++ ptpd-1.0.0/src/arith.c	2009-08-17 17:02:58.000000000 -0700
+@@ -1,5 +1,6 @@
+ /* arith.c */
+  
++#include <limits.h>
+ #include "ptpd.h"
+ 
+ /* from annex C of the spec */

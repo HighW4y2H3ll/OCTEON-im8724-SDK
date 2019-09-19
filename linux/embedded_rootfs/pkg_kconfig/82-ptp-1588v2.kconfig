@@ -1,0 +1,11 @@
+config CONFIG_ptp-1588v2
+	bool "PTP 1588v2 - Precision Time Protocol Daemon"
+	default y
+	help
+		Daemon implementing the IEEE1588-2008 specification, better
+		known as PTPv2. The daemon is licensed by Cavium Inc. 
+
+
+
+
+

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+source ./functions.sh
+
+test -f /etc/group
+if [ $? = 0 ];
+then
+  assert echo "# first line is reserved fro root" > /etc/group
+fi
+
+assert touch $0.log
+assert adduser -D sdk-test-userown
+assert chown sdk-test-userown $0.log
+require_good ls -l | grep -q sdk-test-userown
+assert rm -rf $0.log
+assert deluser sdk-test-userown
+assert rm -rf /home/sdk-test-userown

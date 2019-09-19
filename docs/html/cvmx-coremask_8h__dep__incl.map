@@ -1,0 +1,51 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$cvmx-app-hotplug_8h.html" title="Header file for the hotplug APIs." alt="" coords="675,315,832,344"/>
+<area shape="rect" id="node7" href="$cvmx-app-init-linux_8c.html" title="Simple executive application initialization for Linux user space." alt="" coords="5,315,168,344"/>
+<area shape="rect" id="node9" href="$cvmx-app-init_8c.html" title="Main entry point for all simple executive based programs." alt="" coords="192,315,320,344"/>
+<area shape="rect" id="node11" href="$cvmx-app-init_8h.html" title="Header file for simple executive application initialization." alt="" coords="4811,83,4939,112"/>
+<area shape="rect" id="node15" href="$cvmx-interrupt_8c.html" title="Interface to the Mips interrupts." alt="" coords="5725,315,5861,344"/>
+<area shape="rect" id="node17" href="$cvmx-sysinfo_8h.html" title="This module provides system/board information obtained by the bootloader." alt="" coords="3664,160,3787,189"/>
+<area shape="rect" id="node59" href="$cvmx-profiler_8c.html" title="Interface to event profiler." alt="" coords="344,315,467,344"/>
+<area shape="rect" id="node99" href="$cvmx-coredump_8c.html" title="Main Coredump Interface." alt="" coords="5885,315,6029,344"/>
+<area shape="rect" id="node101" href="$cvmx-coremask_8c.html" title="Module to support operations on bitmap of cores." alt="" coords="6053,315,6195,344"/>
+<area shape="rect" id="node103" href="$cvmx-debug_8c.html" title="cvmx&#45;debug.c" alt="" coords="6219,315,6336,344"/>
+<area shape="rect" id="node123" href="$cvmx-power-throttle_8c.html" title="Interface to power&#45;throttle control, measurement, and debugging facilities." alt="" coords="6360,315,6536,344"/>
+<area shape="rect" id="node134" href="$octeon-feature_8c.html" title="File defining checks for different Octeon features." alt="" coords="6560,315,6699,344"/>
+<area shape="rect" id="node5" href="$cvmx-app-hotplug_8c.html" title="Provides APIs for applications to register for hotplug." alt="" coords="675,392,832,421"/>
+<area shape="rect" id="node13" href="$cvmx-helper-board_8c.html" title="Helper functions to abstract board specific data about network ports from the rest..." alt="" coords="491,315,651,344"/>
+<area shape="rect" id="node21" href="$cvmx-cn3010-evb-hs5_8c.html" title="Interface to the EBH&#45;30xx specific devices." alt="" coords="1381,315,1568,344"/>
+<area shape="rect" id="node23" href="$cvmx-compactflash_8c.html" title="cvmx&#45;compactflash.c" alt="" coords="1592,315,1760,344"/>
+<area shape="rect" id="node25" href="$cvmx-ebt3000_8c.html" title="Interface to the EBT3000 specific devices." alt="" coords="1784,315,1917,344"/>
+<area shape="rect" id="node27" href="$cvmx-flash_8c.html" title="This file provides bootbus flash operations." alt="" coords="1941,315,2051,344"/>
+<area shape="rect" id="node29" href="$cvmx-fpa-resource_8c.html" title="cvmx&#45;fpa&#45;resource.c" alt="" coords="2075,315,2237,344"/>
+<area shape="rect" id="node32" href="$cvmx-helper-errata_8c.html" title="Fixes and workaround for Octeon chip errata." alt="" coords="2261,315,2427,344"/>
+<area shape="rect" id="node34" href="$cvmx-helper-rgmii_8c.html" title="Functions for RGMII/GMII/MII initialization, configuration, and monitoring." alt="" coords="2451,315,2605,344"/>
+<area shape="rect" id="node36" href="$cvmx-helper-sgmii_8c.html" title="Functions for SGMII initialization, configuration, and monitoring." alt="" coords="3448,315,3605,344"/>
+<area shape="rect" id="node38" href="$cvmx-helper-spi_8c.html" title="Functions for SPI initialization, configuration, and monitoring." alt="" coords="3629,315,3771,344"/>
+<area shape="rect" id="node40" href="$cvmx-helper-util_8c.html" title="Small helper utilities." alt="" coords="3795,315,3939,344"/>
+<area shape="rect" id="node42" href="$cvmx-helper_8c.html" title="Helper functions for common, but complicated tasks." alt="" coords="3963,315,4080,344"/>
+<area shape="rect" id="node44" href="$cvmx-ilk_8c.html" title="Support library for the ILK." alt="" coords="4104,315,4195,344"/>
+<area shape="rect" id="node47" href="$cvmx-ipd_8c.html" title="IPD Support." alt="" coords="4219,315,4315,344"/>
+<area shape="rect" id="node49" href="$cvmx-llm_8c.html" title="Configuration functions for low latency memory." alt="" coords="4339,315,4435,344"/>
+<area shape="rect" id="node51" href="$cvmx-mgmt-port_8c.html" title="Support functions for managing the MII management port." alt="" coords="4459,315,4611,344"/>
+<area shape="rect" id="node53" href="$cvmx-pcie_8c.html" title="Interface to PCIe as a host(RC) or target(EP)." alt="" coords="4635,315,4739,344"/>
+<area shape="rect" id="node55" href="$cvmx-pko_8c.html" title="Support library for the hardware Packet Output unit." alt="" coords="4763,315,4861,344"/>
+<area shape="rect" id="node57" href="$cvmx-pow_8c.html" title="Interface to the hardware Packet Order / Work unit." alt="" coords="4885,315,4987,344"/>
+<area shape="rect" id="node61" href="$cvmx-rtc_8h.html" title="This file provides support for real time clocks on some boards." alt="" coords="4092,237,4188,267"/>
+<area shape="rect" id="node63" href="$cvmx-spi_8c.html" title="Support library for the SPI." alt="" coords="5011,315,5104,344"/>
+<area shape="rect" id="node65" href="$cvmx-sysinfo_8c.html" title="This module provides system/board/application information obtained by the bootloader..." alt="" coords="5128,315,5251,344"/>
+<area shape="rect" id="node67" href="$cvmx-thunder_8c.html" title="Interface to the Thunder specific devices." alt="" coords="5275,315,5403,344"/>
+<area shape="rect" id="node69" href="$cvmx-tim-atomic_8c.html" title="New lockless timer API, inspired by ODP timer definition." alt="" coords="5427,315,5579,344"/>
+<area shape="rect" id="node71" href="$cvmx-tim_8c.html" title="Support library for the hardware work queue timers." alt="" coords="5603,315,5701,344"/>
+<area shape="rect" id="node73" href="$cvmx-usb_8c.html" title="&quot;cvmx&#45;usb.c&quot; defines a set of low level USB functions to help developers..." alt="" coords="856,315,955,344"/>
+<area shape="rect" id="node75" href="$cvmx-usbd_8c.html" title="&quot;cvmx&#45;usbd.c&quot; defines a set of low level USB functions to help developers..." alt="" coords="979,315,1085,344"/>
+<area shape="rect" id="node77" href="$cvmx-zip_8c.html" title="Source file for the zip (deflate) block." alt="" coords="1109,315,1205,344"/>
+<area shape="rect" id="node79" href="$cvmx_8h.html" title="Main Octeon executive header file (This should be the second header file included..." alt="" coords="3492,237,3561,267"/>
+<area shape="rect" id="node136" href="$octeon-model_8c.html" title="File defining functions for working with different Octeon models." alt="" coords="1229,315,1357,344"/>
+<area shape="rect" id="node81" href="$cvmx-adma_8c.html" title="cvmx&#45;adma.c" alt="" coords="2629,315,2744,344"/>
+<area shape="rect" id="node83" href="$cvmx-agl_8c.html" title="Functions for RGMII (MGMT) initialization, configuration, and monitoring." alt="" coords="2768,315,2864,344"/>
+<area shape="rect" id="node85" href="$cvmx-app-config_8c.html" title="cvmx&#45;app&#45;config.c" alt="" coords="2888,315,3035,344"/>
+<area shape="rect" id="node90" href="$cvmx-appcfg-transport_8c.html" title="cvmx&#45;appcfg&#45;transport.c" alt="" coords="3059,315,3248,344"/>
+<area shape="rect" id="node92" href="$cvmx-bch_8c.html" title="Interface to the CN70XX, CN78XX hardware BCH engine." alt="" coords="3279,392,3380,421"/>
+<area shape="rect" id="node94" href="$cvmx-bch_8h.html" title="Interface to the CN7XXX hardware BCH engine." alt="" coords="3323,315,3424,344"/>
+</map>

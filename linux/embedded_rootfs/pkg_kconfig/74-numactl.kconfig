@@ -1,0 +1,6 @@
+config CONFIG_numa
+	bool "numa"
+	default y
+	help
+		NUMA support
+

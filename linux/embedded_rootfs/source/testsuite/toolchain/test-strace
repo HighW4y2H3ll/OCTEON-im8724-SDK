@@ -1,0 +1,7 @@
+#!/bin/sh
+
+source ./functions.sh
+
+assert strace /bin/ls > $0.log 2>&1
+assert grep -q "mmap" $0.log
+

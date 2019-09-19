@@ -1,0 +1,10 @@
+config CONFIG_openssh
+	bool "openssh"
+	default n
+	select CONFIG_openssl
+	select CONFIG_zlib
+	help
+		Openssh provides the client and server for ssh v1 and v2.
+
+
+		

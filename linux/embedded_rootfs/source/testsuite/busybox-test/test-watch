@@ -1,0 +1,8 @@
+#!/bin/sh
+source ./functions.sh
+
+assert watch -n 2 ls -al > $0.log &
+sleep 1
+assert pidof watch >> $0.log
+require [ $? -eq 0 ]
+assert pidof watch | xargs kill -9

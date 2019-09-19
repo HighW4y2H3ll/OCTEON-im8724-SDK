@@ -1,0 +1,77 @@
+menu "NFS Root filesystem"
+
+config CONFIG_nfs-root
+	bool "Change root to a NFS filesystem"
+	default n
+	help
+		Replace "/init" with a shell script that loads the ethernet
+		driver,configures a network interface, mounts a NFS filesystem,
+		and chroots to it. Init in the new filesystem is then executed.
+		
+config NFS_ROOT_NET_DEVICE
+	string "Network device"
+	depends CONFIG_nfs-root
+	default "eth0"
+	help
+		Network interface configured for NFS. This is normally the first
+		RGMII port, eth0.
+
+config NFS_ROOT_USE_DHCP
+	bool "Use DHCP to get the IP address, gateway, and DNS server"
+	depends CONFIG_nfs-root
+	default y
+	help
+		Set if you have a DHCP server connected to the Octeon board. The
+		server will be queried by udhcpc for an IP address, netmask,
+		broadcast, and name server.
+
+config NFS_ROOT_IP
+	string "IP address of board"
+	depends CONFIG_nfs-root && !NFS_ROOT_USE_DHCP
+	default "10.0.0.2"
+	help
+		If you are not using DHCP, this is the IP address of the Octeon
+		board.
+
+config NFS_ROOT_NETMASK
+	string "Netmask address of board"
+	depends CONFIG_nfs-root && !NFS_ROOT_USE_DHCP
+	default "255.255.255.0"
+	help
+		If you are not using DHCP, this is the netmask address of the
+		Octeon board.
+
+config NFS_ROOT_BROADCAST
+	string "Broadcast address of board"
+	depends CONFIG_nfs-root && !NFS_ROOT_USE_DHCP
+	default "10.0.0.255"
+	help
+		If you are not using DHCP, this is the broadcast address of the
+		Octeon board. Make sure it matches the IP address and netmask.
+
+config NFS_ROOT_GATEWAY
+	string "Default gateway of board. Blank for no gateway"
+	depends CONFIG_nfs-root && !NFS_ROOT_USE_DHCP
+	default "10.0.0.1"
+	help
+		If you are not using DHCP, this is the default route of the
+		Octeon board.
+	
+config NFS_ROOT_SERVER
+	string "NFS server path"
+	depends CONFIG_nfs-root
+	default "10.0.0.1:/home/debian_rootfs"
+	help
+		This is the NFS filesystem to mount. If you are using DHCP, you
+		can use a machine name here. Without DHCP, you must use the IP
+		address.
+	
+config NFS_ROOT_OPTIONS
+	string "NFS mount options"
+	depends CONFIG_nfs-root
+	default "nolock,rw"
+	help
+		NFS mount options. Since busybox isn't running portmap, you must
+		use the "nolock" option.
+	
+endmenu

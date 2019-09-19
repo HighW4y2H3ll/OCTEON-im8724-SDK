@@ -1,0 +1,104 @@
+#
+# For a description of the syntax of this configuration file,
+# see scripts/kbuild/config-language.txt.
+#
+
+mainmenu "Embedded Filesystem Configuration"
+
+menu "Global Options"
+
+choice
+	prompt "Endianess selection"
+	default TOOLCHAIN_BIG_ENDIAN
+	help
+	  Choose endianess for compiling
+
+config TOOLCHAIN_BIG_ENDIAN
+	bool "Big endian toolchain"
+	help
+	  Use big endian toolchain for compiling
+
+config TOOLCHAIN_LITTLE_ENDIAN
+	bool "Little endian toolchain"
+	help
+	  Use little endian toolchain for compiling
+endchoice
+
+choice
+	prompt "Toolchain ABI and C library"
+	default TOOLCHAIN_ABI_64_OCTEON
+	help
+	  Choose which Mips ABI used by the compiler
+
+config TOOLCHAIN_ABI_N32_OCTEON
+	select CONFIG_octeon-libraries-n32
+	bool "N32 ABI with GNU C Library - Octeon ISA (glibc)"
+	help
+		32bit pointers, integers, and longs. True 64bit for long long.
+
+config TOOLCHAIN_ABI_N32_OCTEON2
+	select CONFIG_octeon2-libraries-n32
+	bool "N32 ABI with GNU C Library - Octeon2 ISA (glibc)"
+	help
+		32bit pointers, integers, and longs. True 64bit for long long.
+
+config TOOLCHAIN_ABI_N32_OCTEON3
+	select CONFIG_octeon3-libraries-n32
+	bool "N32 ABI with GNU C Library - Octeon3 ISA (glibc)"
+	help
+		32bit pointers, integers, and longs. True 64bit for long long.
+		Floating point instructions.
+
+config TOOLCHAIN_ABI_64_OCTEON
+	select CONFIG_octeon-libraries-64
+	bool "N64 ABI with GNU C Library - Octeon ISA (glibc)"
+	help
+		64bit pointers and longs. 32bit integers.
+
+config TOOLCHAIN_ABI_64_OCTEON2
+	select CONFIG_octeon2-libraries-64
+	bool "N64 ABI with GNU C Library - Octeon2 ISA (glibc)"
+	help
+		64bit pointers and longs. 32bit integers.
+
+config TOOLCHAIN_ABI_64_OCTEON3
+	select CONFIG_octeon3-libraries-64
+	bool "N64 ABI with GNU C Library - Octeon3 ISA (glibc)"
+	help
+		64bit pointers and longs. 32bit integers.
+		Floating point instructions.
+
+endchoice
+
+config CONFIG_kernel-config
+	bool "Override the Linux Kernel configuration"
+	default n
+	help
+		Override the configuration file used by the kernel. Select
+		this option to choose a file to replace the default kernel
+		configuration file.
+	
+config CFG_KERNEL_CONFIG_FILE
+	string "Kernel configuration file"
+	depends CONFIG_kernel-config
+	default ""
+	help
+		File to use to override the default kernel configuration
+
+config CONFIG_kernel-modules
+	bool "Include all kernel modules built in the kernel tree"
+	default y
+	help
+		Add all kernel modules (*.ko) under the kernel source tree
+		to the filesystem.
+	
+config CFG_ENABLE_IPV6
+	bool "Enable IPV6 support"
+	default n
+	help
+		Enable IPV6 support for all filesystem tools. Note that the kernel
+		config must enable IPV6 in the kernel.
+
+endmenu
+
+source ".kconfig_include"

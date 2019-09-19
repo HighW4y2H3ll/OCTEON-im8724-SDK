@@ -1,0 +1,12 @@
+#!/bin/sh
+source ./functions.sh
+echo WELCOME TO WORLD > $0.log
+assert cksum  $0.log >$0-1.log
+for i in `wc -c $0.log | awk '{ print $1 }'`
+do
+        for j in `awk '{ print $2 }' $0-1.log`
+        do
+        require [ $i -eq $j ]
+        done
+done
+

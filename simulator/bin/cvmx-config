@@ -1,0 +1,947 @@
+#!/usr/bin/python
+
+#/***********************license start***************
+# * Copyright (c) 2003-2007, Cavium Inc.. All rights reserved.
+# * 
+# * This software file (the "File") is owned and distributed by Cavium 
+# * Networks ("Cavium") under the following dual licensing option: The dual 
+# * licensing option gives you, the licensee, the choice between the following 
+# * alternative licensing terms.  Once you have made an election to use the 
+# * File under one of the following alternative licensing terms (license 
+# * types) you are bound by the respective terms and you may distribute the 
+# * file (or any derivative thereof), to the extent allowed by the respective 
+# * licensing term, only if you (i) delete this introductory statement 
+# * regarding the dual licensing option from the file you will distribute, 
+# * (ii) delete the licensing term that you have elected NOT to use from the 
+# * file you will distribute and (iii) follow the respective licensing term 
+# * that you have elected to use with respect to the correct attribution or 
+# * licensing term that you have to include with your distribution.  
+# * 
+# * ***
+# * OCTEON SDK License Type 2:
+# * 
+# * IMPORTANT: Read this Agreement carefully before clicking on the "I accept" 
+# * button to download the Software and/or before using the Software.  This 
+# * License Agreement (the "Agreement") is a legal agreement between you, 
+# * either an individual or a single legal entity ("You" or "you"), and Cavium 
+# * Networks ("Cavium").  This Agreement governs your use of the Cavium 
+# * software that can be downloaded after accepting this Agreement and/or that 
+# * is accompanied by this Agreement (the "Software").  You must accept the 
+# * terms of this Agreement before downloading and/or using the Software.  By 
+# * clicking on the "I accept" button to download and/or by using the 
+# * Software, you are indicating that you have read and understood, and assent 
+# * to be bound by, the terms of this Agreement.  If you do not agree to the 
+# * terms of the Agreement, you are not granted any rights whatsoever in the 
+# * Software.  If you are not willing to be bound by these terms and 
+# * conditions, you should not use or cease all use of the Software.  This 
+# * Software is the property of Cavium Inc. and constitutes the 
+# * proprietary information of Cavium Inc..  You agree to take reasonable 
+# * steps to prevent the disclosure, unauthorized use or unauthorized 
+# * distribution of the Software to any third party.  
+# * 
+# * License Grant.  Subject to the terms and conditions of this Agreement, 
+# * Cavium grants you a nonexclusive, non-transferable, worldwide, fully-paid 
+# * and royalty-free license to 
+# * 
+# * (a) install, reproduce, and execute the executable version of the Software 
+# * solely for your internal use and only (a) on hardware manufactured by 
+# * Cavium, or (b) software of Cavium that simulates Cavium hardware; 
+# * 
+# * (b) create derivative works of any portions of the Software provided to 
+# * you by Cavium in source code form, which portions enable features of the 
+# * Cavium hardware products you or your licensees are entitled to use, 
+# * provided that any such derivative works must be used only (a) on hardware 
+# * manufactured by Cavium, or (b) software of Cavium that simulates Cavium 
+# * hardware; and 
+# * 
+# * (c) distribute derivative works you created in accordance with clause (b) 
+# * above, only in executable form and only if such distribution (i) 
+# * reproduces the copyright notice that can be found at the very end of this 
+# * Agreement and (ii) is pursuant to a binding license agreement that 
+# * contains terms no less restrictive and no less protective of Cavium than 
+# * this Agreement.  You will immediately notify Cavium if you become aware of 
+# * any breach of any such license agreement.  
+# * 
+# * Restrictions.  The rights granted to you in this Agreement are subject to 
+# * the following restrictions: Except as expressly set forth in this 
+# * Agreement (a) you will not license, sell, rent, lease, transfer, assign, 
+# * display, host, outsource, disclose or otherwise commercially exploit or 
+# * make the Software, or any derivatives you create under this Agreement, 
+# * available to any third party; (b) you will not modify or create derivative 
+# * works of any part of the Software; (c) you will not access or use the 
+# * Software in order to create similar or competitive products, components, 
+# * or services; and (d), no part of the Software may be copied (except for 
+# * the making of a single archival copy), reproduced, distributed, 
+# * republished, downloaded, displayed, posted or transmitted in any form or 
+# * by any means.  
+# * 
+# * Ownership.  You acknowledge and agree that, subject to the license grant 
+# * contained in this Agreement and as between you and Cavium (a) Cavium owns 
+# * all copies of and intellectual property rights to the Software, however 
+# * made, and retains all rights in and to the Software, including all 
+# * intellectual property rights therein, and (b) you own all the derivate 
+# * works of the Software created by you under this Agreement, subject to 
+# * Cavium's rights in the Software.  There are no implied licenses under this 
+# * Agreement, and any rights not expressly granted to your hereunder are 
+# * reserved by Cavium.  You will not, at any time, contest anywhere in the 
+# * world Cavium's ownership of the intellectual property rights in and to the 
+# * Software.  
+# * 
+# * Disclaimer of Warranties.  The Software is provided to you free of charge, 
+# * and on an "As-Is" basis.  Cavium provides no technical support, warranties 
+# * or remedies for the Software.  Cavium and its suppliers disclaim all 
+# * express, implied or statutory warranties relating to the Software, 
+# * including but not limited to, merchantability, fitness for a particular 
+# * purpose, title, and non-infringement.  Cavium does not warrant that the 
+# * Software and the use thereof will be error-free, that defects will be 
+# * corrected, or that the Software is free of viruses or other harmful 
+# * components.  If applicable law requires any warranties with respect to the 
+# * Software, all such warranties are limited in duration to thirty (30) days 
+# * from the date of download or first use, whichever comes first.  
+# * 
+# * Limitation of Liability.  Neither Cavium nor its suppliers shall be 
+# * responsible or liable with respect to any subject matter of this Agreement 
+# * or terms or conditions related thereto under any contract, negligence, 
+# * strict liability or other theory (a) for loss or inaccuracy of data or 
+# * cost of procurement of substitute goods, services or technology, or (b) 
+# * for any indirect, incidental or consequential damages including, but not 
+# * limited to loss of revenues and loss of profits.  Cavium's aggregate 
+# * cumulative liability hereunder shall not exceed the greater of Fifty U.S.  
+# * Dollars (U.S.$50.00) or the amount paid by you for the Software that 
+# * caused the damage.  Certain states and/or jurisdictions do not allow the 
+# * exclusion of implied warranties or limitation of liability for incidental 
+# * or consequential damages, so the exclusions set forth above may not apply 
+# * to you.  
+# * 
+# * Basis of Bargain.  The warranty disclaimer and limitation of liability set 
+# * forth above are fundamental elements of the basis of the agreement between 
+# * Cavium and you.  Cavium would not provide the Software without such 
+# * limitations.  The warranty disclaimer and limitation of liability inure to 
+# * the benefit of Cavium and Cavium's suppliers.  
+# * 
+# * Term and Termination.  This Agreement and the licenses granted hereunder 
+# * are effective on the date you accept the terms of this Agreement, download 
+# * the Software, or use the Software, whichever comes first, and shall 
+# * continue unless this Agreement is terminated pursuant to this section.  
+# * This Agreement immediately terminates in the event that you materially 
+# * breach any of the terms hereof.  You may terminate this Agreement at any 
+# * time, with or without cause, by destroying any copies of the Software in 
+# * your possession.  Upon termination, the license granted hereunder shall 
+# * terminate but the Sections titled "Restrictions", "Ownership", "Disclaimer 
+# * of Warranties", "Limitation of Liability", "Basis of Bargain", "Term and 
+# * Termination", "Export", and "Miscellaneous" will remain in effect.  
+# * 
+# * Export.  The Software and related technology are subject to U.S.  export 
+# * control laws and may be subject to export or import regulations in other 
+# * countries.  You agree to strictly comply with all such laws and 
+# * regulations and acknowledges that you have the responsibility to obtain 
+# * authorization to export, re-export, or import the Software and related 
+# * technology, as may be required.  You will indemnify and hold Cavium 
+# * harmless from any and all claims, losses, liabilities, damages, fines, 
+# * penalties, costs and expenses (including attorney's fees) arising from or 
+# * relating to any breach by you of your obligations under this section.  
+# * Your obligations under this section shall survive the expiration or 
+# * termination of this Agreement.  
+# * 
+# * Miscellaneous.  Neither the rights nor the obligations arising under this 
+# * Agreement are assignable by you, and any such attempted assignment or 
+# * transfer shall be void and without effect.  This Agreement shall be 
+# * governed by and construed in accordance with the laws of the State of 
+# * California without regard to any conflicts of laws provisions that would 
+# * require application of the laws of another jurisdiction.  Any action under 
+# * or relating to this Agreement shall be brought in the state and federal 
+# * courts located in California, with venue in the courts located in Santa 
+# * Clara County and each party hereby submits to the personal jurisdiction of 
+# * such courts; provided, however, that nothing herein will operate to 
+# * prohibit or restrict Cavium from filing for and obtaining injunctive 
+# * relief from any court of competent jurisdiction.  The United Nations 
+# * Convention on Contracts for the International Sale of Goods shall not 
+# * apply to this Agreement.  In the event that any provision of this 
+# * Agreement is found to be contrary to law, then such provision shall be 
+# * construed as nearly as possible to reflect the intention of the parties, 
+# * with the other provisions remaining in full force and effect.  Any notice 
+# * to you may be provided by email.  This Agreement constitutes the entire 
+# * agreement between the parties and supersedes all prior or contemporaneous, 
+# * agreements, understandings and communications between the parties, whether 
+# * written or oral, pertaining to the subject matter hereof.  Any 
+# * modifications of this Agreement must be in writing and agreed to by both 
+# * parties.  
+# * 
+# * Copyright (c) 2003-2007, Cavium Inc.. All rights reserved.
+# * 
+# * ***
+# * 
+# * OCTEON SDK License Type 4:
+# * 
+# * Author: Cavium Inc. 
+# * 
+# * Contact: support@cavium.com 
+# * This file is part of the OCTEON SDK
+# * 
+# * Copyright (c) 2007 Cavium Inc. 
+# * 
+# * This file is free software; you can redistribute it and/or modify 
+# * it under the terms of the GNU General Public License, Version 2, as published by 
+# * the Free Software Foundation. 
+# * 
+# * This file is distributed in the hope that it will be useful, 
+# * but AS-IS and WITHOUT ANY WARRANTY; without even the implied warranty of 
+# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE, TITLE, or NONINFRINGEMENT. 
+# * See the GNU General Public License for more details. 
+# * 
+# * You should have received a copy of the GNU General Public License 
+# * along with this file; if not, write to the Free Software 
+# * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+# * or visit http://www.gnu.org/licenses/. 
+# * 
+# * This file may also be available under a different license from Cavium. 
+# * Contact Cavium Inc. for more information
+# ***********************license end**************************************/
+import sys
+import os
+import re
+import StringIO
+import string
+import warnings
+
+CACHE_LINE_SIZE     = 128       # Size of a cache line
+NUM_FAU_BYTES       = 2048      # Bytes in the FAU unit
+NUM_IOBDMA_BYTES    = 2048      # Scratch memory bytes addressable by a iobdma
+MAX_SCRATCH_MEMORY  = 6 * 1024
+
+OUTPUT_FILE   = "config/cvmx-config.h"
+
+#
+# Represents defines as a name=value pair
+#
+class Define:
+    def __init__(self, name):
+        self.name = name
+        self.description = ""
+        self.value = ""
+
+#
+# State information about an FPA pool
+#
+class FpaPool:
+    def __init__(self, name):
+        self.name = name
+        self.description = ""
+        self.pool = -1
+        self.priority = 8
+        self.protected = 0
+        self.size = 1
+
+    def isMergable(self, test):
+        return (not self.protected) and (not test.protected) and (self.size == test.size)
+
+#
+# State information about a FAU register
+#
+class FauRegister:
+    def __init__(self, name):
+        self.name = name
+        self.description = ""
+        self.size = 8
+        self.count = 1
+
+#
+# State information about a scratch memory location
+#
+class ScratchMemory:
+    def __init__(self, name):
+        self.name = name
+        self.description = ""
+        self.size = 8
+        self.count = 1
+        self.iobdma = 1
+        self.permanent = 1
+        self.location = -1
+
+#
+# The contents of a section read from the config files
+#
+class Section:
+    def __init__(self):
+        self.description = ""
+        self.defines = []
+        self.fpa = []
+        self.fau = []
+        self.scratch = []
+
+#
+# Exception thrown on a config parse error
+#
+class ParseError(Exception):
+    #
+    def __init__(self, filename, line, message):
+        if line:
+            Exception.__init__(self, filename + "(" + str(line) + "): " + message)
+        else:
+            Exception.__init__(self, filename + ": " + message)
+        self.filename = filename
+        self.line = line
+        self.message = message
+
+    # Display the current file location and a friendly message to the user
+    def display(self):
+        print "**********"
+        if self.line:
+            try:
+                inf = open(self.filename)
+                lines = inf.readlines()
+                inf.close()
+                for l in xrange(self.line-2, self.line+3):
+                    if l > 1 and l <= len(lines):
+                        print self.filename + "(" + str(l) + "):" + lines[l-1][0:-1]
+            except:
+                pass
+            print 'File "' + self.filename + '" on line ' + str(self.line) + ':'
+        else:
+            print 'File "' + self.filename + '":'
+        print self.message
+
+#
+# Exception used to tell the user about configuration errors
+#
+class ConfigError(Exception):
+    #
+    def __init__(self, message):
+        Exception.__init__(self, message)
+        self.message = message
+    def display(self):
+        print "**********"
+        print self.message
+
+
+#
+# Read lines from a header file after it has been through the preprocessor
+#
+class HeaderReader:
+    def __init__(self, filename):
+        self.filename = filename
+        self.current_file = filename
+        self.current_line = 0
+        self.lines = None
+        self.tokens = []
+
+    # Get the next input line from the preprocessed header file
+    # self.current_file and self.current_line will tell you what
+    # file this line was actually from
+    def getLine(self):
+        if self.lines == None:
+            try:
+                inc_path = os.environ.get('OCTEON_ROOT')
+                if inc_path is None:
+                    print "Warning: OCTEON_ROOT environment variable not set.\n"
+                    inc_path = ''
+                else:
+                    inc_path = '-I' + inc_path + '/target/include '
+                cmd_str = 'gcc -DCAVIUM_COMPONENT_REQUIREMENT ' + inc_path + '-E "' + self.filename + '"'
+                if sys.version_info[:2] > (2,5):
+                    warnings.simplefilter("ignore", DeprecationWarning)
+                import popen2
+                subproc = popen2.Popen3(cmd_str)
+                self.lines = subproc.fromchild.readlines()
+                if subproc.wait():
+                    raise ConfigError('Unable to preprocess "' + self.filename + '"')
+            except:
+                raise ConfigError('Unable to preprocess "' + self.filename + '"')
+        while self.lines:
+            self.current_line += 1
+            line = self.lines[0].strip()
+            self.lines = self.lines[1:]
+            if line.startswith("#"):
+                parts = line[1:].split('"')
+                self.current_line = int(parts[0].strip())-1
+                self.current_file = parts[1]
+            else:
+                return line
+        return None
+
+    # Get more tokens from the input lines and put them on the token stack
+    def fillTokenStack(self):
+        line = self.getLine()
+        while line == "":
+            line = self.getLine()
+        while line:
+            match = re.match('^([A-Za-z0-9_]+)|(["][^"]*["])|.', line)
+            if match:
+                token = match.group(0)
+                if not token in [" ", "\t"]:
+                    if token[0] == '"':
+                        self.tokens.append(token[1:-1])
+                    else:
+                        self.tokens.append(token)
+                line = line[len(token):]
+
+    # Get the next input token
+    def getToken(self):
+        if not self.tokens:
+            self.fillTokenStack()
+        if self.tokens:
+            token = self.tokens[0]
+            self.tokens = self.tokens[1:]
+        else:
+            token = ""
+        return token
+
+#
+# Implementation of a recursive descent parser for reading Octeon component
+# config files.
+#
+class Config:
+    #
+    def __init__(self):
+        self.sections = []          # Sections loaded from the *.config files
+        self.current_filename = ""  # Name of the file we are currently working on
+        self.reader = None          # Tokenizer in use
+        self.defines = []           # List of defines to be written to the header
+        self.fau8 = []              # List of 8 byte FAU registers in use
+        self.fau4 = []              # List of 4 byte FAU registers in use
+        self.fau2 = []              # List of 2 byte FAU registers in use
+        self.fau1 = []              # List of 1 byte FAU registers in use
+        self.scratch = []           # List of scratch registers in use. Each scratch contains its location
+        self.scratch_end = 0        # Location of the first free scratch memory
+        self.fpa = []               # FIXME
+        self.names = []             # List of names encountered
+
+    # Raise a parse error exception for the current file and line. The supplied
+    # message is the reason the exception is being raised
+    def parseError(self, message):
+        if (self.reader):
+            raise ParseError(self.reader.current_file, self.reader.current_line, message)
+        else:
+            raise ParseError(self.current_filename, 0, message)
+
+    # Setup the tokenizer to begin reading tokens from the supplied filename
+    def setupTokenizer(self, filename):
+        self.current_filename = filename
+        self.reader = HeaderReader(filename)
+
+    # Get the next input token
+    def getToken(self):
+        token = self.reader.getToken()
+        return token
+
+    # Read a token from input and make sure it matches what we expect
+    def expectToken(self, literal):
+        token = self.getToken()
+        if token != literal:
+            self.parseError('Expected token "' + literal + '", received token "' + token + '".')
+
+    # Read a boolean value (true or false) from the input. Return the state of
+    # the boolean or raise an exception if there isn't a bollean to read.
+    def readBoolean(self):
+        token = self.getToken()
+        if token.lower() in ["true", "yes", "1"]:
+            return 1
+        elif token.lower() in ["false", "no", "0"]:
+            return 0
+        else:
+            self.parseError('Expected "true" or "false", received token "' + token + '".')
+
+    # Read the definition of a #define. The "define" keyword has already been
+    # read and processed. The new define is returned or a parse exception is
+    # raised.
+    def readDefine(self):
+        define = Define(self.getToken())
+        if define.name in self.names:
+            self.parseError('Name "' + define.name + '" already in use.')
+        else:
+            self.names.append(define.name)
+        while 1:
+            token = self.getToken()
+            if token == "description":
+                self.expectToken("=")
+                define.description = self.getToken()
+            elif token == "value":
+                self.expectToken("=")
+                define.value = self.getToken()
+            elif token == ";":
+                return define
+            else:
+                self.parseError('Expected token "description", "value", or ";", received token "' + token + '".')
+
+    # Read the definition of a FPA. The "fpa" keyword has already been
+    # read and processed. The new FPA object is returned or a parse exception
+    # is raised.
+    def readFpa(self):
+        fpa = FpaPool(self.getToken())
+        if fpa.name in self.names:
+            self.parseError('Name "' + fpa.name + '" already in use.')
+        else:
+            self.names.append(fpa.name)
+        while 1:
+            token = self.getToken()
+            if token == "description":
+                self.expectToken("=")
+                fpa.description = self.getToken()
+            elif token == "pool":
+                self.expectToken("=")
+                fpa.pool = int(self.getToken())
+                if (fpa.pool < 0) or (fpa.pool > 7):
+                    self.parseError("FPA pool number (" + str(fpa.pool) + ") must be in the range 0 to 7 inclusive.")
+            elif token == "priority":
+                self.expectToken("=")
+                fpa.priority = int(self.getToken())
+                if (fpa.priority < 1) or (fpa.priority > 8):
+                    self.parseError("FPA priority (" + str(fpa.priority) + ") must be in the range 1 to 8 inclusive.")
+            elif token == "protected":
+                self.expectToken("=")
+                fpa.protected = self.readBoolean()
+            elif token == "size":
+                self.expectToken("=")
+                fpa.size = int(self.getToken())
+                if (fpa.size < 1) or (fpa.size > 65536 / CACHE_LINE_SIZE):
+                    self.parseError("FPA size (" + str(fpa.size) + ") must be in the range 1 to 512 cache lines, inclusive.")
+            elif token == ";":
+                return fpa
+            else:
+                self.parseError('Expected token "description", "pool", "priority", "protected", "size", or ";", received token "' + token + '".')
+
+    # Read the definition of a FAU. The "fau" keyword has already been
+    # read and processed. The new FAU object is returned or a parse exception
+    # is raised.
+    def readFau(self):
+        fau = FauRegister(self.getToken())
+        if fau.name in self.names:
+            self.parseError('Name "' + fau.name + '" already in use.')
+        else:
+            self.names.append(fau.name)
+        while 1:
+            token = self.getToken()
+            if token == "description":
+                self.expectToken("=")
+                fau.description = self.getToken()
+            elif token == "size":
+                self.expectToken("=")
+                fau.size = int(self.getToken())
+                if not fau.size in [1,2,4,8]:
+                    self.parseError("FAU size (" + str(fau.size) + ") must be 1, 2, 4, or 8 bytes.")
+            elif token == "count":
+                self.expectToken("=")
+                fau.count = int(self.getToken())
+            elif token == ";":
+                return fau
+            else:
+                self.parseError('Expected token "description", "size", "count", or ";", received token "' + token + '".')
+
+    # Read the definition of a scratch memory. The "scratch" keyword has already been
+    # read and processed. The new scratch object is returned or a parse
+    # exception is raised.
+    def readScratch(self):
+        scratch = ScratchMemory(self.getToken())
+        if scratch.name in self.names:
+            self.parseError('Name "' + scratch.name + '" already in use.')
+        else:
+            self.names.append(scratch.name)
+        while 1:
+            token = self.getToken()
+            if token == "description":
+                self.expectToken("=")
+                scratch.description = self.getToken()
+            elif token == "size":
+                self.expectToken("=")
+                scratch.size = int(self.getToken())
+                if not scratch.size in [1,2,4,8]:
+                    self.parseError("Scratch size (" + str(scratch.size) + ") must be 1, 2, 4, or 8 bytes.")
+            elif token == "count":
+                self.expectToken("=")
+                scratch.count = int(self.getToken())
+            elif token == "iobdma":
+                self.expectToken("=")
+                scratch.iobdma = self.readBoolean()
+            elif token == "permanent":
+                self.expectToken("=")
+                scratch.permanent = self.readBoolean()
+            elif token == ";":
+                if scratch.iobdma and scratch.size != 8:
+                    self.parseError("Scratch size (" + str(scratch.size) + ") must 8 bytes for iobdma access.")
+                return scratch
+            else:
+                self.parseError('Expected token "description", "size", "count", "iobdma", "permanent", or ";", received token "' + token + '".')
+
+    # Read a section block. The "section" keyword has already been read and
+    # processed. The new section is appended to the Config list or an
+    # exception is raised.
+    def readSection(self):
+        section = Section()
+        self.expectToken("{")
+        while 1:
+            token = self.getToken()
+            if token == "description":
+                section.description = self.getToken()
+            elif token == "define":
+                section.defines.append(self.readDefine())
+            elif token == "fpa":
+                section.fpa.append(self.readFpa())
+            elif token == "fau":
+                section.fau.append(self.readFau())
+            elif token == "scratch":
+                section.scratch.append(self.readScratch())
+            elif token == "}":
+                self.sections.append(section)
+                return
+            else:
+                self.parseError('Expected token "description", "requires", "define", "fpa", "fau", "scratch", or "}", received token "' + token + '".')
+
+    # Read a configuration file and populate the config section list. An
+    # exception is raised on error.
+    def read(self, filename):
+        self.setupTokenizer(filename)
+        token = self.getToken()
+        while token:
+            if token == "cvmxconfig":
+                self.readSection()
+            else:
+                pass
+            token = self.getToken()
+
+    # Write a line with a description as a Doxygen comment
+    def writeLine(self, out, line, description=""):
+        if description:
+            out.write(line.ljust(59) + " /**< " + description + " */")
+        else:
+            out.write(line)
+        out.write("\n")
+
+    # Build the cvmx-config.h for the current configuration
+    def buildHeader(self, out, filename):
+        out.write("#ifndef __CVMX_CONFIG_H__\n")
+        out.write("#define __CVMX_CONFIG_H__\n")
+        out.write("\n")
+        out.write("/**\n")
+        out.write(" * @file " + filename + "\n")
+        out.write(" *\n")
+        out.write(" * Auto generated config file for the Cavium Octeon Executive.\n")
+        out.write(" * This file should not be edited, as it will be overwritten by cvmx-config.\n")
+        out.write(" */\n")
+        out.write("\n")
+        out.write("/************************* Config Specific Defines ************************/\n")
+        for d in self.defines:
+            self.writeLine(out, "#define " + d.name + " " + d.value, d.description)
+        out.write("\n")
+        out.write("/************************* FPA allocation *********************************/\n")
+        out.write("/* Pool sizes in bytes, must be multiple of a cache line */\n")
+        for pool in xrange(8):
+            if len(self.fpa[pool]):
+                out.write("#define CVMX_FPA_POOL_" + str(pool) + "_SIZE (" + str(self.fpa[pool][0].size) + " * CVMX_CACHE_LINE_SIZE)\n")
+            else:
+                out.write("#define CVMX_FPA_POOL_" + str(pool) + "_SIZE (" + str(0) + " * CVMX_CACHE_LINE_SIZE)\n")
+        out.write("\n")
+        out.write("/* Pools in use */\n")
+        for pool in xrange(8):
+            for fpa in self.fpa[pool]:
+                self.writeLine(out, "#define " + fpa.name.ljust(35) + " (" + str(pool) + ")", fpa.description)
+                self.writeLine(out, "#define " + (fpa.name+ "_SIZE").ljust(35) + " CVMX_FPA_POOL_" + str(pool) + "_SIZE")
+        out.write("\n")
+        out.write("/*************************  FAU allocation ********************************/\n")
+        out.write("/* The fetch and add registers are allocated here.  They are arranged\n")
+        out.write("    in order of descending size so that all alignment constraints are\n")
+        out.write("    automatically met.\n")
+        out.write("    The enums are linked so that the following enum continues allocating\n")
+        out.write("    where the previous one left off, so the numbering within each\n")
+        out.write("    enum always starts with zero.  The macros take care of the address\n")
+        out.write("    increment size, so the values entered always increase by 1.\n")
+        out.write("    FAU registers are accessed with byte addresses. */\n")
+        out.write("\n")
+        out.write("#define CVMX_FAU_REG_64_ADDR(x) ((x <<3) + CVMX_FAU_REG_64_START)\n")
+        out.write("typedef enum\n")
+        out.write("{\n")
+        out.write("    " + "CVMX_FAU_REG_64_START".ljust(30) + " = 0, \n")
+        loc = 0
+        for fau in self.fau8:
+            self.writeLine(out, "    " + fau.name.ljust(30) + " = CVMX_FAU_REG_64_ADDR(" + str(loc) + "),", fau.description)
+            if fau.count > 1:
+                out.write("        /* Array of " + str(fau.count) + " */\n")
+            loc += fau.count
+        out.write("    " + "CVMX_FAU_REG_64_END".ljust(30) + " = CVMX_FAU_REG_64_ADDR(" + str(loc) + "),\n")
+        out.write("} cvmx_fau_reg_64_t;\n")
+        out.write("\n")
+        out.write("#define CVMX_FAU_REG_32_ADDR(x) ((x <<2) + CVMX_FAU_REG_32_START)\n")
+        out.write("typedef enum\n")
+        out.write("{\n")
+        out.write("    " + "CVMX_FAU_REG_32_START".ljust(30) + " = CVMX_FAU_REG_64_END,\n")
+        loc = 0
+        for fau in self.fau4:
+            self.writeLine(out, "    " + fau.name.ljust(30) + " = CVMX_FAU_REG_32_ADDR(" + str(loc) + "),", fau.description)
+            if fau.count > 1:
+                out.write("        /* Array of " + str(fau.count) + " */\n")
+            loc += fau.count
+        out.write("    " + "CVMX_FAU_REG_32_END".ljust(30) + " = CVMX_FAU_REG_32_ADDR(" + str(loc) + "),\n")
+        out.write("} cvmx_fau_reg_32_t;\n")
+        out.write("\n")
+        out.write("#define CVMX_FAU_REG_16_ADDR(x) ((x <<1) + CVMX_FAU_REG_16_START)\n")
+        out.write("typedef enum\n")
+        out.write("{\n")
+        out.write("    " + "CVMX_FAU_REG_16_START".ljust(30) + " = CVMX_FAU_REG_32_END,\n")
+        loc = 0
+        for fau in self.fau2:
+            self.writeLine(out, "    " + fau.name.ljust(30) + " = CVMX_FAU_REG_16_ADDR(" + str(loc) + "),", fau.description)
+            if fau.count > 1:
+                out.write("        /* Array of " + str(fau.count) + " */\n")
+            loc += fau.count
+        out.write("    " + "CVMX_FAU_REG_16_END".ljust(30) + " = CVMX_FAU_REG_16_ADDR(" + str(loc) + "),\n")
+        out.write("} cvmx_fau_reg_16_t;\n")
+        out.write("\n")
+        out.write("#define CVMX_FAU_REG_8_ADDR(x) ((x) + CVMX_FAU_REG_8_START)\n")
+        out.write("typedef enum {\n")
+        out.write("    " + "CVMX_FAU_REG_8_START".ljust(30) + " = CVMX_FAU_REG_16_END,\n")
+        loc = 0
+        for fau in self.fau1:
+            self.writeLine(out, "    " + fau.name.ljust(30) + " = CVMX_FAU_REG_8_ADDR(" + str(loc) + "),", fau.description)
+            if fau.count > 1:
+                out.write("        /* Array of " + str(fau.count) + " */\n")
+            loc += fau.count
+        out.write("    " + "CVMX_FAU_REG_8_END".ljust(30) + " = CVMX_FAU_REG_8_ADDR(" + str(loc) + "),\n")
+        out.write("} cvmx_fau_reg_8_t;\n")
+        out.write("\n")
+        out.write("/* The name CVMX_FAU_REG_AVAIL_BASE is provided to indicate the first available\n")
+        out.write("   FAU address that is not allocated in cvmx-config.h. This is 64 bit aligned. */\n")
+        out.write("#define CVMX_FAU_REG_AVAIL_BASE ((CVMX_FAU_REG_8_END + 0x7) & (~0x7ULL))\n")
+        out.write("#define CVMX_FAU_REG_END (" + str(NUM_FAU_BYTES) + ")\n")
+        out.write("\n")
+        out.write("/********************** scratch memory allocation *************************/\n")
+        out.write("/* Scratchpad memory allocation.  Note that these are byte memory addresses.\n")
+        out.write("    Some uses of scratchpad (IOBDMA for example) require the use of 8-byte\n")
+        out.write("    aligned addresses, so proper alignment needs to be taken into account. */\n")
+        out.write("\n")
+        for scratch in self.scratch:
+            self.writeLine(out, "#define " + scratch.name.ljust(30) + " (" + str(scratch.location) + ")", scratch.description)
+            if scratch.count > 1:
+                out.write("        /* Array of " + str(scratch.count) + " */\n")
+        self.writeLine(out, "#define " + "CVMX_SCR_REG_AVAIL_BASE".ljust(30) + " (" + str(self.scratch_end) + ")", "First location available after cvmx-config.h allocated region.")
+        out.write("\n")
+        out.write("#endif /* __CVMX_CONFIG_H__ */\n")
+        out.write("\n")
+
+    # Write out the new header file only if it has changed
+    def writeHeader(self, filename):
+        memFile = StringIO.StringIO()
+        self.buildHeader(memFile, filename)
+        newHeader = memFile.getvalue()
+        memFile.close()
+        try:
+            f = open(filename, "r")
+            oldHeader = f.read()
+            f.close()
+        except:
+            oldHeader = ""
+        f = open(filename, "w")
+        f.write(newHeader)
+        f.close()
+
+    # Allocate and check the defines
+    def allocateDefines(self):
+        for s in self.sections:
+            for d in s.defines:
+                self.defines.append(d)
+
+    # Allocate the FAU registers and validate them
+    def allocateFau(self):
+        # Sort the FAU registers into four size buckets
+        for s in self.sections:
+            for fau in s.fau:
+                if fau.size == 8:
+                    self.fau8.append(fau)
+                elif fau.size == 4:
+                    self.fau4.append(fau)
+                elif fau.size == 2:
+                    self.fau2.append(fau)
+                elif fau.size == 1:
+                    self.fau1.append(fau)
+                else:
+                    raise Exception("Internal Error")
+        # Go through and add up the FAU usage
+        fau_count = 0
+        fau_string = "\n\n"
+        for list in [self.fau8, self.fau4, self.fau2, self.fau1]:
+            for fau in list:
+                fau_count += fau.size * fau.count
+                fau_string += fau.name + " requires " + str(fau.size * fau.count) + " bytes (total=" + str(fau_count) + ")\n"
+        # Make sure we have enough room for the FAU registers
+        if fau_count > NUM_FAU_BYTES:
+            raise ConfigError("Too many fetch and add registers defined. The " +
+                              "configuration needs " + str(fau_count) + " FAU bytes, " +
+                              "but the FAU unit only has " + str(NUM_FAU_BYTES) + " bytes." + fau_string)
+
+    # Allocate and validate the scratch memory
+    def allocateScratch(self):
+        # Divide the scratch memory locations into four groups
+        # 1) Permenent IOBDMA locations - linear list
+        # 2) Temporary IOBDMA locations - array indexed by section of linear lists
+        # 3) Permanent locations not used by IOBDMA - linear list
+        # 4) Temporary locations not used by IOBDMA - array indexed by section of linear lists
+        perm_iobdma = []
+        temp_iobdma = []
+        perm = []
+        temp = []
+        for s in self.sections:
+            # Add this section to each of the temporary arrays
+            section_temp_iobdma = []
+            temp_iobdma.append(section_temp_iobdma)
+            section_temp = []
+            temp.append(section_temp)
+            # Loop through the scratch in this section and catagorize them
+            for scratch in s.scratch:
+                if scratch.permanent:
+                    if scratch.iobdma:
+                        perm_iobdma.append(scratch)
+                    else:
+                        perm.append(scratch)
+                else:
+                    if scratch.iobdma:
+                        section_temp_iobdma.append(scratch)
+                    else:
+                        section_temp.append(scratch)
+        # Permanent IOBDMA locations have the highest priority for allocation
+        # These are easy since they are all the same size (8 bytes)
+        scratch_count = 0
+        scratch_string = "\n\n"
+        for scratch in perm_iobdma:
+            scratch.location = scratch_count
+            scratch_count += scratch.size * scratch.count
+            scratch_string += scratch.name + "(permanent, iobdma) requires " + str(scratch.size * scratch.count) + " bytes (total=" + str(scratch_count) + ")\n"
+            self.scratch.append(scratch)
+        # Temporary IOBDMAs are next. Each section uses the same memory as all
+        # the other sections. After all sections we need to move forward by the
+        # size of the largest section
+        beginning_iobdma_temp = scratch_count
+        max_iobdma_temp = beginning_iobdma_temp
+        for section in temp_iobdma:
+            scratch_count = beginning_iobdma_temp
+            for scratch in section:
+                scratch.location = scratch_count
+                scratch_count += scratch.size * scratch.count
+                scratch_string += scratch.name + "(temporary, iobdma) requires " + str(scratch.size * scratch.count) + " bytes (total=" + str(scratch_count) + ")\n"
+                self.scratch.append(scratch)
+            if scratch_count > max_iobdma_temp:
+                max_iobdma_temp = scratch_count
+        # Make sure we haven't overflowed the maximum size for the IOBDMA area
+        if max_iobdma_temp > NUM_IOBDMA_BYTES:
+            raise ConfigError("Too many scratch iobdma memory locations. The " +
+                              "configuration needs " + str(max_iobdma_temp) + " iobdma bytes, " +
+                              "but the hardware only supports " + str(NUM_IOBDMA_BYTES) + " bytes." + scratch_string)
+        # Allocate the permanent, but not IOBDMA scratch next. These can be
+        # variable size, so do them biggest to smallest in order to preserve
+        # alignment
+        scratch_count = max_iobdma_temp
+        for size in [8,4,2,1]:
+            for scratch in perm:
+                if scratch.size == size:
+                    scratch.location = scratch_count
+                    scratch_count += scratch.size * scratch.count
+                    scratch_string += scratch.name + "(permanent) requires " + str(scratch.size * scratch.count) + " bytes (total=" + str(scratch_count) + ")\n"
+                    self.scratch.append(scratch)
+        # We may be mis aligned after the variable sized scratch above. Fixup
+        # our location to be 8 byte aligned again
+        beginning_temp = (((scratch_count + 7) >> 3) << 3)
+        # Finally we need to allocate temporary scratch not for IOBDMA. Each
+        # section needs to allocate in decreasing size order
+        max_temp = beginning_temp
+        for section in temp:
+            scratch_count = beginning_temp
+            for size in [8,4,2,1]:
+                for scratch in section:
+                    if scratch.size == size:
+                        scratch.location = scratch_count
+                        scratch_count += scratch.size * scratch.count
+                        scratch_string += scratch.name + "(temporary) requires " + str(scratch.size * scratch.count) + " bytes (total=" + str(scratch_count) + ")\n"
+                        self.scratch.append(scratch)
+            if scratch_count > max_temp:
+                max_temp = scratch_count
+        # Remember where the end of the scratch area is
+        self.scratch_end = max_temp
+        # Make sure we haven't overflowed the maximum scratch area size
+        if max_temp > MAX_SCRATCH_MEMORY:
+            raise ConfigError("Too many scratch memory locations. The " +
+                              "configuration needs " + str(max_temp) + " bytes, " +
+                              "but the hardware only supports " + str(MAX_SCRATCH_MEMORY) + " bytes." + scratch_string)
+
+    # Allocate and validate the FPA pools
+    def allocateFpa(self):
+        # unallocated is a list of items that need to be assigned to a FPA
+        # pool. Each item is a list of FPA objects that can all be merged into
+        # the one FPA pool.
+        unallocated = []
+        # fpa_pools is a 8 element array. Each element in the array is the list
+        # of FPA objects that will be merged into the pool associated with the
+        # array index
+        fpa_pools = [[] for x in range(8)]
+        # Search through in priority order so important FPA objects tend to get
+        # lower FPA pool numbers
+        for priority in xrange(1,9):
+            for section in self.sections:
+                for fpa in section.fpa:
+                    if fpa.priority == priority:
+                        if fpa.pool != -1:
+                            # we have a predefined pool number. Make sure we
+                            # either have it to ourselves or can merge with
+                            # whomever already has it
+                            if len(fpa_pools[fpa.pool]):
+                                if fpa.isMergable(fpa_pools[fpa.pool][0]):
+                                    fpa_pools[fpa.pool].append(fpa)
+                                else:
+                                    raise ConfigError("FPA pool " + fpa.name + " is configured for pool " +
+                                                    str(fpa.pool) + " which is already used by FPA pool " +
+                                                    fpa_pools[fpa.pool][0].name + ". The two pools cannot be merged.")
+                            else:
+                                fpa_pools[fpa.pool].append(fpa)
+                        else:
+                            # No predefined pool number. Go through the
+                            # unallocated pools and try and merge with an
+                            # existing one
+                            for try_merge in unallocated:
+                                if fpa.isMergable(try_merge[0]):
+                                    try_merge.append(fpa)
+                                    fpa = None
+                                    break
+                            # No merge was possible, append to the list
+                            if fpa:
+                                unallocated.append([fpa])
+        # Look for places to put unallocated pools
+        for pool in xrange(8):
+            if (len(fpa_pools[pool]) == 0) and (len(unallocated) > 0):
+                fpa_pools[pool].extend(unallocated[0])
+                unallocated = unallocated[1:]
+                for fpa in fpa_pools[pool]:
+                    fpa.pool = pool
+        # Tell the user if we still have unallocated pools
+        if len(unallocated):
+            raise ConfigError("Out of FPA pools")
+        self.fpa = fpa_pools
+
+#
+# Processing starts here
+#
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print "Usage:"
+        print "    cvmx-config app-config.h"
+        print
+        print "This script generates a cvmx-config.h file based on the supplied"
+        print "application configuration requirements."
+        print
+        sys.exit(-1)
+    try:
+        cfg = Config()
+        for arg in sys.argv[1:]:
+            cfg.read(arg)
+    except ParseError, e:
+        e.display()
+        sys.exit(-1)
+    try:
+        cfg.allocateDefines()
+        cfg.allocateFau()
+        cfg.allocateScratch()
+        cfg.allocateFpa()
+    except ConfigError, e:
+        e.display()
+        sys.exit(-1)
+    try:
+        os.mkdir("config")
+    except:
+        pass
+    cfg.writeHeader(OUTPUT_FILE)
+

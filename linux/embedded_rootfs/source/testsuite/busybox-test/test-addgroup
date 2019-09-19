@@ -1,0 +1,27 @@
+#!/bin/sh
+source ./functions.sh
+                                                                                
+#verify /etc/group exist, if not create file
+test -f /etc/group
+if [ $? != 0 ];
+then
+assert echo "# first line is for root" > /etc/group
+fi
+                                                                                
+# adding  the users
+assert addgroup sdk-test-user0
+assert addgroup sdk-test-user1
+                                                                                
+# verify existance of created user entries
+assert grep -q 'sdk-test-user0' /etc/group
+assert grep -q 'sdk-test-user1' /etc/group
+                                                                                
+# deleting the groups, assuming sdk-test-user0 is root
+assert delgroup sdk-test-user0
+assert delgroup sdk-test-user1
+                                                                                
+# make sure the groups are deleted from /etc/group
+grep -q 'sdk-test-user0' /etc/group
+if [ $? -ne 1 ]; then exit 1; fi
+grep -q 'sdk-test-user1' /etc/group
+if [ $? -ne 1 ]; then exit 1; fi

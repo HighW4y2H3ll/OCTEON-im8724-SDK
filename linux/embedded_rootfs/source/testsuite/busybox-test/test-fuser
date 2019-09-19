@@ -1,0 +1,10 @@
+#!/bin/sh
+source ./functions.sh
+
+fuser -4 /usr/sbin/telnetd | grep -q `pidof telnetd`
+require [ $? -eq 0 ]
+
+fuser -6 /usr/sbin/telnetd | grep -q `pidof telnetd`
+require [ $? -eq 0 ]
+
+assert fuser -m /bin/sh > $0.log

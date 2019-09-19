@@ -1,0 +1,15 @@
+#!/bin/sh
+source ./functions.sh
+
+ping -c 3 127.0.0.1 > /dev/null &
+require [ $? = 0 ]
+
+ping -c 3 -s 120 127.0.0.1 > $0.log
+require [ $? = 0 ]
+
+for i in `grep -c 128 $0.log | awk '{ print $1 }'`
+do
+require [ $i -eq 3 ]
+done
+
+

@@ -1,0 +1,332 @@
+/dts-v1/;
+/*
+ * Cavium Inc. (Small) NIC10e board
+ */
+/ {
+	model = "cavium,snic10e";
+	compatible = "cavium,snic10e";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&ciu>;
+
+	soc@0 {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges; /* Direct mapping */
+
+		ciu: interrupt-controller@1070000000000 {
+			compatible = "cavium,octeon-3860-ciu";
+			interrupt-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) Controller register (0 or 1)
+			 * 2) Bit within the register (0..63)
+			 */
+			#interrupt-cells = <2>;
+			reg = <0x10700 0x00000000 0x0 0x7000>;
+		};
+
+		gpio: gpio-controller@1070000000800 {
+			#gpio-cells = <2>;
+			compatible = "cavium,octeon-3860-gpio";
+			reg = <0x10700 0x00000800 0x0 0x100>;
+			gpio-controller;
+			/* Interrupts are specified by two parts:
+			 * 1) GPIO pin number (0..15)
+			 * 2) Triggering (1 - edge rising
+			 *		  2 - edge falling
+			 *		  4 - level active high
+			 *		  8 - level active low)
+			 */
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			/* The GPIO pins connect to 16 consecutive CUI bits */
+			interrupts = <0 16>; /* <0 17> <0 18> <0 19>
+				     <0 20> <0 21> <0 22> <0 23>
+				     <0 24> <0 25> <0 26> <0 27>
+				     <0 28> <0 29> <0 30> <0 31>; */
+		};
+
+		smi0: mdio@1180000001800 {
+			compatible = "cavium,octeon-3860-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0x00001800 0x0 0x40>;
+
+			mphy0: ethernet-phy-nexus@0 {
+				reg = <0>;
+				/* The Vitesse VSC8488 is a dual-PHY where
+				 * some of the configuration is common across
+				 * both of the phy devices such as the reset
+				 * line and the base MDIO address.
+				 */
+				compatible = "vitesse,vsc8488-nexus", "ethernet-phy-nexus";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				ranges;
+
+				/* Hardware reset signal */
+				reset = <&gpio 9 0>;
+
+				phy0: ethernet-phy@1 {
+					/* Absolute address */
+					reg = <0x1>;
+					compatible = "vitesse,vsc8488", "ethernet-phy-ieee802.3-c45";
+					interrupt-parent = <&gpio>;
+					interrupts = <13 8>;
+
+					mod_abs = <9>;
+					/* TX Fault GPIO line */
+					tx_fault = <8>;
+					/* GPIO that enables output */
+					txon = <10>;
+					/* INT A GPIO output */
+					inta = <5>;
+					/* Optional equalization value to
+					 * program into the PHY XS XAUI Rx
+					 * Equalization control register.
+					 * It is broken up into one nibble for
+					 * each lane with lane 0 using bits
+					 * 12 - 15.
+					 * Use the following table:
+					 *	0x0 - 0dB
+					 *	0x1 - 1.41dB
+					 *	0x2 - 2.24dB
+					 *	0x3 - 2.83dB
+					 *	0x5 - 4.48dB
+					 *	0x6 - 5.39dB
+					 *	0x7 - 6.07dB
+					 *	0x9 - 6.18dB
+					 *	0xA - 7.08dB (default)
+					 *	0xB - 7.79dB
+					 *	0xD - 9.96dB
+					 *	0xE - 10.84dB
+					 *	0xF - 11.55dB
+					 *
+					 * This is board specific and should
+					 * only be defined by the hardware
+					 * vendor.
+					 */
+					vitesse,rx_equalization = <0x0000>;
+					/* Optional transmit pre-emphasis
+					 * control.  This sets the
+					 * PHY XS XAUI TX pre-emphasis control
+					 * register.
+					 *
+					 * It uses bits 13-14 for lane 0,
+					 * 10-11 for lane 1, 7-8 for lane 2
+					 * and 4-5 for lane 3.
+					 *
+					 * Bits 2-3 are the LOS threshold
+					 * setting and bit 1 enables
+					 * the XAUI output high swing mode.
+					 *
+					 * Use the following table for
+					 * pre-emphasis:
+					 * 0b00 - 0dB
+					 * 0b01 - 2.5dB
+					 * 0b10 - 6dB (default)
+					 * 0b11 - 12dB
+					 *
+					 * Use the following table for the LOS
+					 * threshold setting:
+					 *
+					 * 0b00 - 50mV - 175mV (default)
+					 * 0b01 - 60mV - 185mV
+					 * 0b10 - 70mV - 195mV
+					 * 0b11 - 80mV - 205mV
+					 */
+					vitesse,tx_preemphasis = <0x0000>;
+
+					/* TX output driver slew rate control
+					 * is bits 8-11 where 0x0 is the minimum
+					 * and 0xF is the maximum.
+					 * Default is 0xA.
+					 *
+					 * The TX output driver C(-1)
+					 * coefficient is bits 0-4 where
+					 * 0b00000 is the minimum (-4ma) and
+					 * 0b11111 is the maximum (4ma).  The
+					 * default 0x 0b01111.
+					 */
+					vitesse,txout_driver_ctrl1 = <0x0A0F>;
+
+					/* The TX output driver C(0) coefficient
+					 * is bits 8-12 with 0b00000 being the
+					 * minimum (0mA) and 0b11111 being
+					 * the maximum (16mA). The default is
+					 * 0b10011
+					 *
+					 * The C(+1) coefficient is bits 0-5
+					 * with 0b000000 being the minimum
+					 * (-0.25mA) and 0b111111 being the
+					 * maximum (-16mA).  The default is
+					 * 0b000000.
+					 */
+					vitesse,txout_driver_ctrl2 = <0x1606>;
+					/* The Vitesse 10G PHY does not
+					 * automatically read the SFP EEPROM
+					 * so the host needs to do it to put
+					 * the PHY in the proper mode for
+					 * copper or optical.
+					 */
+					sfp-eeprom = <&sfp0>;
+	                        };
+			};
+		};
+
+		pip: pip@11800a0000000 {
+			compatible = "cavium,octeon-3860-pip";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x11800 0xa0000000 0x0 0x2000>;
+
+			interface@0 {
+				compatible = "cavium,octeon-3860-pip-interface";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>; /* interface */
+
+				ethernet@0 {
+					compatible = "cavium,octeon-3860-pip-port";
+					reg = <0x0>; /* Port */
+					local-mac-address = [ 00 00 00 00 00 00 ];
+					phy-handle = <&phy0>;
+				};
+			};
+		};
+
+		twsi0: i2c@1180000001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001000 0x0 0x200>;
+			interrupts = <0 45>;
+			/* NOTE: In order to get the proper delay between
+			 * i2c bus transactions for the SFP we need to either
+			 * slow the bus down to no more than 30KHz or else
+			 * somehow insert a delay between transactions.  Only
+			 * U-Boot is capable of inserting the appropriate delay
+			 * at this time.
+			 */
+			clock-frequency = <30000>;
+
+			tmp@4c {
+				compatible = "ti,tmp421";
+				reg = <0x4c>;
+			};
+			sfp0: eeprom@50 {
+				compatible = "atmel,24c01";
+				reg = <0x50>;
+			};
+			tlv-eeprom@53 {
+				compatible = "atmel,24c256";
+				reg = <0x53>;
+				pagesize = <64>;
+			};
+		};
+
+		twsi1: i2c@1180000001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "cavium,octeon-3860-twsi";
+			reg = <0x11800 0x00001200 0x0 0x200>;
+			interrupts = <0 59>;
+			clock-frequency = <100000>;
+		};
+
+		uart0: serial@1180000000800 {
+			compatible = "cavium,octeon-3860-uart","ns16550";
+			reg = <0x11800 0x00000800 0x0 0x400>;
+			clock-frequency = <0>;
+			current-speed = <115200>;
+			reg-shift = <3>;
+			interrupts = <0 34>;
+		};
+
+		bootbus: bootbus@1180000000000 {
+			compatible = "cavium,octeon-3860-bootbus";
+			reg = <0x11800 0x00000000 0x0 0x200>;
+			/* The chip select number and offset */
+			#address-cells = <2>;
+			/* The size of the chip select region */
+			#size-cells = <1>;
+         ranges = <0 0  0       0x1f400000  0xc00000>,
+                  <1 0  0x10000 0x30000000  0>,
+                  <2 0  0x10000 0x40000000  0>,
+                  <3 0  0x10000 0x50000000  0>,
+                  <4 0  0x10000 0x60000000  0>,
+                  <5 0  0x10000 0x70000000  0>,
+                  <6 0  0x10000 0x80000000  0>,
+                  <7 0  0x10000 0x90000000  0>;
+
+			cavium,cs-config@0 {
+				compatible = "cavium,octeon-3860-bootbus-config";
+				cavium,cs-index = <0>;
+				cavium,t-adr  = <10>;
+				cavium,t-ce   = <50>;
+				cavium,t-oe   = <50>;
+				cavium,t-we   = <35>;
+				cavium,t-rd-hld = <25>;
+				cavium,t-wr-hld = <35>;
+				cavium,t-pause  = <0>;
+				cavium,t-wait   = <300>;
+				cavium,t-page   = <25>;
+				cavium,t-rd-dly = <0>;
+
+				cavium,pages     = <0>;
+				cavium,bus-width = <8>;
+			};
+			flash0: nor@0,0 {
+				compatible = "cfi-flash";
+				reg = <0 0 0x800000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "bootloader";
+					reg = <0x0 0x1c0000>;
+					read-only;
+				};
+				partition@1c0000 {
+					label = "kernel";
+					reg = <0x1c0000 0x63e000>;
+				};
+				partition@7fe000 {
+					label = "environment";
+					reg = <0x7fe0000 0x2000>;
+					read-only;
+				};
+			};
+		};
+
+		dma0: dma-engine@1180000000100 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000100 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+		dma1: dma-engine@1180000000108 {
+			compatible = "cavium,octeon-5750-bootbus-dma";
+			reg = <0x11800 0x00000108 0x0 0x8>;
+			interrupts = <0 63>;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+		d1 {
+			label = "BOOT-STATUS";
+			gpios = <&gpio 10 1>;
+			default-state = "keep";
+		};
+	};
+
+	aliases {
+		pip = &pip;
+		smi0 = &smi0;
+		twsi0 = &twsi0;
+		twsi1 = &twsi1;
+		uart0 = &uart0;
+		flash0 = &flash0;
+	};
+ };

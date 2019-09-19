@@ -1,0 +1,313 @@
+.\" $Id: ddd.man.in 14384 2006-04-11 21:46:04Z cchavva $ -*-nroff-*-
+.\" DDD manual page
+.\" ddd/ddd.man.  Generated from ddd.man.in by configure.
+.\"
+.\" Copyright (C) 1999-2001 Universitaet Passau, Germany.
+.\" Copyright (C) 2001-2004 Free Software Foundation, Inc.
+.\" Written by Andreas Zeller <zeller@gnu.org>.
+.\" 
+.\" This file is part of DDD.
+.\" 
+.\" DDD is free software; you can redistribute it and/or modify it under
+.\" the terms of the GNU General Public License as published by the Free
+.\" Software Foundation; either version 2 of the License, or (at your
+.\" option) any later version.
+.\" 
+.\" DDD is distributed in the hope that it will be useful, but WITHOUT ANY
+.\" WARRANTY; without even the implied warranty of MERCHANTABILITY or
+.\" FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+.\" for more details. 
+.\" 
+.\" You should have received a copy of the GNU General Public License
+.\" along with DDD -- see the file COPYING.  If not, write to the Free
+.\" Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+.\" MA 02111-1307, USA.
+.\" 
+.\" DDD is the data display debugger.
+.\" For details, see the DDD World-Wide-Web page, 
+.\" `http://www.gnu.org/software/ddd/',
+.\" or send a mail to the DDD developers <ddd@gnu.org>.
+.\"
+.TH ddd 1 "2001\-01\-15" "DDD 3.3.11" "GNU Tools"
+.SH "NAME"
+ddd - The Data Display Debugger
+.PSPIC ../../../src/ddd/ddd/PICS/dddlogo.eps 10cm
+.\"
+.\" ---------------
+.SH "SYNOPSIS"
+.\" ---------------
+.na
+.TP
+.B ddd
+.RB "[\|" \-\-help "\|]"
+.RB "[\|" \-\-gdb "\|]"
+.RB "[\|" \-\-dbx "\|]"
+.RB "[\|" \-\-ladebug "\|]"
+.RB "[\|" \-\-wdb "\|]"
+.RB "[\|" \-\-xdb "\|]"
+.RB "[\|" \-\-jdb "\|]"
+.RB "[\|" \-\-pydb "\|]"
+.RB "[\|" \-\-perl "\|]"
+.RB "[\|" \-\-debugger
+.I name\c
+\&\|]
+.RB "[\|" \-\- "[" r "]" host " [\|[\|"\c
+.I username\c
+.B @\c
+\&]\c
+.I hostname\c
+\&\|]\|]
+.RB "[\|" \-\-trace "\|]"
+.RB "[\|" \-\-version "\|]"
+.RB "[\|" \-\-configuration "\|]"
+.RB "[\|"\c
+.I options...\c
+\&\|]
+.RB "[\|" \c
+.I prog\c
+.RB "[\|" \c
+.I core\c
+\&\||\|\c
+.I procID\c
+\&\|]\|]
+.ad b
+.TP
+but usually just
+.TP
+.B ddd
+.I program
+.ad b
+.\"
+.\" ---------------
+.SH "DESCRIPTION"
+.\" ---------------
+.\"
+\s-1DDD\s+1 is a graphical front-end for \s-1GDB\s+1 and other
+command-line debuggers.  Using DDD, you can see what is going on
+\*(lqinside\*(rq another program while it executes\(em\&or what another
+program was doing at the moment it crashed.
+.PP
+\s-1DDD\s+1 can do four main kinds of things (plus other things in support of
+these) to help you catch bugs in the act:
+.IP \(bu 2
+Start your program, specifying anything that might affect its
+behavior.
+.br
+.IP \(bu 2
+Make your program stop on specified conditions.
+.br
+.IP \(bu 2
+Examine what has happened, when your program has stopped.
+.br
+.IP \(bu 2
+Change things in your program, so you can experiment with correcting the
+effects of one bug and go on to learn about another.
+.PP
+\*(lqClassical\*(rq \s-1UNIX\s+1 debuggers such as the \s-1GNU\s+1
+debugger (\s-1GDB\s+1) provide a command-line interface and a
+multitude of commands for these and other debugging purposes.
+\s-1DDD\s+1 is a comfortable \fIgraphical user interface\fR around
+an inferior \s-1GDB\s+1, \s-1DBX\s+1, Ladebug, \s-1XDB\s+1,
+\s-1JDB\s+1, Python debugger, or Perl debugger.
+.PP
+\s-1DDD\s+1 is invoked with the shell command \fBddd\fR.  You can
+open a program to be debugged using `\fBFile\(->Open Program\fR' (the
+`\fBOpen Program\fR' item in the `\fBFile\fR' menu.  You can get
+online help at any time using the `\fBHelp\fR' menu; for the first
+steps, try `\fBHelp\(->What Now?\fR'.  Quit \s-1DDD\s+1 using
+`\fBFile\(->Exit\fR'.
+.PP
+More information on \s-1DDD\s+1 is contained in the \s-1DDD\s+1
+Manual.  You can read the text-only version in \s-1DDD\s+1 (via
+`\fBHelp\(->DDD Reference\fR') or in Emacs (as Info file).
+Full-fledged HTML, PostScript, and PDF versions are available online
+via the \s-1DDD\s+1 WWW page,
+.sp
+.br
+  \fBhttp://www.gnu.org/software/ddd/\fR
+.br
+.sp
+.\"
+.\" ---------------
+.SH "OPTIONS"
+.\" ---------------
+.\"
+These are the most important options used when starting \s-1DDD\s+1.
+All options may be abbreviated, as long as they are unambiguous;
+single dashes may also be used.  \s-1DDD\s+1 also understands the
+usual X options such as `\fB\-display\fR' or `\fB\-geometry\fR'; see
+\fBX(1)\fR for details.
+.PP
+All arguments and options not handled by \s-1DDD\s+1 are passed to
+the inferior debugger.  To pass an option to the inferior debugger
+that conflicts with an X option, or with a \s-1DDD\s+1 option listed
+here, use the `\fB\-\-debugger\fR' option, below.
+.PP
+.\"
+.TP
+.B \-\-configuration
+Show the \s-1DDD\s+1 configuration settings and exit.
+.TP
+.B \-\-dbx
+Run the \s-1DBX\s+1 debugger as inferior debugger.
+.TP
+.B \-\-debugger \fIname\fR
+Invoke the inferior debugger \fIname\fR.  This is useful if you have
+several debugger versions around, or if the inferior debugger cannot
+be invoked as `\fBgdb\fR', `\fBdbx\fR', `\fBxdb\fR', `\fBjdb\fR',
+`\fBpydb\fR', or `\fBperl\fR' respectively.
+.br
+This option can also be used to pass options to the inferior debugger
+that would otherwise conflict with \s-1DDD\s+1 options.  For
+instance, to pass the option `\fB\-d \fIdirectory\fR' to \s-1XDB\s+1,
+use:
+.sp
+.br
+  \fBddd\ \-\-debugger "xdb \-d \fIdirectory\fB"\fR
+.br
+.sp
+If you use the `\fB\-\-debugger\fR' option, be sure that the type of
+inferior debugger is specified as well.  That is, use one of the
+options `\fB\-\-gdb\fR', `\fB\-\-dbx\fR', `\fB\-\-xdb\fR',
+`\fB\-\-jdb\fR'\, `\fB\-\-pydb\fR', or `\fB\-\-perl\fR' (unless the
+default setting works fine).
+.TP
+.B \-\-gdb
+Run the \s-1GDB\s+1 debugger as inferior debugger.
+.TP
+.B \-\-help
+Give a list of frequently used options.  Show options of the
+inferior debugger as well.
+.TP
+.B \-\-host \fR[\|\fIusername\fB@\fR\|]\|\fIhostname\fR
+Invoke the inferior debugger directly on the remote host
+\fIhostname\fR.  If \fIusername\fR is given and the `\fB\-\-login\fR'
+option is not used, use \fIusername\fR as remote user name.
+.TP
+.B \-\-jdb
+Run \s-1JDB\s+1 as inferior debugger.
+.TP
+.B \-\-ladebug
+Run Ladebug as inferior debugger.
+.TP
+.B \-\-perl
+Run Perl as inferior debugger.
+.TP
+.B \-\-pydb
+Run \s-1PYDB\s+1 as inferior debugger.
+.TP 
+.B \-\-rhost \fR[\|\fIusername\fB@\fR\|]\|\fIhostname\fR
+Run the inferior debugger interactively on the remote host
+\fIhostname\fR.  If \fIusername\fR is given and the `\fB\-\-login\fR'
+option is not used, use \fIusername\fR as remote user name.
+.TP
+.B \-\-trace
+Show the interaction between \s-1DDD\s+1 and the inferior debugger
+on standard error.  This is useful for debugging \s-1DDD\s+1.  If
+`\fB\-\-trace\fR' is not specified, this information is written into
+`\fB$HOME/.ddd/log\fR', such that you can also do a post-mortem
+debugging.
+.TP
+.B \-\-version
+Show the \s-1DDD\s+1 version and exit.
+.TP
+.B \-\-wdb
+Run the \s-1WDB\s+1 debugger as inferior debugger.
+.TP
+.B \-\-xdb
+Run \s-1XDB\s+1 as inferior debugger.
+.PP
+A full list of options, including important options of the inferior
+debugger, can be found in the \s-1DDD\s+1 manual.
+.\"
+.\" ---------------
+.SH "SEE ALSO"
+.\" ---------------
+.BR X (1),
+.BR gdb (1),
+.BR dbx (1),
+.BR wdb (1),
+.BR xdb (1),
+.BR perldebug (1)
+.PP
+.RB "`\|" ddd "\|'"
+entry in \fBinfo\fR.
+.PP
+.RB "`\|" gdb "\|'"
+entry in \fBinfo\fR.
+.PP
+.I
+Debugging with \s-1DDD\s+1: User's Guide and Reference Manual\c
+\&, by Andreas Zeller.
+.PP
+.I
+Using \s-1GDB\s+1: A Guide to the \s-1GNU\s+1 Source-Level Debugger\c
+\&, by Richard M. Stallman and Roland H. Pesch.
+.PP
+.I
+Java Language Debugging\c
+\&, at \fBhttp://java.sun.com/\fR (and its mirrors) in 
+\fB/products/jdk/1.1/debugging/\fR
+.PP
+.I
+The Python Language\c
+\&, at \fBhttp://www.python.org/\fR and its mirrors.
+.PP
+.I
+\s-1DDD\s+1\(em\&A Free Graphical Front-End for \s-1UNIX\s+1 Debuggers\c
+\&, by Andreas Zeller and Dorothea Luetkehaus, Computer Science Report
+95-07, Technische Universitaet Braunschweig, 1995.
+.PP
+.I
+\s-1DDD\s+1 \(en ein Debugger mit graphischer Datendarstellung\c
+\&, by Dorothea Luetkehaus, Diploma Thesis, Technische
+Universitaet Braunschweig, 1994.
+.PP
+The \s-1DDD\s+1 \fI\s-1FTP\s+1 site,\fR
+.sp
+.br
+  \fBftp://ftp.gnu.org/gnu/ddd\fR
+.br
+.sp
+.PP
+The \s-1DDD\s+1 \fI\s-1WWW\s+1 page,\fR
+.sp
+.br
+  \fBhttp://www.gnu.org/software/ddd/\fR
+.br
+.sp
+.PP
+The \s-1DDD\s+1 \fIMailing List,\fR
+.sp
+.br
+   \fBddd@gnu.org\fR
+.br
+.sp
+For more information on this list, send a mail to
+.sp
+.br
+   \fBddd-request@gnu.org\fR .
+.br
+.sp
+.PP
+.\" ---------------
+.SH "COPYRIGHT"
+.\" ---------------
+.\"
+This manual page is Copyright \(co 2001 Universitaet Passau, Germany
+and \(co 2001-2004 Free Software Foundation, Inc.
+.PP
+Permission is granted to make and distribute verbatim copies of this
+manual page provided the copyright notice and this permission notice
+are preserved on all copies.
+.PP
+Permission is granted to copy and distribute modified versions of this
+manual page under the conditions for verbatim copying, provided that
+the entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+.PP
+Permission is granted to copy and distribute translations of this
+manual page into another language, under the above conditions for
+modified versions, except that this permission notice may be included
+in translations approved by the Free Software Foundation instead of in
+the original English.

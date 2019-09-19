@@ -1,0 +1,6 @@
+config CONFIG_octeon-top
+	bool "octeon-top"
+	select CONFIG_python
+	default n
+	help
+		Includes oct-top utility

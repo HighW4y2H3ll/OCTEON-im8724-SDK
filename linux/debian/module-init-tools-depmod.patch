@@ -1,0 +1,11 @@
+--- module-init-tools.orig	2014-05-28 18:33:29.000000000 -0700
++++ module-init-tools	2014-05-28 18:33:15.000000000 -0700
+@@ -49,7 +49,7 @@
+ if [ "$VERBOSE" = no ]; then
+   log_action_begin_msg 'Loading kernel modules'
+ fi
+-
++depmod -a
+ # Loop over every line in /etc/modules.
+ grep '^[^#]' $MODULES_FILE | \
+ while read module args; do

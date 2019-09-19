@@ -1,0 +1,8 @@
+#!/bin/sh
+source ./functions.sh
+ping -c 10 127.0.0.1 > /dev/null &
+assert sleep 1
+assert pidof ping > $0-1.log
+assert ps | grep  ping | head -n 1 | awk '{ print $1 }'> $0-2.log
+require_good diff -q $0-1.log $0-2.log
+killall -9 ping

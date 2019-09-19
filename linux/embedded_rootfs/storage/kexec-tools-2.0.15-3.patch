@@ -1,0 +1,36 @@
+From 38079a5cd9abe2904c7c816047489adeb61328ca Mon Sep 17 00:00:00 2001
+From: David Daney <david.daney@cavium.com>
+Date: Wed, 11 Oct 2017 17:44:40 -0700
+Subject: [PATCH] kexec-tools: mips: Try to include bss in kernel vmcore file.
+
+The kernel message buffers, as well as a lot of other useful data
+reside in the bss section.  Without this vmcore-dmesg cannot work, and
+debugging with a core dump is much more difficult.
+
+Try to add the /proc/iomem "Kernel bss" section to vmcore.  If it is
+not found, just do what we used to do and use "Kernel data" instead.
+
+Signed-off-by: David Daney <david.daney@cavium.com>
+---
+ kexec/arch/mips/crashdump-mips.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/kexec/arch/mips/crashdump-mips.c b/kexec/arch/mips/crashdump-mips.c
+index e98badf..fc92e64 100644
+--- a/kexec/arch/mips/crashdump-mips.c
++++ b/kexec/arch/mips/crashdump-mips.c
+@@ -74,7 +74,10 @@ static int get_kernel_vaddr_and_size(struct crash_elf_info *elf_info,
+ 
+ 	elf_info->kern_vaddr_start = elf_info->kern_paddr_start |
+ 					start_offset;
+-	if (parse_iomem_single("Kernel data\n", NULL, &end) == 0) {
++	/* If "Kernel bss" exists, the kernel ends there, else fall
++	 *  through and say that it ends at "Kernel data" */
++	if (parse_iomem_single("Kernel bss\n", NULL, &end) == 0 ||
++	    parse_iomem_single("Kernel data\n", NULL, &end) == 0) {
+ 		elf_info->kern_size = end - elf_info->kern_paddr_start;
+ 		dbgprintf("kernel_vaddr= 0x%llx paddr %llx\n",
+ 				elf_info->kern_vaddr_start,
+-- 
+2.9.5
+

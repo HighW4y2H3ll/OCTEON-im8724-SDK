@@ -1,0 +1,11 @@
+config CONFIG_mtd-tools
+	bool "mtd-tools"
+	select CONFIG_zlib
+	select CONFIG_lzo
+	select CONFIG_e2fsprogs
+	default y
+	help
+		Tools for manipulating memory technology devices, such as flash
+		memory, Disk-On-Chip, or ROM. Includes mkfs.jffs2, a tool to
+		create JFFS2 (journaling flash file system) filesystems.
+

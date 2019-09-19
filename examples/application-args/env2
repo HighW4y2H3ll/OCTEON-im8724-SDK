@@ -1,0 +1,1 @@
+bootcmd=bootoct 0x10000000 stack=0x34500 heap=0x567800 endbootargs app-args -arg1 -arg2=foo -another_arg

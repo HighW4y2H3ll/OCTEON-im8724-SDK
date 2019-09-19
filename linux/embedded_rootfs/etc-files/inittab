@@ -1,2 +1,4 @@
-::sysinit:/sbin/rc boot
-::respawn:-/bin/cav_sh /bin/sh
+#::sysinit:/sbin/rc boot
+::sysinit:exec /sbin/rc boot
+#::respawn:-/bin/cav_sh /bin/sh
+::respawn:exec /bin/sh

@@ -1,6 +1,6 @@
 config CONFIG_m4_host
 	bool "m4_host"
-	default y
+	default n
 	help
 		Build m4 for host target needed for building other packages.
 

@@ -68,6 +68,19 @@ if [ -e /usr/sbin/sshd ]; then
   /usr/sbin/sshd -q
 fi
 
+# Run additional board specific initialization script if needed
+
+BOARD_TYPE=$(cat /proc/octeon_info|awk '/board_type/ { print $2 }')
+if [ -e /etc/im8724-init.sh ] && [ "$BOARD_TYPE" == "20011" ]; then
+        /etc/im8724-init.sh
+fi
+
+until mount /dev/mmcblk1p2 /mnt
+do
+    echo Try mounting /dev/mmcblk1p2
+    sleep 3
+done
+exec switch_root -c /dev/console /mnt /sbin/init
 
 echo $0 complete
 

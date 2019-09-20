@@ -1,0 +1,61 @@
+
+SDK:    (Install Git LFS)
+git@github.com:Cavium-Open-Source-Distributions/OCTEON-SDK.git
+9f1cd06fd731848a044048f075242d72ad456d03
+
+Env setup:
+set OCTEON_ROOT
+source ./env-setup OCTEON_CN78XX
+
+Build Kernel && initramfs:
+cd linux && make kernel
+
+
+cs4321 kernel Load issue
+drivers/of/of_mdio.c : Patch of_mdiobus_child_is_phy
+if (of_device_is_compatible(child, "cortina,cs4318"))
+    return true;
+
+
+KVM patch:
+https://elixir.bootlin.com/linux/latest/source/arch/mips/kvm/emulate.c#L1842
+kernel/linux/virt/kvm/Kconfig - default y
+
+Initramfs Patch:
+embedded_rootfs/storage/busybox.config - enable CONFIG_SWITCH_ROOT=y
+embedded_rootfs/etc-files/inittab -    ::respawn:exec /bin/sh
+
+patch busybox/init/init.c
+```
+*** init.c	2019-08-29 19:07:46.665398888 +0000
+--- init.c_bak	2019-08-29 18:41:49.614695123 +0000
+*************** static pid_t run(const struct init_actio
+*** 479,499 ****
+  
+  	/* Careful: don't be affected by a signal in vforked child */
+  	sigprocmask_allsigs(SIG_BLOCK);
+-     if (strlen(a->command) > 4
+-        && a->command[0] == 'e'
+-        && a->command[1] == 'x'
+-        && a->command[2] == 'e'
+-        && a->command[3] == 'c'
+-        && a->command[4] == ' '
+-        ) {
+- 	    init_exec(&a->command[5]);
+-         pid = -1;
+-     } else {
+  	if (BB_MMU && (a->action_type & ASKFIRST))
+  		pid = fork();
+  	else
+  		pid = vfork();
+-     }
+  	if (pid < 0)
+  		message(L_LOG | L_CONSOLE, "can't fork");
+  	if (pid) {
+--- 479,488 ----
+```
+
+
+Boot to Debian: debian-octeon_jessie.tgz
+patch etc/inittab -   exchange /etc/init.d/rcS (sysinit->wait) and /sbin/sulogin (wait->sysinit)
+regenerate ssh host key - rm -v /etc/ssh/ssh_host_*;dpkg-reconfigure openssh-server

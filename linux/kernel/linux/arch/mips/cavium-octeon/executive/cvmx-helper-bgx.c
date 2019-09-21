@@ -86,6 +86,12 @@ CVMX_SHARED int(*cvmx_helper_bgx_override_autoneg)(int xiface, int index) = NULL
  */
 CVMX_SHARED int(*cvmx_helper_bgx_override_fec)(int xiface, int index) = NULL;
 
+/*
+ * cvmx_helper_get_real_78xx_xaui_link_status(int xiface, int index)
+ * is a function pointer to ger real port link status
+ */
+CVMX_SHARED uint64_t(*cvmx_helper_get_real_78xx_xaui_link_status)(int xiface, int index) = NULL;
+
 /**
  * Delay after enabling an interface based on the mode.  Different modes take
  * different amounts of time.
@@ -603,10 +609,11 @@ int __cvmx_helper_bgx_sgmii_enable(int xiface)
  *
  * @param xiface Interface to init
  * @param index     Index of prot on the interface
+ * @param speed Link speed
  *
  * @return Zero on success, negative on failure
  */
-static int __cvmx_helper_bgx_sgmii_hardware_init_link(int xiface, int index)
+static int __cvmx_helper_bgx_sgmii_hardware_init_link(int xiface, int index, int speed)
 {
 	cvmx_bgxx_gmp_pcs_mrx_control_t gmp_control;
 	cvmx_bgxx_gmp_pcs_miscx_ctl_t gmp_misc_ctl;
@@ -644,6 +651,16 @@ static int __cvmx_helper_bgx_sgmii_hardware_init_link(int xiface, int index)
 	gmp_control.u64 = cvmx_read_csr_node(node, CVMX_BGXX_GMP_PCS_MRX_CONTROL(index, xi.interface));
 	if (cvmx_helper_get_port_phy_present(xiface, index)) {
 		gmp_control.s.pwr_dn = 0;
+		if (speed == 100) {
+			gmp_control.s.spdmsb = 0;
+			gmp_control.s.spdlsb = 1;
+		} else if (speed == 10) {
+			gmp_control.s.spdmsb = 0;
+			gmp_control.s.spdlsb = 0;
+		} else {
+			gmp_control.s.spdmsb = 1;
+			gmp_control.s.spdlsb = 0;
+		}
 	} else {
 		gmp_control.s.spdmsb = 1;
 		gmp_control.s.spdlsb = 0;
@@ -1190,7 +1207,7 @@ int __cvmx_helper_bgx_sgmii_link_set(int xipd_port,
 			cmr0.s.enable = 1;
 			cvmx_write_csr_node(node, CVMX_BGXX_CMRX_CONFIG(0, iface), cmr0.u64);
 		}
-		__cvmx_helper_bgx_sgmii_hardware_init_link(xiface, index);
+		__cvmx_helper_bgx_sgmii_hardware_init_link(xiface, index, link_info.s.speed);
 	} else if (cvmx_helper_bgx_is_rgmii(xi.interface, index)) {
 		if (debug)
 			cvmx_dprintf("%s: Bringing down XCV RGMII interface %d\n",
@@ -1610,6 +1627,7 @@ int __cvmx_helper_bgx_sgmii_configure_loopback(int xipd_port, int enable_interna
 	int index = cvmx_helper_get_interface_index_num(xp.port);
 	cvmx_bgxx_gmp_pcs_mrx_control_t gmp_mrx_control;
 	cvmx_bgxx_gmp_pcs_miscx_ctl_t gmp_misc_ctl;
+	cvmx_helper_link_info_t link_info;
 
 	if (!cvmx_helper_is_port_valid(xiface, index))
 		return 0;
@@ -1618,9 +1636,9 @@ int __cvmx_helper_bgx_sgmii_configure_loopback(int xipd_port, int enable_interna
 		cvmx_dprintf("%s: interface %u:%d/%d\n",
 		__func__, xi.node, xi.interface, index);
 
+	link_info = __cvmx_helper_bgx_sgmii_link_get(xipd_port);
 	if (cvmx_helper_bgx_is_rgmii(xi.interface, index)) {
 		cvmx_xcv_ctl_t xcv_ctl;
-		cvmx_helper_link_info_t link_info;
 
 		xcv_ctl.u64 = cvmx_read_csr(CVMX_XCV_CTL);
 		xcv_ctl.s.lpbk_int = enable_internal;
@@ -1628,7 +1646,7 @@ int __cvmx_helper_bgx_sgmii_configure_loopback(int xipd_port, int enable_interna
 		cvmx_write_csr(CVMX_XCV_CTL, xcv_ctl.u64);
 
 		/* Initialize link and speed */
-		__cvmx_helper_bgx_sgmii_hardware_init_link(xiface, index);
+		__cvmx_helper_bgx_sgmii_hardware_init_link(xiface, index, link_info.s.speed);
 		link_info = __cvmx_helper_bgx_sgmii_link_get(xipd_port);
 		__cvmx_helper_bgx_sgmii_hardware_init_link_speed(xiface, index, link_info);
 		__cvmx_helper_bgx_rgmii_speed(link_info);
@@ -1640,7 +1658,7 @@ int __cvmx_helper_bgx_sgmii_configure_loopback(int xipd_port, int enable_interna
 		gmp_misc_ctl.u64 = cvmx_read_csr_node(node, CVMX_BGXX_GMP_PCS_MISCX_CTL(index, xi.interface));
 		gmp_misc_ctl.s.loopbck2 = enable_external;
 		cvmx_write_csr_node(node, CVMX_BGXX_GMP_PCS_MISCX_CTL(index, xi.interface), gmp_misc_ctl.u64);
-		__cvmx_helper_bgx_sgmii_hardware_init_link(xiface, index);
+		__cvmx_helper_bgx_sgmii_hardware_init_link(xiface, index, link_info.s.speed);
 	}
 
 
@@ -2079,6 +2097,9 @@ cvmx_helper_link_info_t __cvmx_helper_bgx_xaui_link_get(int xipd_port)
 	spu_status1.u64 = cvmx_read_csr_node(xi.node, CVMX_BGXX_SPUX_STATUS1(index, xi.interface));
 	smu_tx_ctl.u64 = cvmx_read_csr_node(xi.node, CVMX_BGXX_SMUX_TX_CTL(index, xi.interface));
 	smu_rx_ctl.u64 = cvmx_read_csr_node(xi.node, CVMX_BGXX_SMUX_RX_CTL(index, xi.interface));
+
+	if(cvmx_helper_get_real_78xx_xaui_link_status)
+		smu_rx_ctl.s.status = cvmx_helper_get_real_78xx_xaui_link_status(xi.interface, index);
 
 	if ((smu_tx_ctl.s.ls == 0)     &&
 	    (smu_rx_ctl.s.status == 0) &&

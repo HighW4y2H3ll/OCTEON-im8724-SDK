@@ -42,7 +42,7 @@
  *
  * Interface to PCIe as a host(RC) or target(EP)
  *
- * <hr>$Revision: 167267 $<hr>
+ * <hr>$Revision: 167433 $<hr>
  */
 #ifdef CVMX_BUILD_FOR_LINUX_KERNEL
 #include <asm/octeon/cvmx.h>
@@ -1476,6 +1476,8 @@ static int __cvmx_pcie_rc_initialize_link_gen2(int node, int pcie_port)
 	return 0;
 }
 
+extern int octeon_pcie_get_qlm_from_fdt(int numa_node, int pcie_port);
+
 /**
  * Initialize a PCIe gen 2 port for use in host(RC) mode. It doesn't enumerate
  * the bus.
@@ -1511,6 +1513,35 @@ static int __cvmx_pcie_rc_initialize_gen2(int pcie_port)
 #endif
 	pcie_port &= 0x3;
 	qlm = __cvmx_pcie_get_qlm(node, pcie_port);
+#ifdef CVMX_BUILD_FOR_LINUX_KERNEL
+	/* Configure PCIe based on device tree. */
+	if ((qlm < 0) &&
+	    (OCTEON_IS_OCTEON3()) &&
+	    (!OCTEON_IS_MODEL(OCTEON_CN70XX))) {
+		cvmx_gserx_cfg_t gserx_cfg;
+
+		/* Check for hotplugged endpoints */
+		//qlm = octeon_pcie_get_qlm_from_fdt(node, pcie_port);
+	    qlm = __cvmx_pcie_get_qlm(node, pcie_port);
+		if (qlm < 0)
+			return -1;
+
+		gserx_cfg.u64 = cvmx_read_csr_node(node, CVMX_GSERX_CFG(qlm));
+		if (!gserx_cfg.s.pcie) {
+			gserx_cfg.s.pcie = 1;
+			cvmx_write_csr_node(node, CVMX_GSERX_CFG(qlm),
+					    gserx_cfg.u64);
+			gserx_cfg.u64 = cvmx_read_csr_node(node,
+							   CVMX_GSERX_CFG(qlm));
+			if (gserx_cfg.s.pcie) {
+				/* Endpoint was hotplugged, try again */
+				qlm = __cvmx_pcie_get_qlm(node, pcie_port);
+				if (qlm < 0)
+					return -1;
+			}
+		}
+	}
+#endif
 
 	if (pcie_port >= CVMX_PCIE_PORTS) {
 		//cvmx_dprintf("Invalid PCIe%d port\n", pcie_port);
@@ -1537,7 +1568,10 @@ static int __cvmx_pcie_rc_initialize_gen2(int pcie_port)
 				qlm = 1;
 			else
 				qlm = pcie_port;
-		}
+		} else if (OCTEON_IS_MODEL(OCTEON_CN66XX)
+			   || OCTEON_IS_MODEL(OCTEON_CN63XX))
+			qlm = pcie_port;
+
 		/* PCIe is allowed only in QLM1, 1 PCIe port in x2 or
 		 * 2 PCIe ports in x1
 		 */
@@ -2127,7 +2161,11 @@ static uint64_t __cvmx_pcie_build_config_addr(int node, int port, int bus,
 	pcie_addr.config.es = _CVMX_PCIE_ES;
 	pcie_addr.config.port = port;
 	/* Always use config type 0 */
+#ifndef CONFIG_OCTEON_IM8724
 	if (pciercx_cfg006.s.pbnum == 0)
+#else
+	if(dev == 0 && bus == 2)
+#endif
 		pcie_addr.config.ty = (bus > pciercx_cfg006.s.pbnum + 1);
 	else
 		pcie_addr.config.ty = (bus > pciercx_cfg006.s.pbnum);

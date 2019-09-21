@@ -122,6 +122,10 @@ static inline u32 ethtool_adv_to_mii_adv_t(u32 ethadv)
 		result |= ADVERTISE_PAUSE_CAP;
 	if (ethadv & ADVERTISED_Asym_Pause)
 		result |= ADVERTISE_PAUSE_ASYM;
+	if (ethadv & ADVERTISED_1000baseX_Half)
+		result |= ADVERTISE_1000XHALF;
+	if (ethadv & ADVERTISED_1000baseX_Full)
+		result |= ADVERTISE_1000XFULL;
 
 	return result;
 }

@@ -1463,6 +1463,8 @@ enum ethtool_link_mode_bit_indices {
 /* Please do not define any new ADVERTISED_* macro for bits > 31, see
  * notice above.
  */
+#define ADVERTISED_1000baseX_Half	(1 << 27)
+#define ADVERTISED_1000baseX_Full	(1 << 28)
 
 /* The following are all involved in forcing a particular link
  * mode for the device for setting things.  When getting the

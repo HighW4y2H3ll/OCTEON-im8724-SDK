@@ -1242,7 +1242,8 @@ int genphy_config_aneg(struct phy_device *phydev)
 {
 	int err, changed;
 
-	changed = genphy_config_eee_advert(phydev);
+	//changed = genphy_config_eee_advert(phydev);
+    changed = 0;
 
 	if (AUTONEG_ENABLE != phydev->autoneg)
 		return genphy_setup_forced(phydev);
@@ -1307,22 +1308,47 @@ static int gen10g_config_aneg(struct phy_device *phydev)
  */
 int genphy_update_link(struct phy_device *phydev)
 {
-	int status;
+	unsigned int mii_reg;
 
-	/* Do a fake read */
-	status = phy_read(phydev, MII_BMSR);
-	if (status < 0)
-		return status;
+	/*
+	 * Wait if the link is up, and autonegotiation is in progress
+	 * (ie - we're capable and it's not done)
+	 */
+	mii_reg = phy_read(phydev, MII_BMSR);
 
-	/* Read link and autonegotiation status */
-	status = phy_read(phydev, MII_BMSR);
-	if (status < 0)
-		return status;
+	/*
+	 * If we already saw the link up, and it hasn't gone down, then
+	 * we don't need to wait for autoneg again
+	 */
+	if (phydev->link && mii_reg & BMSR_LSTATUS)
+		return 0;
 
-	if ((status & BMSR_LSTATUS) == 0)
-		phydev->link = 0;
-	else
+	if ((mii_reg & BMSR_ANEGCAPABLE) && !(mii_reg & BMSR_ANEGCOMPLETE)) {
+		int i = 0;
+
+		while (!(mii_reg & BMSR_ANEGCOMPLETE)) {
+			/*
+			 * Timeout reached ?
+			 */
+#define PHY_ANEG_TIMEOUT	4000
+			if (i > PHY_ANEG_TIMEOUT) {
+				phydev->link = 0;
+				return 0;
+			}
+
+			udelay(1000);	/* 1 ms */
+			mii_reg = phy_read(phydev, MII_BMSR);
+		}
 		phydev->link = 1;
+	} else {
+		/* Read the link a second time to clear the latched state */
+		mii_reg = phy_read(phydev, MII_BMSR);
+
+		if (mii_reg & BMSR_LSTATUS)
+			phydev->link = 1;
+		else
+			phydev->link = 0;
+	}
 
 	return 0;
 }

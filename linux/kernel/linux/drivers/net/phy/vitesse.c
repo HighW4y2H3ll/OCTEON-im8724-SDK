@@ -216,9 +216,9 @@ static int vsc8221_config_init(struct phy_device *phydev)
 {
 	int err;
 
-    genphy_update_link(phydev);
 	err = phy_write(phydev, MII_VSC8244_AUX_CONSTAT,
 			MII_VSC8221_AUXCONSTAT_INIT);
+    genphy_update_link(phydev);
     err |= vitesse_parse_status(phydev);
 	return err;
 

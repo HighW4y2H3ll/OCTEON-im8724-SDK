@@ -262,6 +262,7 @@ config RIONET_RX_SIZE
 
 config TUN
 	tristate "Universal TUN/TAP device driver support"
+    default m
 	depends on INET
 	select CRC32
 	---help---

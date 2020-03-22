@@ -20,6 +20,34 @@
 
 #include "interrupt.h"
 
+static bool asid_versions_eq(int cpu, u64 a, u64 b)
+{
+	return ((a ^ b) & asid_version_mask(cpu)) == 0;
+}
+
+static void check_mmu_context(struct mm_struct *mm)
+{
+	unsigned int cpu = smp_processor_id();
+	if (!asid_versions_eq(cpu, cpu_context(cpu, mm), asid_cache(cpu)))
+		get_new_mmu_context(mm, cpu);
+}
+
+static void check_switch_mmu_context(struct mm_struct *mm)
+{
+	unsigned int cpu = smp_processor_id();
+    check_mmu_context(mm);
+    write_c0_entryhi(cpu_asid(cpu, mm));
+	TLBMISS_HANDLER_SETUP_PGD(mm->pgd);
+}
+
+static inline void set_cpu_context(unsigned int cpu,
+				   struct mm_struct *mm, u64 ctx)
+{
+	//if (cpu_has_mmid)
+	//	atomic64_set(&mm->context.mmid, ctx);
+	//else
+		mm->context.asid[cpu] = ctx;
+}
 static gpa_t kvm_trap_emul_gva_to_gpa_cb(gva_t gva)
 {
 	gpa_t gpa;
@@ -1105,7 +1133,7 @@ static void kvm_trap_emul_check_requests(struct kvm_vcpu *vcpu, int cpu,
 		/* Generate new ASID for current mode */
 		if (reload_asid) {
 			mm = KVM_GUEST_KERNEL_MODE(vcpu) ? kern_mm : user_mm;
-			get_new_mmu_context(mm);
+			get_new_mmu_context(mm, cpu);
 			htw_stop();
 			write_c0_entryhi(cpu_asid(cpu, mm));
 			TLBMISS_HANDLER_SETUP_PGD(mm->pgd);

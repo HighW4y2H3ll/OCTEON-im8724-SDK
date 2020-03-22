@@ -29,9 +29,9 @@
 #include <linux/file.h>
 #include <linux/syscore_ops.h>
 #include <linux/cpu.h>
-#include <linux/sched/signal.h>
-#include <linux/sched/mm.h>
-#include <linux/sched/stat.h>
+#include <linux/signal.h>
+#include <linux/mm.h>
+#include <linux/stat.h>
 #include <linux/cpumask.h>
 #include <linux/smp.h>
 #include <linux/anon_inodes.h>
@@ -400,12 +400,13 @@ static void kvm_mmu_notifier_change_pte(struct mmu_notifier *mn,
 	srcu_read_unlock(&kvm->srcu, idx);
 }
 
-static int kvm_mmu_notifier_invalidate_range_start(struct mmu_notifier *mn,
-					const struct mmu_notifier_range *range)
+static void kvm_mmu_notifier_invalidate_range_start(struct mmu_notifier *mn,
+                    struct mm_struct *mm,
+                    unsigned long start,
+                    unsigned long end)
 {
 	struct kvm *kvm = mmu_notifier_to_kvm(mn);
 	int need_tlb_flush = 0, idx;
-	int ret;
 
 	idx = srcu_read_lock(&kvm->srcu);
 	spin_lock(&kvm->mmu_lock);
@@ -415,7 +416,7 @@ static int kvm_mmu_notifier_invalidate_range_start(struct mmu_notifier *mn,
 	 * count is also read inside the mmu_lock critical section.
 	 */
 	kvm->mmu_notifier_count++;
-	need_tlb_flush = kvm_unmap_hva_range(kvm, range->start, range->end);
+	need_tlb_flush = kvm_unmap_hva_range(kvm, start, end);
 	need_tlb_flush |= kvm->tlbs_dirty;
 	/* we've to flush the tlb before the pages can be freed */
 	if (need_tlb_flush)
@@ -423,17 +424,13 @@ static int kvm_mmu_notifier_invalidate_range_start(struct mmu_notifier *mn,
 
 	spin_unlock(&kvm->mmu_lock);
 
-	ret = kvm_arch_mmu_notifier_invalidate_range(kvm, range->start,
-					range->end,
-					mmu_notifier_range_blockable(range));
-
 	srcu_read_unlock(&kvm->srcu, idx);
-
-	return ret;
 }
 
 static void kvm_mmu_notifier_invalidate_range_end(struct mmu_notifier *mn,
-					const struct mmu_notifier_range *range)
+                    struct mm_struct *mm,
+					unsigned long start,
+					unsigned long end)
 {
 	struct kvm *kvm = mmu_notifier_to_kvm(mn);
 
@@ -559,12 +556,19 @@ static int kvm_init_mmu_notifier(struct kvm *kvm)
 
 #endif /* CONFIG_MMU_NOTIFIER && KVM_ARCH_WANT_MMU_NOTIFIER */
 
+void *kvzalloc(unsigned long size) {
+    if (size > PAGE_SIZE)
+        return vzalloc(size);
+    else
+        return kzalloc(size, GFP_KERNEL);
+}
+
 static struct kvm_memslots *kvm_alloc_memslots(void)
 {
 	int i;
 	struct kvm_memslots *slots;
 
-	slots = kvzalloc(sizeof(struct kvm_memslots), GFP_KERNEL_ACCOUNT);
+	slots = kvzalloc(sizeof(struct kvm_memslots));
 	if (!slots)
 		return NULL;
 
@@ -686,7 +690,7 @@ static struct kvm *kvm_create_vm(unsigned long type)
 		return ERR_PTR(-ENOMEM);
 
 	spin_lock_init(&kvm->mmu_lock);
-	mmgrab(current->mm);
+	atomic_inc(&current->mm->mm_count);
 	kvm->mm = current->mm;
 	kvm_eventfd_init(kvm);
 	mutex_init(&kvm->lock);
@@ -857,7 +861,7 @@ static int kvm_create_dirty_bitmap(struct kvm_memory_slot *memslot)
 {
 	unsigned long dirty_bytes = 2 * kvm_dirty_bitmap_bytes(memslot);
 
-	memslot->dirty_bitmap = kvzalloc(dirty_bytes, GFP_KERNEL_ACCOUNT);
+	memslot->dirty_bitmap = kvzalloc(dirty_bytes);
 	if (!memslot->dirty_bitmap)
 		return -ENOMEM;
 
@@ -1010,7 +1014,7 @@ int __kvm_set_memory_region(struct kvm *kvm,
 	/* We can read the guest memory with __xxx_user() later on. */
 	if ((id < KVM_USER_MEM_SLOTS) &&
 	    ((mem->userspace_addr & (PAGE_SIZE - 1)) ||
-	     !access_ok((void __user *)(unsigned long)mem->userspace_addr,
+	     !access_ok(VERIFY_WRITE, (void __user *)(unsigned long)mem->userspace_addr,
 			mem->memory_size)))
 		goto out;
 	if (as_id >= KVM_ADDRESS_SPACE_NUM || id >= KVM_MEM_SLOTS_NUM)
@@ -1089,7 +1093,7 @@ int __kvm_set_memory_region(struct kvm *kvm,
 			goto out_free;
 	}
 
-	slots = kvzalloc(sizeof(struct kvm_memslots), GFP_KERNEL_ACCOUNT);
+	slots = kvzalloc(sizeof(struct kvm_memslots));
 	if (!slots)
 		goto out_free;
 	memcpy(slots, __kvm_memslots(kvm, as_id), sizeof(struct kvm_memslots));
@@ -2411,7 +2415,7 @@ void kvm_vcpu_block(struct kvm_vcpu *vcpu)
 	}
 
 	for (;;) {
-		prepare_to_swait_exclusive(&vcpu->wq, &wait, TASK_INTERRUPTIBLE);
+		prepare_to_swait(&vcpu->wq, &wait, TASK_INTERRUPTIBLE);
 
 		if (kvm_vcpu_check_block(vcpu) < 0)
 			break;
@@ -2454,8 +2458,8 @@ bool kvm_vcpu_wake_up(struct kvm_vcpu *vcpu)
 	struct swait_queue_head *wqp;
 
 	wqp = kvm_arch_vcpu_wq(vcpu);
-	if (swq_has_sleeper(wqp)) {
-		swake_up_one(wqp);
+	if (swait_active(wqp)) {
+		swake_up(wqp);
 		WRITE_ONCE(vcpu->ready, true);
 		++vcpu->stat.halt_wakeup;
 		return true;
@@ -2623,9 +2627,9 @@ void kvm_vcpu_on_spin(struct kvm_vcpu *me, bool yield_to_kernel_mode)
 }
 EXPORT_SYMBOL_GPL(kvm_vcpu_on_spin);
 
-static vm_fault_t kvm_vcpu_fault(struct vm_fault *vmf)
+static int kvm_vcpu_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
-	struct kvm_vcpu *vcpu = vmf->vma->vm_file->private_data;
+	struct kvm_vcpu *vcpu = vma->vm_file->private_data;
 	struct page *page;
 
 	if (vmf->pgoff == 0)
@@ -2994,6 +2998,28 @@ out:
 }
 
 #ifdef CONFIG_KVM_COMPAT
+static int
+get_compat_sigset(sigset_t *set, const compat_sigset_t __user *compat)
+{
+#ifdef __BIG_ENDIAN
+	compat_sigset_t v;
+	if (copy_from_user(&v, compat, sizeof(compat_sigset_t)))
+		return -EFAULT;
+	switch (_NSIG_WORDS) {
+	case 4: set->sig[3] = v.sig[6] | (((long)v.sig[7]) << 32 );
+		/* fall through */
+	case 3: set->sig[2] = v.sig[4] | (((long)v.sig[5]) << 32 );
+		/* fall through */
+	case 2: set->sig[1] = v.sig[2] | (((long)v.sig[3]) << 32 );
+		/* fall through */
+	case 1: set->sig[0] = v.sig[0] | (((long)v.sig[1]) << 32 );
+	}
+#else
+	if (copy_from_user(set, compat, sizeof(compat_sigset_t)))
+		return -EFAULT;
+#endif
+	return 0;
+}
 static long kvm_vcpu_compat_ioctl(struct file *filp,
 				  unsigned int ioctl, unsigned long arg)
 {
@@ -3893,8 +3919,8 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
 	if (bus->dev_count - bus->ioeventfd_count > NR_IOBUS_DEVS - 1)
 		return -ENOSPC;
 
-	new_bus = kmalloc(struct_size(bus, range, bus->dev_count + 1),
-			  GFP_KERNEL_ACCOUNT);
+	new_bus = kmalloc(sizeof(*bus) + ((bus->dev_count + 1) *
+                sizeof(struct kvm_io_range)), GFP_KERNEL_ACCOUNT);
 	if (!new_bus)
 		return -ENOMEM;
 
@@ -3939,8 +3965,8 @@ void kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
 	if (i == bus->dev_count)
 		return;
 
-	new_bus = kmalloc(struct_size(bus, range, bus->dev_count - 1),
-			  GFP_KERNEL_ACCOUNT);
+	new_bus = kmalloc(sizeof(*bus) + ((bus->dev_count - 1) *
+                sizeof(struct kvm_io_range)), GFP_KERNEL_ACCOUNT);
 	if (!new_bus)  {
 		pr_err("kvm: failed to shrink bus, removing it completely\n");
 		goto broken;
@@ -4319,6 +4345,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	int r;
 	int cpu;
 
+
 	r = kvm_arch_init(opaque);
 	if (r)
 		goto out_fail;
@@ -4359,11 +4386,12 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	if (!vcpu_align)
 		vcpu_align = __alignof__(struct kvm_vcpu);
 	kvm_vcpu_cache =
-		kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
-					   SLAB_ACCOUNT,
-					   offsetof(struct kvm_vcpu, arch),
-					   sizeof_field(struct kvm_vcpu, arch),
-					   NULL);
+		//kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
+		//			   SLAB_ACCOUNT,
+		//			   offsetof(struct kvm_vcpu, arch),
+		//			   sizeof_field(struct kvm_vcpu, arch),
+		//			   NULL);
+        kmem_cache_create("kvm_vcpu", vcpu_size, vcpu_align, 0, NULL);
 	if (!kvm_vcpu_cache) {
 		r = -ENOMEM;
 		goto out_free_3;

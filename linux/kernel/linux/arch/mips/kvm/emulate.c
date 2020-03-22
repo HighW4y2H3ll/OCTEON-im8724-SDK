@@ -34,6 +34,14 @@
 
 #include "trace.h"
 
+static inline void set_cpu_context(unsigned int cpu,
+				   struct mm_struct *mm, u64 ctx)
+{
+	//if (cpu_has_mmid)
+	//	atomic64_set(&mm->context.mmid, ctx);
+	//else
+		mm->context.asid[cpu] = ctx;
+}
 /*
  * Compute the return address and do emulate branch simulation, if required.
  * This function should be called only in branch delay slot active.
@@ -1017,7 +1025,7 @@ static void kvm_mips_change_entryhi(struct kvm_vcpu *vcpu,
 		 */
 		preempt_disable();
 		cpu = smp_processor_id();
-		get_new_mmu_context(kern_mm);
+		get_new_mmu_context(kern_mm, cpu);
 		for_each_possible_cpu(i)
 			if (i != cpu)
 				set_cpu_context(i, kern_mm, 0);

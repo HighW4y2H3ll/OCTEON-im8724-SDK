@@ -1,0 +1,951 @@
+diff -rpN ./include/kvm/arm_arch_timer.h ../../../../../qemu/linux-5.4.11/include/kvm/arm_arch_timer.h
+*** ./include/kvm/arm_arch_timer.h	2017-11-13 03:36:56.000000000 +0000
+--- ../../../../../qemu/linux-5.4.11/include/kvm/arm_arch_timer.h	2020-01-12 11:21:53.000000000 +0000
+***************
+*** 1,19 ****
+  /*
+   * Copyright (C) 2012 ARM Ltd.
+   * Author: Marc Zyngier <marc.zyngier@arm.com>
+-  *
+-  * This program is free software; you can redistribute it and/or modify
+-  * it under the terms of the GNU General Public License version 2 as
+-  * published by the Free Software Foundation.
+-  *
+-  * This program is distributed in the hope that it will be useful,
+-  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-  * GNU General Public License for more details.
+-  *
+-  * You should have received a copy of the GNU General Public License
+-  * along with this program; if not, write to the Free Software
+-  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+   */
+  
+  #ifndef __ASM_ARM_KVM_ARCH_TIMER_H
+--- 1,7 ----
++ /* SPDX-License-Identifier: GPL-2.0-only */
+  /*
+   * Copyright (C) 2012 ARM Ltd.
+   * Author: Marc Zyngier <marc.zyngier@arm.com>
+   */
+  
+  #ifndef __ASM_ARM_KVM_ARCH_TIMER_H
+***************
+*** 21,79 ****
+  
+  #include <linux/clocksource.h>
+  #include <linux/hrtimer.h>
+- #include <linux/workqueue.h>
+  
+! struct arch_timer_kvm {
+! 	/* Virtual offset */
+! 	cycle_t			cntvoff;
+  };
+  
+! struct arch_timer_cpu {
+  	/* Registers: control register, timer value */
+! 	u32				cntv_ctl;	/* Saved/restored */
+! 	cycle_t				cntv_cval;	/* Saved/restored */
+  
+  	/*
+! 	 * Anything that is not used directly from assembly code goes
+! 	 * here.
+  	 */
+  
+! 	/* Background timer used when the guest is not running */
+! 	struct hrtimer			timer;
+! 
+! 	/* Work queued with the above timer expires */
+! 	struct work_struct		expired;
+  
+! 	/* Background timer active */
+! 	bool				armed;
+  
+! 	/* Timer IRQ */
+! 	struct kvm_irq_level		irq;
+  
+! 	/* Active IRQ state caching */
+! 	bool				active_cleared_last;
+  
+  	/* Is the timer enabled */
+  	bool			enabled;
+  };
+  
+! int kvm_timer_hyp_init(void);
+  int kvm_timer_enable(struct kvm_vcpu *vcpu);
+! void kvm_timer_init(struct kvm *kvm);
+! int kvm_timer_vcpu_reset(struct kvm_vcpu *vcpu,
+! 			 const struct kvm_irq_level *irq);
+  void kvm_timer_vcpu_init(struct kvm_vcpu *vcpu);
+- void kvm_timer_flush_hwstate(struct kvm_vcpu *vcpu);
+  void kvm_timer_sync_hwstate(struct kvm_vcpu *vcpu);
+  void kvm_timer_vcpu_terminate(struct kvm_vcpu *vcpu);
+  
+  u64 kvm_arm_timer_get_reg(struct kvm_vcpu *, u64 regid);
+  int kvm_arm_timer_set_reg(struct kvm_vcpu *, u64 regid, u64 value);
+  
+! bool kvm_timer_should_fire(struct kvm_vcpu *vcpu);
+! void kvm_timer_schedule(struct kvm_vcpu *vcpu);
+! void kvm_timer_unschedule(struct kvm_vcpu *vcpu);
+  
+  void kvm_timer_vcpu_put(struct kvm_vcpu *vcpu);
+  
+  #endif
+--- 9,112 ----
+  
+  #include <linux/clocksource.h>
+  #include <linux/hrtimer.h>
+  
+! enum kvm_arch_timers {
+! 	TIMER_PTIMER,
+! 	TIMER_VTIMER,
+! 	NR_KVM_TIMERS
+  };
+  
+! enum kvm_arch_timer_regs {
+! 	TIMER_REG_CNT,
+! 	TIMER_REG_CVAL,
+! 	TIMER_REG_TVAL,
+! 	TIMER_REG_CTL,
+! };
+! 
+! struct arch_timer_context {
+! 	struct kvm_vcpu			*vcpu;
+! 
+  	/* Registers: control register, timer value */
+! 	u32				cnt_ctl;
+! 	u64				cnt_cval;
+! 
+! 	/* Timer IRQ */
+! 	struct kvm_irq_level		irq;
+! 
+! 	/* Virtual offset */
+! 	u64				cntvoff;
+! 
+! 	/* Emulated Timer (may be unused) */
+! 	struct hrtimer			hrtimer;
+  
+  	/*
+! 	 * We have multiple paths which can save/restore the timer state onto
+! 	 * the hardware, so we need some way of keeping track of where the
+! 	 * latest state is.
+  	 */
++ 	bool				loaded;
+  
+! 	/* Duplicated state from arch_timer.c for convenience */
+! 	u32				host_timer_irq;
+! 	u32				host_timer_irq_flags;
+! };
+  
+! struct timer_map {
+! 	struct arch_timer_context *direct_vtimer;
+! 	struct arch_timer_context *direct_ptimer;
+! 	struct arch_timer_context *emul_ptimer;
+! };
+  
+! struct arch_timer_cpu {
+! 	struct arch_timer_context timers[NR_KVM_TIMERS];
+  
+! 	/* Background timer used when the guest is not running */
+! 	struct hrtimer			bg_timer;
+  
+  	/* Is the timer enabled */
+  	bool			enabled;
+  };
+  
+! int kvm_timer_hyp_init(bool);
+  int kvm_timer_enable(struct kvm_vcpu *vcpu);
+! int kvm_timer_vcpu_reset(struct kvm_vcpu *vcpu);
+  void kvm_timer_vcpu_init(struct kvm_vcpu *vcpu);
+  void kvm_timer_sync_hwstate(struct kvm_vcpu *vcpu);
++ bool kvm_timer_should_notify_user(struct kvm_vcpu *vcpu);
++ void kvm_timer_update_run(struct kvm_vcpu *vcpu);
+  void kvm_timer_vcpu_terminate(struct kvm_vcpu *vcpu);
+  
+  u64 kvm_arm_timer_get_reg(struct kvm_vcpu *, u64 regid);
+  int kvm_arm_timer_set_reg(struct kvm_vcpu *, u64 regid, u64 value);
+  
+! int kvm_arm_timer_set_attr(struct kvm_vcpu *vcpu, struct kvm_device_attr *attr);
+! int kvm_arm_timer_get_attr(struct kvm_vcpu *vcpu, struct kvm_device_attr *attr);
+! int kvm_arm_timer_has_attr(struct kvm_vcpu *vcpu, struct kvm_device_attr *attr);
+! 
+! bool kvm_timer_is_pending(struct kvm_vcpu *vcpu);
+! 
+! u64 kvm_phys_timer_read(void);
+  
++ void kvm_timer_vcpu_load(struct kvm_vcpu *vcpu);
+  void kvm_timer_vcpu_put(struct kvm_vcpu *vcpu);
+  
++ void kvm_timer_init_vhe(void);
++ 
++ bool kvm_arch_timer_get_input_level(int vintid);
++ 
++ #define vcpu_timer(v)	(&(v)->arch.timer_cpu)
++ #define vcpu_get_timer(v,t)	(&vcpu_timer(v)->timers[(t)])
++ #define vcpu_vtimer(v)	(&(v)->arch.timer_cpu.timers[TIMER_VTIMER])
++ #define vcpu_ptimer(v)	(&(v)->arch.timer_cpu.timers[TIMER_PTIMER])
++ 
++ #define arch_timer_ctx_index(ctx)	((ctx) - vcpu_timer((ctx)->vcpu)->timers)
++ 
++ u64 kvm_arm_timer_read_sysreg(struct kvm_vcpu *vcpu,
++ 			      enum kvm_arch_timers tmr,
++ 			      enum kvm_arch_timer_regs treg);
++ void kvm_arm_timer_write_sysreg(struct kvm_vcpu *vcpu,
++ 				enum kvm_arch_timers tmr,
++ 				enum kvm_arch_timer_regs treg,
++ 				u64 val);
++ 
+  #endif
+diff -rpN ./include/kvm/arm_pmu.h ../../../../../qemu/linux-5.4.11/include/kvm/arm_pmu.h
+*** ./include/kvm/arm_pmu.h	2017-11-13 03:36:56.000000000 +0000
+--- ../../../../../qemu/linux-5.4.11/include/kvm/arm_pmu.h	2020-01-12 11:21:53.000000000 +0000
+***************
+*** 1,18 ****
+  /*
+   * Copyright (C) 2015 Linaro Ltd.
+   * Author: Shannon Zhao <shannon.zhao@linaro.org>
+-  *
+-  * This program is free software; you can redistribute it and/or modify
+-  * it under the terms of the GNU General Public License version 2 as
+-  * published by the Free Software Foundation.
+-  *
+-  * This program is distributed in the hope that it will be useful,
+-  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-  * GNU General Public License for more details.
+-  *
+-  * You should have received a copy of the GNU General Public License
+-  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   */
+  
+  #ifndef __ASM_ARM_KVM_PMU_H
+--- 1,7 ----
++ /* SPDX-License-Identifier: GPL-2.0-only */
+  /*
+   * Copyright (C) 2015 Linaro Ltd.
+   * Author: Shannon Zhao <shannon.zhao@linaro.org>
+   */
+  
+  #ifndef __ASM_ARM_KVM_PMU_H
+***************
+*** 22,40 ****
+  #include <asm/perf_event.h>
+  
+  #define ARMV8_PMU_CYCLE_IDX		(ARMV8_PMU_MAX_COUNTERS - 1)
+  
+  #ifdef CONFIG_KVM_ARM_PMU
+  
+  struct kvm_pmc {
+  	u8 idx;	/* index into the pmu->pmc array */
+  	struct perf_event *perf_event;
+- 	u64 bitmask;
+  };
+  
+  struct kvm_pmu {
+  	int irq_num;
+  	struct kvm_pmc pmc[ARMV8_PMU_MAX_COUNTERS];
+  	bool ready;
+  	bool irq_level;
+  };
+  
+--- 11,31 ----
+  #include <asm/perf_event.h>
+  
+  #define ARMV8_PMU_CYCLE_IDX		(ARMV8_PMU_MAX_COUNTERS - 1)
++ #define ARMV8_PMU_MAX_COUNTER_PAIRS	((ARMV8_PMU_MAX_COUNTERS + 1) >> 1)
+  
+  #ifdef CONFIG_KVM_ARM_PMU
+  
+  struct kvm_pmc {
+  	u8 idx;	/* index into the pmu->pmc array */
+  	struct perf_event *perf_event;
+  };
+  
+  struct kvm_pmu {
+  	int irq_num;
+  	struct kvm_pmc pmc[ARMV8_PMU_MAX_COUNTERS];
++ 	DECLARE_BITMAP(chained, ARMV8_PMU_MAX_COUNTER_PAIRS);
+  	bool ready;
++ 	bool created;
+  	bool irq_level;
+  };
+  
+*************** struct kvm_pmu {
+*** 43,55 ****
+  u64 kvm_pmu_get_counter_value(struct kvm_vcpu *vcpu, u64 select_idx);
+  void kvm_pmu_set_counter_value(struct kvm_vcpu *vcpu, u64 select_idx, u64 val);
+  u64 kvm_pmu_valid_counter_mask(struct kvm_vcpu *vcpu);
+  void kvm_pmu_vcpu_reset(struct kvm_vcpu *vcpu);
+  void kvm_pmu_vcpu_destroy(struct kvm_vcpu *vcpu);
+! void kvm_pmu_disable_counter(struct kvm_vcpu *vcpu, u64 val);
+! void kvm_pmu_enable_counter(struct kvm_vcpu *vcpu, u64 val);
+! void kvm_pmu_overflow_set(struct kvm_vcpu *vcpu, u64 val);
+  void kvm_pmu_flush_hwstate(struct kvm_vcpu *vcpu);
+  void kvm_pmu_sync_hwstate(struct kvm_vcpu *vcpu);
+  void kvm_pmu_software_increment(struct kvm_vcpu *vcpu, u64 val);
+  void kvm_pmu_handle_pmcr(struct kvm_vcpu *vcpu, u64 val);
+  void kvm_pmu_set_counter_event_type(struct kvm_vcpu *vcpu, u64 data,
+--- 34,48 ----
+  u64 kvm_pmu_get_counter_value(struct kvm_vcpu *vcpu, u64 select_idx);
+  void kvm_pmu_set_counter_value(struct kvm_vcpu *vcpu, u64 select_idx, u64 val);
+  u64 kvm_pmu_valid_counter_mask(struct kvm_vcpu *vcpu);
++ void kvm_pmu_vcpu_init(struct kvm_vcpu *vcpu);
+  void kvm_pmu_vcpu_reset(struct kvm_vcpu *vcpu);
+  void kvm_pmu_vcpu_destroy(struct kvm_vcpu *vcpu);
+! void kvm_pmu_disable_counter_mask(struct kvm_vcpu *vcpu, u64 val);
+! void kvm_pmu_enable_counter_mask(struct kvm_vcpu *vcpu, u64 val);
+  void kvm_pmu_flush_hwstate(struct kvm_vcpu *vcpu);
+  void kvm_pmu_sync_hwstate(struct kvm_vcpu *vcpu);
++ bool kvm_pmu_should_notify_user(struct kvm_vcpu *vcpu);
++ void kvm_pmu_update_run(struct kvm_vcpu *vcpu);
+  void kvm_pmu_software_increment(struct kvm_vcpu *vcpu, u64 val);
+  void kvm_pmu_handle_pmcr(struct kvm_vcpu *vcpu, u64 val);
+  void kvm_pmu_set_counter_event_type(struct kvm_vcpu *vcpu, u64 data,
+*************** int kvm_arm_pmu_v3_get_attr(struct kvm_v
+*** 61,66 ****
+--- 54,60 ----
+  			    struct kvm_device_attr *attr);
+  int kvm_arm_pmu_v3_has_attr(struct kvm_vcpu *vcpu,
+  			    struct kvm_device_attr *attr);
++ int kvm_arm_pmu_v3_enable(struct kvm_vcpu *vcpu);
+  #else
+  struct kvm_pmu {
+  };
+*************** static inline u64 kvm_pmu_valid_counter_
+*** 78,90 ****
+  {
+  	return 0;
+  }
+  static inline void kvm_pmu_vcpu_reset(struct kvm_vcpu *vcpu) {}
+  static inline void kvm_pmu_vcpu_destroy(struct kvm_vcpu *vcpu) {}
+! static inline void kvm_pmu_disable_counter(struct kvm_vcpu *vcpu, u64 val) {}
+! static inline void kvm_pmu_enable_counter(struct kvm_vcpu *vcpu, u64 val) {}
+! static inline void kvm_pmu_overflow_set(struct kvm_vcpu *vcpu, u64 val) {}
+  static inline void kvm_pmu_flush_hwstate(struct kvm_vcpu *vcpu) {}
+  static inline void kvm_pmu_sync_hwstate(struct kvm_vcpu *vcpu) {}
+  static inline void kvm_pmu_software_increment(struct kvm_vcpu *vcpu, u64 val) {}
+  static inline void kvm_pmu_handle_pmcr(struct kvm_vcpu *vcpu, u64 val) {}
+  static inline void kvm_pmu_set_counter_event_type(struct kvm_vcpu *vcpu,
+--- 72,89 ----
+  {
+  	return 0;
+  }
++ static inline void kvm_pmu_vcpu_init(struct kvm_vcpu *vcpu) {}
+  static inline void kvm_pmu_vcpu_reset(struct kvm_vcpu *vcpu) {}
+  static inline void kvm_pmu_vcpu_destroy(struct kvm_vcpu *vcpu) {}
+! static inline void kvm_pmu_disable_counter_mask(struct kvm_vcpu *vcpu, u64 val) {}
+! static inline void kvm_pmu_enable_counter_mask(struct kvm_vcpu *vcpu, u64 val) {}
+  static inline void kvm_pmu_flush_hwstate(struct kvm_vcpu *vcpu) {}
+  static inline void kvm_pmu_sync_hwstate(struct kvm_vcpu *vcpu) {}
++ static inline bool kvm_pmu_should_notify_user(struct kvm_vcpu *vcpu)
++ {
++ 	return false;
++ }
++ static inline void kvm_pmu_update_run(struct kvm_vcpu *vcpu) {}
+  static inline void kvm_pmu_software_increment(struct kvm_vcpu *vcpu, u64 val) {}
+  static inline void kvm_pmu_handle_pmcr(struct kvm_vcpu *vcpu, u64 val) {}
+  static inline void kvm_pmu_set_counter_event_type(struct kvm_vcpu *vcpu,
+*************** static inline int kvm_arm_pmu_v3_has_att
+*** 105,110 ****
+--- 104,113 ----
+  {
+  	return -ENXIO;
+  }
++ static inline int kvm_arm_pmu_v3_enable(struct kvm_vcpu *vcpu)
++ {
++ 	return 0;
++ }
+  #endif
+  
+  #endif
+diff -rpN ./include/kvm/arm_psci.h ../../../../../qemu/linux-5.4.11/include/kvm/arm_psci.h
+*** ./include/kvm/arm_psci.h	1970-01-01 00:00:00.000000000 +0000
+--- ../../../../../qemu/linux-5.4.11/include/kvm/arm_psci.h	2020-01-12 11:21:53.000000000 +0000
+***************
+*** 0 ****
+--- 1,52 ----
++ /* SPDX-License-Identifier: GPL-2.0-only */
++ /*
++  * Copyright (C) 2012,2013 - ARM Ltd
++  * Author: Marc Zyngier <marc.zyngier@arm.com>
++  */
++ 
++ #ifndef __KVM_ARM_PSCI_H__
++ #define __KVM_ARM_PSCI_H__
++ 
++ #include <linux/kvm_host.h>
++ #include <uapi/linux/psci.h>
++ 
++ #define KVM_ARM_PSCI_0_1	PSCI_VERSION(0, 1)
++ #define KVM_ARM_PSCI_0_2	PSCI_VERSION(0, 2)
++ #define KVM_ARM_PSCI_1_0	PSCI_VERSION(1, 0)
++ 
++ #define KVM_ARM_PSCI_LATEST	KVM_ARM_PSCI_1_0
++ 
++ /*
++  * We need the KVM pointer independently from the vcpu as we can call
++  * this from HYP, and need to apply kern_hyp_va on it...
++  */
++ static inline int kvm_psci_version(struct kvm_vcpu *vcpu, struct kvm *kvm)
++ {
++ 	/*
++ 	 * Our PSCI implementation stays the same across versions from
++ 	 * v0.2 onward, only adding the few mandatory functions (such
++ 	 * as FEATURES with 1.0) that are required by newer
++ 	 * revisions. It is thus safe to return the latest, unless
++ 	 * userspace has instructed us otherwise.
++ 	 */
++ 	if (test_bit(KVM_ARM_VCPU_PSCI_0_2, vcpu->arch.features)) {
++ 		if (vcpu->kvm->arch.psci_version)
++ 			return vcpu->kvm->arch.psci_version;
++ 
++ 		return KVM_ARM_PSCI_LATEST;
++ 	}
++ 
++ 	return KVM_ARM_PSCI_0_1;
++ }
++ 
++ 
++ int kvm_hvc_call_handler(struct kvm_vcpu *vcpu);
++ 
++ struct kvm_one_reg;
++ 
++ int kvm_arm_get_fw_num_regs(struct kvm_vcpu *vcpu);
++ int kvm_arm_copy_fw_reg_indices(struct kvm_vcpu *vcpu, u64 __user *uindices);
++ int kvm_arm_get_fw_reg(struct kvm_vcpu *vcpu, const struct kvm_one_reg *reg);
++ int kvm_arm_set_fw_reg(struct kvm_vcpu *vcpu, const struct kvm_one_reg *reg);
++ 
++ #endif /* __KVM_ARM_PSCI_H__ */
+diff -rpN ./include/kvm/arm_vgic.h ../../../../../qemu/linux-5.4.11/include/kvm/arm_vgic.h
+*** ./include/kvm/arm_vgic.h	2017-11-13 03:36:56.000000000 +0000
+--- ../../../../../qemu/linux-5.4.11/include/kvm/arm_vgic.h	2020-01-12 11:21:53.000000000 +0000
+***************
+*** 1,17 ****
+  /*
+   * Copyright (C) 2015, 2016 ARM Ltd.
+-  *
+-  * This program is free software; you can redistribute it and/or modify
+-  * it under the terms of the GNU General Public License version 2 as
+-  * published by the Free Software Foundation.
+-  *
+-  * This program is distributed in the hope that it will be useful,
+-  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-  * GNU General Public License for more details.
+-  *
+-  * You should have received a copy of the GNU General Public License
+-  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   */
+  #ifndef __KVM_ARM_VGIC_H
+  #define __KVM_ARM_VGIC_H
+--- 1,6 ----
++ /* SPDX-License-Identifier: GPL-2.0-only */
+  /*
+   * Copyright (C) 2015, 2016 ARM Ltd.
+   */
+  #ifndef __KVM_ARM_VGIC_H
+  #define __KVM_ARM_VGIC_H
+***************
+*** 26,32 ****
+  #include <linux/list.h>
+  #include <linux/jump_label.h>
+  
+! #define VGIC_V3_MAX_CPUS	255
+  #define VGIC_V2_MAX_CPUS	8
+  #define VGIC_NR_IRQS_LEGACY     256
+  #define VGIC_NR_SGIS		16
+--- 15,23 ----
+  #include <linux/list.h>
+  #include <linux/jump_label.h>
+  
+! #include <linux/irqchip/arm-gic-v4.h>
+! 
+! #define VGIC_V3_MAX_CPUS	512
+  #define VGIC_V2_MAX_CPUS	8
+  #define VGIC_NR_IRQS_LEGACY     256
+  #define VGIC_NR_SGIS		16
+***************
+*** 38,43 ****
+--- 29,38 ----
+  #define VGIC_MIN_LPI		8192
+  #define KVM_IRQCHIP_NUM_PINS	(1020 - 32)
+  
++ #define irq_is_ppi(irq) ((irq) >= VGIC_NR_SGIS && (irq) < VGIC_NR_PRIVATE_IRQS)
++ #define irq_is_spi(irq) ((irq) >= VGIC_NR_PRIVATE_IRQS && \
++ 			 (irq) <= VGIC_MAX_SPI)
++ 
+  enum vgic_type {
+  	VGIC_V2,		/* Good ol' GICv2 */
+  	VGIC_V3,		/* New fancy GICv3 */
+*************** struct vgic_global {
+*** 51,61 ****
+  	/* Physical address of vgic virtual cpu interface */
+  	phys_addr_t		vcpu_base;
+  
+! 	/* GICV mapping */
+  	void __iomem		*vcpu_base_va;
+  
+! 	/* virtual control interface mapping */
+  	void __iomem		*vctrl_base;
+  
+  	/* Number of implemented list registers */
+  	int			nr_lr;
+--- 46,60 ----
+  	/* Physical address of vgic virtual cpu interface */
+  	phys_addr_t		vcpu_base;
+  
+! 	/* GICV mapping, kernel VA */
+  	void __iomem		*vcpu_base_va;
++ 	/* GICV mapping, HYP VA */
++ 	void __iomem		*vcpu_hyp_va;
+  
+! 	/* virtual control interface mapping, kernel VA */
+  	void __iomem		*vctrl_base;
++ 	/* virtual control interface mapping, HYP VA */
++ 	void __iomem		*vctrl_hyp;
+  
+  	/* Number of implemented list registers */
+  	int			nr_lr;
+*************** struct vgic_global {
+*** 69,76 ****
+--- 68,80 ----
+  	/* Only needed for the legacy KVM_CREATE_IRQCHIP */
+  	bool			can_emulate_gicv2;
+  
++ 	/* Hardware has GICv4? */
++ 	bool			has_gicv4;
++ 
+  	/* GIC system register CPU interface */
+  	struct static_key_false gicv3_cpuif;
++ 
++ 	u32			ich_vtr_el2;
+  };
+  
+  extern struct vgic_global kvm_vgic_global_state;
+*************** enum vgic_irq_config {
+*** 85,91 ****
+  };
+  
+  struct vgic_irq {
+! 	spinlock_t irq_lock;		/* Protects the content of the struct */
+  	struct list_head lpi_list;	/* Used to link all LPIs together */
+  	struct list_head ap_list;
+  
+--- 89,95 ----
+  };
+  
+  struct vgic_irq {
+! 	raw_spinlock_t irq_lock;	/* Protects the content of the struct */
+  	struct list_head lpi_list;	/* Used to link all LPIs together */
+  	struct list_head ap_list;
+  
+*************** struct vgic_irq {
+*** 101,121 ****
+  					 */
+  
+  	u32 intid;			/* Guest visible INTID */
+- 	bool pending;
+  	bool line_level;		/* Level only */
+! 	bool soft_pending;		/* Level only */
+  	bool active;			/* not used for LPIs */
+  	bool enabled;
+  	bool hw;			/* Tied to HW IRQ */
+  	struct kref refcount;		/* Used for LPIs */
+  	u32 hwintid;			/* HW INTID number */
+  	union {
+  		u8 targets;			/* GICv2 target VCPUs mask */
+  		u32 mpidr;			/* GICv3 target VCPU */
+  	};
+  	u8 source;			/* GICv2 SGIs only */
+  	u8 priority;
+  	enum vgic_irq_config config;	/* Level or edge */
+  };
+  
+  struct vgic_register_region;
+--- 105,143 ----
+  					 */
+  
+  	u32 intid;			/* Guest visible INTID */
+  	bool line_level;		/* Level only */
+! 	bool pending_latch;		/* The pending latch state used to calculate
+! 					 * the pending state for both level
+! 					 * and edge triggered IRQs. */
+  	bool active;			/* not used for LPIs */
+  	bool enabled;
+  	bool hw;			/* Tied to HW IRQ */
+  	struct kref refcount;		/* Used for LPIs */
+  	u32 hwintid;			/* HW INTID number */
++ 	unsigned int host_irq;		/* linux irq corresponding to hwintid */
+  	union {
+  		u8 targets;			/* GICv2 target VCPUs mask */
+  		u32 mpidr;			/* GICv3 target VCPU */
+  	};
+  	u8 source;			/* GICv2 SGIs only */
++ 	u8 active_source;		/* GICv2 SGIs only */
+  	u8 priority;
++ 	u8 group;			/* 0 == group 0, 1 == group 1 */
+  	enum vgic_irq_config config;	/* Level or edge */
++ 
++ 	/*
++ 	 * Callback function pointer to in-kernel devices that can tell us the
++ 	 * state of the input level of mapped level-triggered IRQ faster than
++ 	 * peaking into the physical GIC.
++ 	 *
++ 	 * Always called in non-preemptible section and the functions can use
++ 	 * kvm_arm_get_running_vcpu() to get the vcpu pointer for private
++ 	 * IRQs.
++ 	 */
++ 	bool (*get_input_level)(int vintid);
++ 
++ 	void *owner;			/* Opaque pointer to reserve an interrupt
++ 					   for in-kernel devices. */
+  };
+  
+  struct vgic_register_region;
+*************** struct vgic_its {
+*** 145,151 ****
+  	gpa_t			vgic_its_base;
+  
+  	bool			enabled;
+- 	bool			initialized;
+  	struct vgic_io_device	iodev;
+  	struct kvm_device	*dev;
+  
+--- 167,172 ----
+*************** struct vgic_its {
+*** 159,170 ****
+--- 180,204 ----
+  	u32			creadr;
+  	u32			cwriter;
+  
++ 	/* migration ABI revision in use */
++ 	u32			abi_rev;
++ 
+  	/* Protects the device and collection lists */
+  	struct mutex		its_lock;
+  	struct list_head	device_list;
+  	struct list_head	collection_list;
+  };
+  
++ struct vgic_state_iter;
++ 
++ struct vgic_redist_region {
++ 	u32 index;
++ 	gpa_t base;
++ 	u32 count; /* number of redistributors or 0 if single region */
++ 	u32 free_index; /* index of the next free redistributor */
++ 	struct list_head list;
++ };
++ 
+  struct vgic_dist {
+  	bool			in_kernel;
+  	bool			ready;
+*************** struct vgic_dist {
+*** 173,194 ****
+  	/* vGIC model the kernel emulates for the guest (GICv2 or GICv3) */
+  	u32			vgic_model;
+  
+  	/* Do injected MSIs require an additional device ID? */
+  	bool			msis_require_devid;
+  
+  	int			nr_spis;
+  
+- 	/* TODO: Consider moving to global state */
+- 	/* Virtual control interface mapping */
+- 	void __iomem		*vctrl_base;
+- 
+  	/* base addresses in guest physical address space: */
+  	gpa_t			vgic_dist_base;		/* distributor */
+  	union {
+  		/* either a GICv2 CPU interface */
+  		gpa_t			vgic_cpu_base;
+  		/* or a number of GICv3 redistributor regions */
+! 		gpa_t			vgic_redist_base;
+  	};
+  
+  	/* distributor enabled */
+--- 207,230 ----
+  	/* vGIC model the kernel emulates for the guest (GICv2 or GICv3) */
+  	u32			vgic_model;
+  
++ 	/* Implementation revision as reported in the GICD_IIDR */
++ 	u32			implementation_rev;
++ 
++ 	/* Userspace can write to GICv2 IGROUPR */
++ 	bool			v2_groups_user_writable;
++ 
+  	/* Do injected MSIs require an additional device ID? */
+  	bool			msis_require_devid;
+  
+  	int			nr_spis;
+  
+  	/* base addresses in guest physical address space: */
+  	gpa_t			vgic_dist_base;		/* distributor */
+  	union {
+  		/* either a GICv2 CPU interface */
+  		gpa_t			vgic_cpu_base;
+  		/* or a number of GICv3 redistributor regions */
+! 		struct list_head rd_regions;
+  	};
+  
+  	/* distributor enabled */
+*************** struct vgic_dist {
+*** 209,225 ****
+  	u64			propbaser;
+  
+  	/* Protects the lpi_list and the count value below. */
+! 	spinlock_t		lpi_list_lock;
+  	struct list_head	lpi_list_head;
+  	int			lpi_list_count;
+  };
+  
+  struct vgic_v2_cpu_if {
+  	u32		vgic_hcr;
+  	u32		vgic_vmcr;
+- 	u32		vgic_misr;	/* Saved only */
+- 	u64		vgic_eisr;	/* Saved only */
+- 	u64		vgic_elrsr;	/* Saved only */
+  	u32		vgic_apr;
+  	u32		vgic_lr[VGIC_V2_MAX_LRS];
+  };
+--- 245,273 ----
+  	u64			propbaser;
+  
+  	/* Protects the lpi_list and the count value below. */
+! 	raw_spinlock_t		lpi_list_lock;
+  	struct list_head	lpi_list_head;
+  	int			lpi_list_count;
++ 
++ 	/* LPI translation cache */
++ 	struct list_head	lpi_translation_cache;
++ 
++ 	/* used by vgic-debug */
++ 	struct vgic_state_iter *iter;
++ 
++ 	/*
++ 	 * GICv4 ITS per-VM data, containing the IRQ domain, the VPE
++ 	 * array, the property table pointer as well as allocation
++ 	 * data. This essentially ties the Linux IRQ core and ITS
++ 	 * together, and avoids leaking KVM's data structures anywhere
++ 	 * else.
++ 	 */
++ 	struct its_vm		its_vm;
+  };
+  
+  struct vgic_v2_cpu_if {
+  	u32		vgic_hcr;
+  	u32		vgic_vmcr;
+  	u32		vgic_apr;
+  	u32		vgic_lr[VGIC_V2_MAX_LRS];
+  };
+*************** struct vgic_v3_cpu_if {
+*** 228,239 ****
+  	u32		vgic_hcr;
+  	u32		vgic_vmcr;
+  	u32		vgic_sre;	/* Restored only, change ignored */
+- 	u32		vgic_misr;	/* Saved only */
+- 	u32		vgic_eisr;	/* Saved only */
+- 	u32		vgic_elrsr;	/* Saved only */
+  	u32		vgic_ap0r[4];
+  	u32		vgic_ap1r[4];
+  	u64		vgic_lr[VGIC_V3_MAX_LRS];
+  };
+  
+  struct vgic_cpu {
+--- 276,292 ----
+  	u32		vgic_hcr;
+  	u32		vgic_vmcr;
+  	u32		vgic_sre;	/* Restored only, change ignored */
+  	u32		vgic_ap0r[4];
+  	u32		vgic_ap1r[4];
+  	u64		vgic_lr[VGIC_V3_MAX_LRS];
++ 
++ 	/*
++ 	 * GICv4 ITS per-VPE data, containing the doorbell IRQ, the
++ 	 * pending table pointer, the its_vm pointer and a few other
++ 	 * HW specific things. As for the its_vm structure, this is
++ 	 * linking the Linux IRQ subsystem and the ITS together.
++ 	 */
++ 	struct its_vpe	its_vpe;
+  };
+  
+  struct vgic_cpu {
+*************** struct vgic_cpu {
+*** 246,252 ****
+  	unsigned int used_lrs;
+  	struct vgic_irq private_irqs[VGIC_NR_PRIVATE_IRQS];
+  
+! 	spinlock_t ap_list_lock;	/* Protects the ap_list */
+  
+  	/*
+  	 * List of IRQs that this VCPU should consider because they are either
+--- 299,305 ----
+  	unsigned int used_lrs;
+  	struct vgic_irq private_irqs[VGIC_NR_PRIVATE_IRQS];
+  
+! 	raw_spinlock_t ap_list_lock;	/* Protects the ap_list */
+  
+  	/*
+  	 * List of IRQs that this VCPU should consider because they are either
+*************** struct vgic_cpu {
+*** 256,297 ****
+  	 */
+  	struct list_head ap_list_head;
+  
+- 	u64 live_lrs;
+- 
+  	/*
+  	 * Members below are used with GICv3 emulation only and represent
+  	 * parts of the redistributor.
+  	 */
+  	struct vgic_io_device	rd_iodev;
+! 	struct vgic_io_device	sgi_iodev;
+  
+  	/* Contains the attributes and gpa of the LPI pending tables. */
+  	u64 pendbaser;
+  
+  	bool lpis_enabled;
+  };
+  
+  extern struct static_key_false vgic_v2_cpuif_trap;
+  
+  int kvm_vgic_addr(struct kvm *kvm, unsigned long type, u64 *addr, bool write);
+  void kvm_vgic_early_init(struct kvm *kvm);
+  int kvm_vgic_create(struct kvm *kvm, u32 type);
+  void kvm_vgic_destroy(struct kvm *kvm);
+- void kvm_vgic_vcpu_early_init(struct kvm_vcpu *vcpu);
+  void kvm_vgic_vcpu_destroy(struct kvm_vcpu *vcpu);
+  int kvm_vgic_map_resources(struct kvm *kvm);
+  int kvm_vgic_hyp_init(void);
+  
+  int kvm_vgic_inject_irq(struct kvm *kvm, int cpuid, unsigned int intid,
+! 			bool level);
+! int kvm_vgic_inject_mapped_irq(struct kvm *kvm, int cpuid, unsigned int intid,
+! 			       bool level);
+! int kvm_vgic_map_phys_irq(struct kvm_vcpu *vcpu, u32 virt_irq, u32 phys_irq);
+! int kvm_vgic_unmap_phys_irq(struct kvm_vcpu *vcpu, unsigned int virt_irq);
+! bool kvm_vgic_map_is_active(struct kvm_vcpu *vcpu, unsigned int virt_irq);
+  
+  int kvm_vgic_vcpu_pending_irq(struct kvm_vcpu *vcpu);
+  
+  #define irqchip_in_kernel(k)	(!!((k)->arch.vgic.in_kernel))
+  #define vgic_initialized(k)	((k)->arch.vgic.initialized)
+  #define vgic_ready(k)		((k)->arch.vgic.ready)
+--- 309,359 ----
+  	 */
+  	struct list_head ap_list_head;
+  
+  	/*
+  	 * Members below are used with GICv3 emulation only and represent
+  	 * parts of the redistributor.
+  	 */
+  	struct vgic_io_device	rd_iodev;
+! 	struct vgic_redist_region *rdreg;
+  
+  	/* Contains the attributes and gpa of the LPI pending tables. */
+  	u64 pendbaser;
+  
+  	bool lpis_enabled;
++ 
++ 	/* Cache guest priority bits */
++ 	u32 num_pri_bits;
++ 
++ 	/* Cache guest interrupt ID bits */
++ 	u32 num_id_bits;
+  };
+  
+  extern struct static_key_false vgic_v2_cpuif_trap;
++ extern struct static_key_false vgic_v3_cpuif_trap;
+  
+  int kvm_vgic_addr(struct kvm *kvm, unsigned long type, u64 *addr, bool write);
+  void kvm_vgic_early_init(struct kvm *kvm);
++ int kvm_vgic_vcpu_init(struct kvm_vcpu *vcpu);
+  int kvm_vgic_create(struct kvm *kvm, u32 type);
+  void kvm_vgic_destroy(struct kvm *kvm);
+  void kvm_vgic_vcpu_destroy(struct kvm_vcpu *vcpu);
+  int kvm_vgic_map_resources(struct kvm *kvm);
+  int kvm_vgic_hyp_init(void);
++ void kvm_vgic_init_cpu_hardware(void);
+  
+  int kvm_vgic_inject_irq(struct kvm *kvm, int cpuid, unsigned int intid,
+! 			bool level, void *owner);
+! int kvm_vgic_map_phys_irq(struct kvm_vcpu *vcpu, unsigned int host_irq,
+! 			  u32 vintid, bool (*get_input_level)(int vindid));
+! int kvm_vgic_unmap_phys_irq(struct kvm_vcpu *vcpu, unsigned int vintid);
+! bool kvm_vgic_map_is_active(struct kvm_vcpu *vcpu, unsigned int vintid);
+  
+  int kvm_vgic_vcpu_pending_irq(struct kvm_vcpu *vcpu);
+  
++ void kvm_vgic_load(struct kvm_vcpu *vcpu);
++ void kvm_vgic_put(struct kvm_vcpu *vcpu);
++ void kvm_vgic_vmcr_sync(struct kvm_vcpu *vcpu);
++ 
+  #define irqchip_in_kernel(k)	(!!((k)->arch.vgic.in_kernel))
+  #define vgic_initialized(k)	((k)->arch.vgic.initialized)
+  #define vgic_ready(k)		((k)->arch.vgic.ready)
+*************** int kvm_vgic_vcpu_pending_irq(struct kvm
+*** 301,308 ****
+  bool kvm_vcpu_has_pending_irqs(struct kvm_vcpu *vcpu);
+  void kvm_vgic_sync_hwstate(struct kvm_vcpu *vcpu);
+  void kvm_vgic_flush_hwstate(struct kvm_vcpu *vcpu);
+  
+! void vgic_v3_dispatch_sgi(struct kvm_vcpu *vcpu, u64 reg);
+  
+  /**
+   * kvm_vgic_get_max_vcpus - Get the maximum number of VCPUs allowed by HW
+--- 363,371 ----
+  bool kvm_vcpu_has_pending_irqs(struct kvm_vcpu *vcpu);
+  void kvm_vgic_sync_hwstate(struct kvm_vcpu *vcpu);
+  void kvm_vgic_flush_hwstate(struct kvm_vcpu *vcpu);
++ void kvm_vgic_reset_mapped_irq(struct kvm_vcpu *vcpu, u32 vintid);
+  
+! void vgic_v3_dispatch_sgi(struct kvm_vcpu *vcpu, u64 reg, bool allow_group1);
+  
+  /**
+   * kvm_vgic_get_max_vcpus - Get the maximum number of VCPUs allowed by HW
+*************** int kvm_send_userspace_msi(struct kvm *k
+*** 323,326 ****
+--- 386,402 ----
+   */
+  int kvm_vgic_setup_default_irq_routing(struct kvm *kvm);
+  
++ int kvm_vgic_set_owner(struct kvm_vcpu *vcpu, unsigned int intid, void *owner);
++ 
++ struct kvm_kernel_irq_routing_entry;
++ 
++ int kvm_vgic_v4_set_forwarding(struct kvm *kvm, int irq,
++ 			       struct kvm_kernel_irq_routing_entry *irq_entry);
++ 
++ int kvm_vgic_v4_unset_forwarding(struct kvm *kvm, int irq,
++ 				 struct kvm_kernel_irq_routing_entry *irq_entry);
++ 
++ void kvm_vgic_v4_enable_doorbell(struct kvm_vcpu *vcpu);
++ void kvm_vgic_v4_disable_doorbell(struct kvm_vcpu *vcpu);
++ 
+  #endif /* __KVM_ARM_VGIC_H */
+diff -rpN ./include/kvm/iodev.h ../../../../../qemu/linux-5.4.11/include/kvm/iodev.h
+*** ./include/kvm/iodev.h	2017-11-13 03:36:56.000000000 +0000
+--- ../../../../../qemu/linux-5.4.11/include/kvm/iodev.h	2020-01-12 11:21:53.000000000 +0000
+***************
+*** 1,16 ****
+! /*
+!  * This program is free software; you can redistribute it and/or modify
+!  * it under the terms of the GNU General Public License as published by
+!  * the Free Software Foundation; either version 2 of the License.
+!  *
+!  * This program is distributed in the hope that it will be useful,
+!  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  * GNU General Public License for more details.
+!  *
+!  * You should have received a copy of the GNU General Public License
+!  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+!  */
+  
+  #ifndef __KVM_IODEV_H__
+  #define __KVM_IODEV_H__
+--- 1,4 ----
+! /* SPDX-License-Identifier: GPL-2.0-only */
+  
+  #ifndef __KVM_IODEV_H__
+  #define __KVM_IODEV_H__

@@ -17,7 +17,7 @@
 #include <asm/msa.h>
 #include <asm/setup.h>
 #include <asm/tlbex.h>
-#include <asm/uasm.h>
+//#include <asm/uasm.h>
 
 /* Register names */
 #define ZERO		0

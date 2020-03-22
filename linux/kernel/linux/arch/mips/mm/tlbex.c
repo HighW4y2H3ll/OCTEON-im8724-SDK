@@ -338,7 +338,8 @@ static int allocate_kscratch(void)
 }
 
 static int scratch_reg;
-static int pgd_reg;
+int pgd_reg;
+EXPORT_SYMBOL_GPL(pgd_reg);
 enum vmalloc64_mode {not_refill, refill_scratch, refill_noscratch};
 
 static struct work_registers build_get_work_registers(u32 **p)
@@ -496,7 +497,7 @@ static void __maybe_unused build_tlb_probe_entry(u32 **p)
  */
 enum tlb_write_entry { tlb_random, tlb_indexed };
 
-static void build_tlb_write_entry(u32 **p, struct uasm_label **l,
+void build_tlb_write_entry(u32 **p, struct uasm_label **l,
 				  struct uasm_reloc **r,
 				  enum tlb_write_entry wmode)
 {
@@ -621,6 +622,7 @@ static void build_tlb_write_entry(u32 **p, struct uasm_label **l,
 		break;
 	}
 }
+EXPORT_SYMBOL_GPL(build_tlb_write_entry);
 
 static __maybe_unused void build_convert_pte_to_entrylo(u32 **p,
 							unsigned int reg)
@@ -792,7 +794,7 @@ static void build_huge_handler_tail(u32 **p, struct uasm_reloc **r,
  * TMP and PTR are scratch.
  * TMP will be clobbered, PTR will hold the pmd entry.
  */
-static void
+void
 build_get_pmde64(u32 **p, struct uasm_label **l, struct uasm_reloc **r,
 		 unsigned int tmp, unsigned int ptr)
 {
@@ -870,6 +872,7 @@ build_get_pmde64(u32 **p, struct uasm_label **l, struct uasm_reloc **r,
 	uasm_i_daddu(p, ptr, ptr, tmp); /* add in pmd offset */
 #endif
 }
+EXPORT_SYMBOL_GPL(build_get_pmde64);
 
 /*
  * BVADDR is the faulting address, PTR is scratch.
@@ -1000,7 +1003,7 @@ static void build_adjust_context(u32 **p, unsigned int ctx)
 	uasm_i_andi(p, ctx, ctx, mask);
 }
 
-static void build_get_ptep(u32 **p, unsigned int tmp, unsigned int ptr)
+void build_get_ptep(u32 **p, unsigned int tmp, unsigned int ptr)
 {
 	/*
 	 * Bug workaround for the Nevada. It seems as if under certain
@@ -1024,8 +1027,9 @@ static void build_get_ptep(u32 **p, unsigned int tmp, unsigned int ptr)
 	build_adjust_context(p, tmp);
 	UASM_i_ADDU(p, ptr, ptr, tmp); /* add in offset */
 }
+EXPORT_SYMBOL_GPL(build_get_ptep);
 
-static void build_update_entries(u32 **p, unsigned int tmp, unsigned int ptep)
+void build_update_entries(u32 **p, unsigned int tmp, unsigned int ptep)
 {
 	int pte_off_even = 0;
 	int pte_off_odd = sizeof(pte_t);
@@ -1074,6 +1078,7 @@ static void build_update_entries(u32 **p, unsigned int tmp, unsigned int ptep)
 		UASM_i_MTC0(p, 0, C0_ENTRYLO1);
 	UASM_i_MTC0(p, ptep, C0_ENTRYLO1); /* load it */
 }
+EXPORT_SYMBOL_GPL(build_update_entries);
 
 struct mips_huge_tlb_info {
 	int huge_pte;

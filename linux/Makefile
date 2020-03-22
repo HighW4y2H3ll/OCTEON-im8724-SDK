@@ -117,6 +117,10 @@ kernel: embedded_rootfs/.config
 	${MAKE} -C embedded_rootfs all initramfs
 	${MAKE} -C kernel
 
+.PHONY: kernel_menuconfig
+kernel_menuconfig: kernel/linux/.config
+	${MAKE} -C kernel/linux menuconfig
+
 .PHONY: kernel-deb
 kernel-deb:
 	if [ ! -e kernel/linux/.config ]; then cp kernel/kernel.config kernel/linux/.config; fi

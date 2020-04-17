@@ -1,0 +1,6 @@
+
+dereg pregvious kvm module
+    typedef void (*dereg_prev_kvm_dev_t)(void);
+    dereg_prev_kvm_dev_t dereg_prev_kvm_dev = (dereg_prev_kvm_dev_t)0xffffffff840bae70;
+    dereg_prev_kvm_dev();
+

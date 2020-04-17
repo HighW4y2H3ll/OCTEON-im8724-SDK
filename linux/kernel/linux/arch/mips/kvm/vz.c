@@ -3212,7 +3212,7 @@ int kvm_mips_emulation_init(struct kvm_mips_callbacks **install_callbacks)
 	 * VZ requires at least 2 KScratch registers, so it should have been
 	 * possible to allocate pgd_reg.
 	 */
-	if (WARN(pgd_reg == -1,
+	if (WARN((*pgd_reg__kvmref__) == -1,
 		 "pgd_reg not allocated even though cpu_has_vz\n"))
 		return -ENODEV;
 

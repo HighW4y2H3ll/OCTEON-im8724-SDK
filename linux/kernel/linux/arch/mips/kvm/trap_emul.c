@@ -19,6 +19,13 @@
 #include <asm/pgalloc.h>
 
 #include "interrupt.h"
+#include "unexported_ref_fixup.h"
+
+#define TLBMISS_HANDLER_SETUP_PGD_2(pgd)					\
+do {									\
+	tlbmiss_handler_setup_pgd__kvmref__((unsigned long)(pgd));		\
+	htw_set_pwbase((unsigned long)pgd);				\
+} while (0)
 
 static bool asid_versions_eq(int cpu, u64 a, u64 b)
 {
@@ -37,7 +44,7 @@ static void check_switch_mmu_context(struct mm_struct *mm)
 	unsigned int cpu = smp_processor_id();
     check_mmu_context(mm);
     write_c0_entryhi(cpu_asid(cpu, mm));
-	TLBMISS_HANDLER_SETUP_PGD(mm->pgd);
+	TLBMISS_HANDLER_SETUP_PGD_2(mm->pgd);
 }
 
 static inline void set_cpu_context(unsigned int cpu,
@@ -285,7 +292,7 @@ static int kvm_trap_emul_handle_tlb_miss(struct kvm_vcpu *vcpu, bool store)
 
 	if (((badvaddr & PAGE_MASK) == KVM_GUEST_COMMPAGE_ADDR)
 	    && KVM_GUEST_KERNEL_MODE(vcpu)) {
-		if (kvm_mips_handle_commpage_tlb_fault(badvaddr, vcpu) < 0) {
+		if (kvm_mips_handle_commpage_tlb_fault_2(badvaddr, vcpu) < 0) {
 			run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
 			ret = RESUME_HOST;
 		}
@@ -565,6 +572,22 @@ static int kvm_trap_emul_check_extension(struct kvm *kvm, long ext)
 	return r;
 }
 
+static inline pgd_t *pgd_alloc__kvmref__(struct mm_struct *mm)
+{
+	pgd_t *ret, *init;
+
+	ret = (pgd_t *) __get_free_pages(GFP_KERNEL, PGD_ORDER);
+	if (ret) {
+		//init = pgd_offset(&init_mm, 0UL);
+		init = pgd_offset(init_mm__kvmref__, 0UL);
+		pgd_init__kvmref__((unsigned long)ret);
+		memcpy(ret + USER_PTRS_PER_PGD, init + USER_PTRS_PER_PGD,
+		       (PTRS_PER_PGD - USER_PTRS_PER_PGD) * sizeof(pgd_t));
+	}
+
+	return ret;
+}
+
 static int kvm_trap_emul_vcpu_init(struct kvm_vcpu *vcpu)
 {
 	struct mm_struct *kern_mm = &vcpu->arch.guest_kernel_mm;
@@ -574,11 +597,11 @@ static int kvm_trap_emul_vcpu_init(struct kvm_vcpu *vcpu)
 	 * Allocate GVA -> HPA page tables.
 	 * MIPS doesn't use the mm_struct pointer argument.
 	 */
-	kern_mm->pgd = pgd_alloc(kern_mm);
+	kern_mm->pgd = pgd_alloc__kvmref__(kern_mm);
 	if (!kern_mm->pgd)
 		return -ENOMEM;
 
-	user_mm->pgd = pgd_alloc(user_mm);
+	user_mm->pgd = pgd_alloc__kvmref__(user_mm);
 	if (!user_mm->pgd) {
 		pgd_free(kern_mm, kern_mm->pgd);
 		return -ENOMEM;
@@ -606,7 +629,7 @@ static void kvm_mips_emul_free_gva_pt(pgd_t *pgd)
 			break;
 		pud = pud_offset(pgd + i, 0);
 		for (j = 0; j < PTRS_PER_PUD; j++) {
-			if (pud_none(pud[j]))
+			if (pud_none__kvmref__(pud[j]))
 				continue;
 
 			pud_va = pgd_va | ((unsigned long)j << PUD_SHIFT);
@@ -1136,7 +1159,7 @@ static void kvm_trap_emul_check_requests(struct kvm_vcpu *vcpu, int cpu,
 			get_new_mmu_context(mm, cpu);
 			htw_stop();
 			write_c0_entryhi(cpu_asid(cpu, mm));
-			TLBMISS_HANDLER_SETUP_PGD(mm->pgd);
+			TLBMISS_HANDLER_SETUP_PGD_2(mm->pgd);
 			htw_start();
 		}
 	}

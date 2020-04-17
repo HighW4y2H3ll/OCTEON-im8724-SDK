@@ -860,6 +860,8 @@ extern int kvm_mips_handle_kseg0_tlb_fault(unsigned long badbaddr,
 
 extern int kvm_mips_handle_commpage_tlb_fault(unsigned long badvaddr,
 					      struct kvm_vcpu *vcpu);
+extern int kvm_mips_handle_commpage_tlb_fault_2(unsigned long badvaddr,
+					      struct kvm_vcpu *vcpu);
 
 extern int kvm_mips_handle_mapped_seg_tlb_fault(struct kvm_vcpu *vcpu,
 						struct kvm_mips_tlb *tlb,
@@ -874,7 +876,8 @@ extern enum emulation_result kvm_mips_handle_tlbmiss(u32 cause,
 
 extern void kvm_mips_dump_host_tlbs(void);
 extern void kvm_mips_dump_guest_tlbs(struct kvm_vcpu *vcpu);
-extern int kvm_mips_host_tlb_inv(struct kvm_vcpu *vcpu, unsigned long entryhi,
+extern int kvm_mips_host_tlb_inv(struct kvm_vcpu *vcpu, unsigned long va);
+extern int kvm_mips_host_tlb_inv_2(struct kvm_vcpu *vcpu, unsigned long entryhi,
 				 bool user, bool kernel);
 
 extern int kvm_mips_guest_tlb_lookup(struct kvm_vcpu *vcpu,

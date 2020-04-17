@@ -34,6 +34,8 @@
 
 #include "trace.h"
 
+#include "unexported_ref_fixup.h"
+
 static inline void set_cpu_context(unsigned int cpu,
 				   struct mm_struct *mm, u64 ctx)
 {
@@ -1091,7 +1093,7 @@ static void kvm_mips_invalidate_guest_tlb(struct kvm_vcpu *vcpu,
 	 * Probe the shadow host TLB for the entry being overwritten, if one
 	 * matches, invalidate it
 	 */
-	kvm_mips_host_tlb_inv(vcpu, tlb->tlb_hi, user, true);
+	kvm_mips_host_tlb_inv_2(vcpu, tlb->tlb_hi, user, true);
 
 	/* Invalidate the whole ASID on other CPUs */
 	cpu = smp_processor_id();
@@ -1857,7 +1859,7 @@ enum emulation_result kvm_mips_emulate_cache(union mips_instruction inst,
 				local_flush_icache_range(0, 0);
 				break;
 			default:
-				__flush_cache_all();
+				__flush_cache_all__kvmref__();
 				break;
 			}
 #endif

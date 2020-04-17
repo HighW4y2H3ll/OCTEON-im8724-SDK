@@ -19,6 +19,7 @@
 #include <linux/signal.h>
 #include <linux/fs.h>
 #include <linux/memblock.h>
+#include <linux/kallsyms.h>
 
 #include <asm/fpu.h>
 #include <asm/page.h>
@@ -1712,6 +1713,63 @@ static struct notifier_block kvm_mips_csr_die_notifier = {
 	.notifier_call = kvm_mips_csr_die_notify,
 };
 
+struct mm_struct *init_mm__kvmref__;
+//EXPORT_SYMBOL_GPL(init_mm__kvmref__);
+void (*tlbmiss_handler_setup_pgd__kvmref__)(unsigned long);
+void (*pmd_init__kvmref__)(unsigned long page, unsigned long pagetable);
+void (*pgd_init__kvmref__)(unsigned long page);
+pmd_t *invalid_pmd_table__kvmref__;
+void (*__flush_cache_all__kvmref__)(void);
+int *pgd_reg__kvmref__;
+struct uasm_label;
+struct uasm_reloc;
+enum tlb_write_entry;
+void (*build_tlb_write_entry__kvmref__)(u32 **p, struct uasm_label **l,
+				  struct uasm_reloc **r,
+				  enum tlb_write_entry wmode);
+void (*build_get_pmde64__kvmref__)(u32 **p, struct uasm_label **l, struct uasm_reloc **r,
+		 unsigned int tmp, unsigned int ptr);
+void (*build_get_ptep__kvmref__)(u32 **p, unsigned int tmp, unsigned int ptr);
+void (*build_update_entries__kvmref__)(u32 **p, unsigned int tmp, unsigned int ptep);
+static int setup_symbol_refs(void) {
+    void (**fpp)(void) = (void (**)(void))kallsyms_lookup_name("__flush_cache_all");
+    if (!fpp)   return -1;
+    __flush_cache_all__kvmref__ = *fpp;
+    if (!__flush_cache_all__kvmref__)   return -1;
+
+    init_mm__kvmref__ = (struct mm_struct*)kallsyms_lookup_name("init_mm");
+    if (!init_mm__kvmref__) return -1;
+
+    tlbmiss_handler_setup_pgd__kvmref__ = (void (*)(unsigned long))kallsyms_lookup_name("tlbmiss_handler_setup_pgd");
+    if (!tlbmiss_handler_setup_pgd__kvmref__)   return -1;
+
+    pmd_init__kvmref__ = (void (*)(unsigned long, unsigned long))kallsyms_lookup_name("pmd_init");
+    if (!pmd_init__kvmref__)    return -1;
+
+    pgd_init__kvmref__ = (void (*)(unsigned long))kallsyms_lookup_name("pgd_init");
+    if (!pgd_init__kvmref__)    return -1;
+
+    invalid_pmd_table__kvmref__ = (pmd_t *)kallsyms_lookup_name("invalid_pmd_table");
+    if (!invalid_pmd_table__kvmref__)   return -1;
+
+    pgd_reg__kvmref__ = (int*)kallsyms_lookup_name("pgd_reg");
+    if (!pgd_reg__kvmref__) return -1;
+
+    build_tlb_write_entry__kvmref__ = (void (*)(u32**, struct uasm_label **, struct uasm_reloc**, enum tlb_write_entry))kallsyms_lookup_name("build_tlb_write_entry");
+    if (!build_tlb_write_entry__kvmref__)   return -1;
+
+    build_get_pmde64__kvmref__ = (void (*)(u32**, struct uasm_label**, struct uasm_reloc**, unsigned int, unsigned int))kallsyms_lookup_name("build_get_pmde64");
+    if (!build_get_pmde64__kvmref__)    return -1;
+
+    build_get_ptep__kvmref__ = (void (*)(u32**, unsigned int, unsigned int))kallsyms_lookup_name("build_get_ptep");
+    if (!build_get_ptep__kvmref__)  return -1;
+
+    build_update_entries__kvmref__ = (void (*)(u32**, unsigned int, unsigned int))kallsyms_lookup_name("build_update_entries");
+    if (!build_update_entries__kvmref__)    return -1;
+
+    return 0;
+}
+
 static int __init kvm_mips_init(void)
 {
 	int ret;
@@ -1720,6 +1778,8 @@ static int __init kvm_mips_init(void)
 	//	pr_warn("KVM does not yet support MMIDs. KVM Disabled\n");
 	//	return -EOPNOTSUPP;
 	//}
+    if (setup_symbol_refs())
+        return -EINVAL;
 
 	ret = kvm_mips_entry_setup();
 	if (ret)

@@ -15,6 +15,8 @@
 #include <asm/mmu_context.h>
 #include <asm/pgalloc.h>
 
+#include "unexported_ref_fixup.h"
+
 /*
  * KVM_MMU_CACHE_MIN_PAGES is the number of GPA page table translation levels
  * for which pages need to be cached.
@@ -80,7 +82,7 @@ static void kvm_pgd_init(void *page)
 #ifdef __PAGETABLE_PMD_FOLDED
 	entry = (unsigned long)invalid_pte_table;
 #else
-	entry = (unsigned long)invalid_pmd_table;
+	entry = (unsigned long)invalid_pmd_table__kvmref__;
 #endif
 
 	p = (unsigned long *)page;
@@ -146,13 +148,13 @@ static pte_t *kvm_mips_walk_pgd(pgd_t *pgd, struct kvm_mmu_memory_cache *cache,
 		return NULL;
 	}
 	pud = pud_offset(pgd, addr);
-	if (pud_none(*pud)) {
+	if (pud_none__kvmref__(*pud)) {
 		pmd_t *new_pmd;
 
 		if (!cache)
 			return NULL;
 		new_pmd = mmu_memory_cache_alloc(cache);
-		pmd_init((unsigned long)new_pmd,
+		pmd_init__kvmref__((unsigned long)new_pmd,
 			 (unsigned long)invalid_pte_table);
 		pud_populate(NULL, pud, new_pmd);
 	}
@@ -238,7 +240,7 @@ static bool kvm_mips_flush_gpa_pud(pud_t *pud, unsigned long start_gpa,
 	int i;
 
 	for (i = i_min; i <= i_max; ++i, start_gpa = 0) {
-		if (!pud_present(pud[i]))
+		if (!pud_present__kvmref__(pud[i]))
 			continue;
 
 		pmd = pmd_offset(pud + i, 0);
@@ -246,7 +248,7 @@ static bool kvm_mips_flush_gpa_pud(pud_t *pud, unsigned long start_gpa,
 			end = end_gpa;
 
 		if (kvm_mips_flush_gpa_pmd(pmd, start_gpa, end)) {
-			pud_clear(pud + i);
+			pud_clear__kvmref__(pud + i);
 			pmd_free(NULL, pmd);
 		} else {
 			safe_to_remove = false;
@@ -362,7 +364,7 @@ static int kvm_mips_##name##_pud(pud_t *pud, unsigned long start,	\
 	int i;								\
 									\
 	for (i = i_min; i <= i_max; ++i, start = 0) {			\
-		if (!pud_present(pud[i]))				\
+		if (!pud_present__kvmref__(pud[i]))				\
 			continue;					\
 									\
 		pmd = pmd_offset(pud + i, 0);				\
@@ -896,7 +898,7 @@ static bool kvm_mips_flush_gva_pud(pud_t *pud, unsigned long start_gva,
 	int i;
 
 	for (i = i_min; i <= i_max; ++i, start_gva = 0) {
-		if (!pud_present(pud[i]))
+		if (!pud_present__kvmref__(pud[i]))
 			continue;
 
 		pmd = pmd_offset(pud + i, 0);
@@ -904,7 +906,7 @@ static bool kvm_mips_flush_gva_pud(pud_t *pud, unsigned long start_gva,
 			end = end_gva;
 
 		if (kvm_mips_flush_gva_pmd(pmd, start_gva, end)) {
-			pud_clear(pud + i);
+			pud_clear__kvmref__(pud + i);
 			pmd_free(NULL, pmd);
 		} else {
 			safe_to_remove = false;
@@ -1033,7 +1035,7 @@ int kvm_mips_handle_kseg0_tlb_fault(unsigned long badvaddr,
 	ptep_gva[1] = kvm_mips_gpa_pte_to_gva_unmapped(pte_gpa[1]);
 
 	/* Invalidate this entry in the TLB, guest kernel ASID only */
-	kvm_mips_host_tlb_inv(vcpu, badvaddr, false, true);
+	kvm_mips_host_tlb_inv_2(vcpu, badvaddr, false, true);
 	return 0;
 }
 
@@ -1086,7 +1088,7 @@ int kvm_mips_handle_mapped_seg_tlb_fault(struct kvm_vcpu *vcpu,
 	ptep_gva[1] = kvm_mips_gpa_pte_to_gva_mapped(pte_gpa[1], tlb_lo[1]);
 
 	/* Invalidate this entry in the TLB, current guest mode ASID only */
-	kvm_mips_host_tlb_inv(vcpu, gva, !kernel, kernel);
+	kvm_mips_host_tlb_inv_2(vcpu, gva, !kernel, kernel);
 
 	kvm_debug("@ %#lx tlb_lo0: 0x%08lx tlb_lo1: 0x%08lx\n", vcpu->arch.pc,
 		  tlb->tlb_lo[0], tlb->tlb_lo[1]);
@@ -1094,7 +1096,7 @@ int kvm_mips_handle_mapped_seg_tlb_fault(struct kvm_vcpu *vcpu,
 	return 0;
 }
 
-int kvm_mips_handle_commpage_tlb_fault(unsigned long badvaddr,
+int kvm_mips_handle_commpage_tlb_fault_2(unsigned long badvaddr,
 				       struct kvm_vcpu *vcpu)
 {
 	kvm_pfn_t pfn;
@@ -1111,7 +1113,7 @@ int kvm_mips_handle_commpage_tlb_fault(unsigned long badvaddr,
 	*ptep = pte_mkyoung(pte_mkdirty(pfn_pte(pfn, PAGE_SHARED)));
 
 	/* Invalidate this entry in the TLB, guest kernel ASID only */
-	kvm_mips_host_tlb_inv(vcpu, badvaddr, false, true);
+	kvm_mips_host_tlb_inv_2(vcpu, badvaddr, false, true);
 	return 0;
 }
 

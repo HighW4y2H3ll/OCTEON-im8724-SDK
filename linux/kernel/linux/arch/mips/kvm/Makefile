@@ -19,6 +19,7 @@ kvm-objs		+= vz.o
 else
 kvm-objs		+= dyntrans.o
 kvm-objs		+= trap_emul.o
+kvm-objs		+= tlbext.o
 endif
 obj-$(CONFIG_KVM)	+= kvm.o
 obj-y			+= callback.o tlb.o

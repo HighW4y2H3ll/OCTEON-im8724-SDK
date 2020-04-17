@@ -19,6 +19,8 @@
 #include <asm/tlbex.h>
 //#include <asm/uasm.h>
 
+#include "unexported_ref_fixup.h"
+
 /* Register names */
 #define ZERO		0
 #define AT		1
@@ -128,8 +130,8 @@ int kvm_mips_entry_setup(void)
 	 */
 	unsigned int kscratch_mask = cpu_data[0].kscratch_mask;
 
-	if (pgd_reg != -1)
-		kscratch_mask &= ~BIT(pgd_reg);
+	if ((*pgd_reg__kvmref__) != -1)
+		kscratch_mask &= ~BIT((*pgd_reg__kvmref__));
 
 	/* Pick a scratch register for storing VCPU */
 	if (kscratch_mask) {
@@ -307,7 +309,7 @@ static void *kvm_mips_build_enter_guest(void *addr)
 
 #ifdef CONFIG_KVM_MIPS_VZ
 	/* Save normal linux process pgd (VZ guarantees pgd_reg is set) */
-	UASM_i_MFC0(&p, K0, c0_kscratch(), pgd_reg);
+	UASM_i_MFC0(&p, K0, c0_kscratch(), (*pgd_reg__kvmref__));
 	UASM_i_SW(&p, K0, offsetof(struct kvm_vcpu_arch, host_pgd), K1);
 
 	/*
@@ -321,7 +323,7 @@ static void *kvm_mips_build_enter_guest(void *addr)
 	UASM_i_LW(&p, S0, (int)offsetof(struct kvm_vcpu, kvm) -
 			  (int)offsetof(struct kvm_vcpu, arch), K1);
 	UASM_i_LW(&p, A0, offsetof(struct kvm, arch.gpa_mm.pgd), S0);
-	UASM_i_LA(&p, T9, (unsigned long)tlbmiss_handler_setup_pgd);
+	UASM_i_LA(&p, T9, (unsigned long)tlbmiss_handler_setup_pgd_start__kvmref__);
 	uasm_i_jalr(&p, RA, T9);
 	/* delay slot */
 	if (cpu_has_htw)
@@ -413,7 +415,7 @@ static void *kvm_mips_build_enter_guest(void *addr)
 	UASM_i_LW(&p, A0, (int)offsetof(struct mm_struct, pgd) -
 			  (int)offsetof(struct mm_struct, context.asid), T1);
 
-	UASM_i_LA(&p, T9, (unsigned long)tlbmiss_handler_setup_pgd);
+	UASM_i_LA(&p, T9, (unsigned long)tlbmiss_handler_setup_pgd__kvmref__);
 	uasm_i_jalr(&p, RA, T9);
 	 uasm_i_mtc0(&p, K0, C0_ENTRYHI);
 #else
@@ -502,16 +504,16 @@ void *kvm_mips_build_tlb_refill_exception(void *addr, void *handler)
 	 */
 
 #ifdef CONFIG_64BIT
-	build_get_pmde64(&p, &l, &r, K0, K1); /* get pmd in K1 */
+	build_get_pmde64__kvmref__(&p, &l, &r, K0, K1); /* get pmd in K1 */
 #else
 	build_get_pgde32(&p, K0, K1); /* get pgd in K1 */
 #endif
 
 	/* we don't support huge pages yet */
 
-	build_get_ptep(&p, K0, K1);
-	build_update_entries(&p, K0, K1);
-	build_tlb_write_entry(&p, &l, &r, tlb_random);
+	build_get_ptep__kvmref__(&p, K0, K1);
+	build_update_entries__kvmref__(&p, K0, K1);
+	build_tlb_write_entry__kvmref__(&p, &l, &r, tlb_random);
 
 	preempt_enable();
 
@@ -723,7 +725,7 @@ void *kvm_mips_build_exit(void *addr)
 	 */
 	UASM_i_LW(&p, A0,
 		  offsetof(struct kvm_vcpu_arch, host_pgd), K1);
-	UASM_i_LA(&p, T9, (unsigned long)tlbmiss_handler_setup_pgd);
+	UASM_i_LA(&p, T9, (unsigned long)tlbmiss_handler_setup_pgd__kvmref__);
 	uasm_i_jalr(&p, RA, T9);
 	/* delay slot */
 	if (cpu_has_htw)

@@ -69,6 +69,11 @@
 MODULE_AUTHOR("Qumranet");
 MODULE_LICENSE("GPL");
 
+#ifdef EXPORT_SYMBOL_GPL
+    #undef EXPORT_SYMBOL_GPL
+    #define EXPORT_SYMBOL_GPL(X)
+#endif
+
 /* Architectures should define their poll value according to the halt latency */
 static unsigned int halt_poll_ns = KVM_HALT_POLL_NS_DEFAULT;
 module_param(halt_poll_ns, uint, S_IRUGO | S_IWUSR);
@@ -3846,6 +3851,13 @@ static void kvm_sched_out(struct preempt_notifier *pn,
 	if (current->state == TASK_RUNNING)
 		vcpu->preempted = true;
 	kvm_arch_vcpu_put(vcpu);
+}
+
+#include <linux/kallsyms.h>
+void (*__fixup_flush_cache_all)(void);
+void unexported_fixup(void) {
+    void **__p_flush_cache_all = (void**)kallsyms_lookup_name("__flush_cache_all");
+    __fixup_flush_cache_all = (void(*)(void))(*__p_flush_cache_all);
 }
 
 int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,

@@ -1639,6 +1639,7 @@ enum emulation_result kvm_mips_emulate_load(union mips_instruction inst,
 	return er;
 }
 
+extern void (*__fixup_flush_cache_all)(void);
 enum emulation_result kvm_mips_emulate_cache(union mips_instruction inst,
 					     u32 *opc, u32 cause,
 					     struct kvm_run *run,
@@ -1695,7 +1696,7 @@ enum emulation_result kvm_mips_emulate_cache(union mips_instruction inst,
                 local_flush_icache_range(0, 0);
                 break;
             default:
-                __flush_cache_all();
+                __fixup_flush_cache_all();
                 break;
             }
 #endif

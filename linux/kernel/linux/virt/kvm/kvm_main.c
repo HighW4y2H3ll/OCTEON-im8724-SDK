@@ -3866,6 +3866,11 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	int r;
 	int cpu;
 
+    void (*__orig_kvm_exit)(void);
+    __orig_kvm_exit = (void(*)(void))kallsyms_lookup_name("kvm_exit");
+    unexported_fixup();
+    __orig_kvm_exit();
+
 	r = kvm_arch_init(opaque);
 	if (r)
 		goto out_fail;

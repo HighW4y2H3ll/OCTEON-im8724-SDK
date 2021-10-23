@@ -21,3 +21,4 @@ install:
 
 ${DIR}:
 	tar -zxf ${STORAGE}/${PKG}-${VERSION}.tar.gz
+	cd ${DIR} && patch -p1 < ${STORAGE}/flex-2.6.4-1.patch
